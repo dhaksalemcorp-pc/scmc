@@ -2324,7 +2324,7 @@ var S={token:null,user:null,lookup:null,tasks:[],users:[],filtered:[],drillFilte
 // ── GAS URL for GitHub Pages hosting ─────────────────────────
 // When hosted on GitHub Pages, set this to your GAS /exec URL
 // When hosted on GAS itself, leave as empty string ''
-var GAS_URL = 'https://script.google.com/macros/s/AKfycbwCGhTSkHysb5v2lHE3tblmL0hgEEBt8tCOLm-miD7Z8d3RbgstoCS9bB3O8eELL94njg/exec';  // ← REPLACE with your /exec URL when hosting on GitHub Pages
+var GAS_URL = '';  // ← REPLACE with your /exec URL when hosting on GitHub Pages
 // Example: var GAS_URL = 'https://script.google.com/macros/s/AKfycby.../exec';
 
 var IS_GAS=(function(){try{return(typeof google!=='undefined')&&google!==null&&typeof google.script!=='undefined'&&typeof google.script.run!=='undefined';}catch(e){return false;}})();
@@ -2454,6 +2454,8 @@ function demoFn(fn,args){
   if(fn==='serverUploadPhoto')return{success:true,url:'https://drive.google.com/file/d/demo_'+Date.now()+'/view',fileId:'demo_'+Date.now()};
   if(fn==='serverGetActivityLogs')return{success:true,data:[{username:'admin',action:'LOGIN',details:'User logged in successfully',timestamp:new Date().toISOString()},{username:'admin',action:'CREATE_TASK',details:'Task TSK2406001 created',timestamp:new Date().toISOString()}]};
   if(fn==='serverInitDatabase')return{success:true,message:'Database initialized successfully'};
+  if(fn==='serverGetLogo'){var lv=LS.get('sc-logo')||'';return{success:true,value:lv};}
+  if(fn==='serverSaveLogo'){if(args[1]){LS.set('sc-logo',args[1]);}else{LS.del('sc-logo');}return{success:true};}
   if(fn==='serverAddDepartment'){if(!IS_GAS&&S.lookup&&S.lookup.departments){var found2=false;for(var i=0;i<S.lookup.departments.length;i++)if(S.lookup.departments[i].DeptName===args[1]){found2=true;break;}if(!found2)S.lookup.departments.push({DeptID:'D'+Date.now(),DeptName:args[1],Status:'Active'});}return{success:true};}
   if(fn==='serverAddDesignation'){if(!IS_GAS&&S.lookup&&S.lookup.designations){var found3=false;for(var i=0;i<S.lookup.designations.length;i++)if(S.lookup.designations[i].DesigName===args[1]){found3=true;break;}if(!found3)S.lookup.designations.push({DesigID:'DG'+Date.now(),DesigName:args[1],Status:'Active'});}return{success:true};}
   if(fn==='serverGetOfficerDashboard'){
@@ -3757,13 +3759,24 @@ function previewLogo(input){
 
 function applyLogo(){
   if(!S._pendingLogo){toast('Please choose a logo file first.','error');return;}
-  LS.set('sc-logo',S._pendingLogo);
-  applyLogoToUI(S._pendingLogo);
-  // Pre-render and cache the PWA icon with the new logo
-  if(window.refreshPWAIcon) window.refreshPWAIcon(S._pendingLogo);
-  S._pendingLogo=null;
+  var logoData = S._pendingLogo;
+  // Save to localStorage for instant load on this device
+  LS.set('sc-logo', logoData);
+  applyLogoToUI(logoData);
+  // Pre-render PWA icon
+  if(window.refreshPWAIcon) window.refreshPWAIcon(logoData);
+  // Save to Google Sheets so ALL devices load it automatically
+  showLoader('Saving logo to server...');
+  gasCall('serverSaveLogo', S.token, logoData).then(function(r){
+    hideLoader();
+    if(r && r.success){
+      toast('Logo saved! It will appear for all users on their next login.','ok');
+    } else {
+      toast('Logo saved on this device. Server save failed: '+(r?r.message:''),'info');
+    }
+  });
+  S._pendingLogo = null;
   closeModal('mLogoUpload');
-  toast('Logo applied! Re-add the app to your home screen to see the new icon.','ok');
 }
 
 function removeLogo(){
@@ -3771,7 +3784,11 @@ function removeLogo(){
   try{localStorage.removeItem('sc-pwa-icon');}catch(e){}
   applyLogoToUI(null);
   if(window.refreshPWAIcon) window.refreshPWAIcon(null);
-  toast('Logo removed.','info');
+  // Remove from server too
+  if(S.token){
+    gasCall('serverSaveLogo', S.token, '').then(function(){});
+  }
+  toast('Logo removed for all users.','info');
 }
 
 function applyLogoToUI(dataUrl){
@@ -3794,8 +3811,24 @@ function applyLogoToUI(dataUrl){
 }
 
 function loadSavedLogo(){
-  var saved=LS.get('sc-logo');
-  if(saved)applyLogoToUI(saved);
+  // Apply cached logo instantly for fast display
+  var cached=LS.get('sc-logo');
+  if(cached){applyLogoToUI(cached);if(window.refreshPWAIcon)window.refreshPWAIcon(cached);}
+  // Then fetch from server — this syncs logo across ALL devices
+  gasCall('serverGetLogo').then(function(r){
+    if(r&&r.success&&r.value&&r.value.length>100){
+      // Server has a logo — cache and apply
+      LS.set('sc-logo',r.value);
+      applyLogoToUI(r.value);
+      if(window.refreshPWAIcon)window.refreshPWAIcon(r.value);
+    } else if(r&&r.success&&r.value===''){
+      // Admin removed logo — clear locally too
+      LS.del('sc-logo');
+      try{localStorage.removeItem('sc-pwa-icon');}catch(e){}
+      applyLogoToUI(null);
+      if(window.refreshPWAIcon)window.refreshPWAIcon(null);
+    }
+  });
 }
 
 // ── Fix renderSettings to show dept/desig with clickable delete-style list ──
