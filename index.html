@@ -1292,6 +1292,7 @@ tbody tr:hover { background: var(--surface2); }
       <div class="sb-item" data-page="users" id="snav-users" onclick="go('users')"><span class="material-icons-round sb-i">manage_accounts</span> User Management</div>
       <div class="sb-item" data-page="settings" id="snav-settings" onclick="go('settings')"><span class="material-icons-round sb-i">settings</span> Settings</div>
       <div class="sb-item" id="snav-chgpw" onclick="showMyProfile()"><span class="material-icons-round sb-i">manage_accounts</span> My Profile</div>
+      <div class="sb-item" id="snav-photolog" data-page="photolog" onclick="go('photolog')"><span class="material-icons-round sb-i">photo_library</span> Photo Log</div>
       <div class="sb-item" data-page="about" onclick="go('about')"><span class="material-icons-round sb-i">info</span> About</div>
     </div>
     <div class="sb-footer">
@@ -1432,7 +1433,18 @@ tbody tr:hover { background: var(--surface2); }
             </div>
             <div class="f-group">
                 <label class="f-label">Assign Officer <span class="req">*</span></label>
-                <select class="f-sel" id="t-officer" onchange="onOfficerChange()"></select>
+                <div style="display:flex;gap:8px;align-items:flex-end">
+                  <select class="f-sel" id="t-officer" onchange="onOfficerChange()" style="flex:1"></select>
+                  <button type="button" class="btn btn-ghost btn-sm" onclick="addOfficerToList()" title="Add another officer to assign same task" style="white-space:nowrap;flex-shrink:0"><span class="material-icons-round mi">person_add</span> Add</button>
+                </div>
+                <div id="t-officers-list" style="margin-top:6px"></div>
+                <div style="font-size:11.5px;color:var(--tx3);margin-top:4px">&#8505; Tap <strong>Add</strong> to assign the same task to multiple officers simultaneously.</div>
+              </div>
+              <div style="display:flex;gap:10px;margin-top:4px">
+                <button class="btn btn-primary" onclick="saveTask()"><span class="material-icons-round mi">save</span> Save Task</button>
+                <button class="btn btn-primary" id="multiSaveBtn" style="display:none;background:var(--c-teal)" onclick="saveTaskMultiOfficer()"><span class="material-icons-round mi">group_add</span> Assign Task to Officers</button>
+                <button class="btn btn-ghost" onclick="previewTask()"><span class="material-icons-round mi">preview</span> Preview</button>
+              </div>
               </div>
             <div class="f-group">
               <label class="f-label">Task Description <span class="req">*</span></label>
@@ -1602,15 +1614,8 @@ tbody tr:hover { background: var(--surface2); }
         <div class="card"><div class="card-hd"><span class="card-title">Department Tasks</span></div><div class="card-bd" style="height:250px"><canvas id="cvDept"></canvas></div></div>
       </div>
       <div class="card mb16">
-        <div class="card-hd"><span class="card-title">Officer Task Summary</span></div>
-        <div class="card-bd-0">
-          <div class="tbl-wrap">
-            <table>
-              <thead><tr><th>Officer</th><th>Department</th><th>Total</th><th>Completed</th><th>Pending</th><th>Overdue</th><th>Status</th></tr></thead>
-              <tbody id="officerPerf"></tbody>
-            </table>
-          </div>
-        </div>
+        <div class="card-hd"><span class="card-title">Officer Task Summary</span><button class="btn btn-ghost btn-sm" onclick="loadCommView()"><span class="material-icons-round mi">refresh</span></button></div>
+        <div class="card-bd" id="officerPerf" style="max-height:420px;overflow-y:auto"></div>
       </div>
       <div class="card"><div class="card-hd"><span class="card-title">Critical &amp; Delayed Tasks</span></div><div class="card-bd-0" id="criticalList"></div></div>
     </div>
@@ -1678,6 +1683,104 @@ tbody tr:hover { background: var(--surface2); }
             <button class="btn btn-ghost" onclick="removeLogo()"><span class="material-icons-round mi">delete</span> Remove Logo</button>
           </div>
         </div>
+      </div>
+    </div>
+
+    <!-- PHOTO LOG PAGE -->
+    <div class="page" id="page-photolog">
+      <div class="ph">
+        <div class="ph-left"><h1>Photo Log</h1><p>Field inspection and visit records</p></div>
+        <div class="ph-actions">
+          <button class="btn btn-ghost btn-sm" id="plViewToggle" onclick="plToggleView()"><span class="material-icons-round mi">view_list</span> View Entries</button>
+          <button class="btn btn-ghost btn-sm" onclick="showExportChoice('photolog')"><span class="material-icons-round mi">ios_share</span> Export</button>
+        </div>
+      </div>
+
+      <!-- ENTRY FORM (View A - default) -->
+      <div id="plFormView">
+        <div class="card mb16">
+          <div class="card-hd"><span class="card-title">&#128247; New Entry</span></div>
+          <div class="card-bd">
+            <div class="f-row">
+              <div class="f-group">
+                <label class="f-label">Date <span class="req">*</span></label>
+                <input type="date" class="f-ctrl" id="pl-date">
+              </div>
+              <div class="f-group">
+                <label class="f-label">Time <span class="req">*</span></label>
+                <input type="time" class="f-ctrl" id="pl-time">
+              </div>
+            </div>
+            <div class="f-row">
+              <div class="f-group">
+                <label class="f-label">Type <span class="req">*</span></label>
+                <select class="f-sel" id="pl-type" onchange="plUpdateNotesLabel()">
+                  <option value="">Select Type</option>
+                  <option>Inspection</option>
+                  <option>Meeting</option>
+                  <option>Site Visit</option>
+                </select>
+              </div>
+              <div class="f-group">
+                <label class="f-label">Zone <span class="req">*</span></label>
+                <select class="f-sel" id="pl-zone">
+                  <option value="">Select Zone</option>
+                  <option>Main Office</option>
+                  <option>Suramangalam Zone-1</option>
+                  <option>Hasthampatti Zone-2</option>
+                  <option>Ammapet Zone-3</option>
+                  <option>Kondalampatti Zone-4</option>
+                </select>
+              </div>
+            </div>
+            <div class="f-group">
+              <label class="f-label">Location / Ward</label>
+              <input type="text" class="f-ctrl" id="pl-location" placeholder="e.g. Ward 12, Near Bus Stand">
+            </div>
+            <div class="f-group">
+              <label class="f-label" id="pl-notes-label">Notes</label>
+              <textarea class="f-ctrl" id="pl-notes" rows="4" placeholder="Enter your observations..."></textarea>
+            </div>
+            <div class="f-group">
+              <label class="f-label">Photos <span style="font-size:11px;color:var(--tx3)">(up to 5, max 2MB each)</span></label>
+              <div id="plDropZone" style="border:2px dashed var(--border);border-radius:10px;padding:20px;text-align:center;cursor:pointer;background:var(--surface2)"
+                ondragover="event.preventDefault();this.style.borderColor='var(--c-blue)'"
+                ondragleave="this.style.borderColor='var(--border)'"
+                ondrop="handlePlPhotoDrop(event)"
+                onclick="document.getElementById('plPhotoInput').click()">
+                <span class="material-icons-round mi" style="font-size:32px;color:var(--tx3)">add_photo_alternate</span>
+                <div style="font-size:13px;color:var(--tx3);margin-top:6px">Tap to upload or drag photos here</div>
+              </div>
+              <input type="file" id="plPhotoInput" accept="image/*" multiple style="display:none" onchange="handlePlPhotoSelect(this.files)">
+              <div id="plPhotoPreview" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:10px"></div>
+            </div>
+            <div style="display:flex;gap:10px;margin-top:4px">
+              <button class="btn btn-primary" onclick="savePlEntry()"><span class="material-icons-round mi">save</span> Save Entry</button>
+              <button class="btn btn-ghost" onclick="clearPlForm()"><span class="material-icons-round mi">clear</span> Clear</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ENTRY LIST (View B) -->
+      <div id="plListView" style="display:none">
+        <!-- Filter bar -->
+        <div class="card mb12">
+          <div class="card-bd" style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+            <select class="f-sel" id="plFType" onchange="plFilter()" style="min-width:120px"><option value="">All Types</option><option>Inspection</option><option>Meeting</option><option>Site Visit</option></select>
+            <select class="f-sel" id="plFZone" onchange="plFilter()" style="min-width:140px"><option value="">All Zones</option><option>Main Office</option><option>Suramangalam Zone-1</option><option>Hasthampatti Zone-2</option><option>Ammapet Zone-3</option><option>Kondalampatti Zone-4</option></select>
+            <select class="f-sel" id="plFMonth" onchange="plFilter()" style="min-width:130px">
+              <option value="">All Months</option>
+              <option value="01">January</option><option value="02">February</option><option value="03">March</option>
+              <option value="04">April</option><option value="05">May</option><option value="06">June</option>
+              <option value="07">July</option><option value="08">August</option><option value="09">September</option>
+              <option value="10">October</option><option value="11">November</option><option value="12">December</option>
+            </select>
+            <button class="btn btn-ghost btn-sm" onclick="plClearFilter()">Clear</button>
+            <span id="plCount" style="font-size:12px;color:var(--tx3);margin-left:auto"></span>
+          </div>
+        </div>
+        <div id="plCards"></div>
       </div>
     </div>
 
@@ -1844,8 +1947,8 @@ tbody tr:hover { background: var(--surface2); }
         <div class="f-group"><label class="f-label">Email</label><input type="email" class="f-ctrl" id="mu-email" placeholder="name@corp.gov.in"></div>
       </div>
       <div class="f-row">
-        <div class="f-group"><label class="f-label">Username <span class="req">*</span></label><input type="text" class="f-ctrl" id="mu-uname" placeholder="username"></div>
-        <div class="f-group"><label class="f-label">Password <span class="req" id="pwReqStar">*</span></label><input type="password" class="f-ctrl" id="mu-pass" placeholder="Min 6 characters"></div>
+        <div class="f-group"><label class="f-label">Username <span class="req">*</span></label><input type="text" class="f-ctrl" id="mu-uname" placeholder="username"><div id="mu-uname-note" style="font-size:11px;color:var(--tx3);margin-top:3px;display:none">Username cannot be changed here. Officer can update via My Profile.</div></div>
+        <div class="f-group"><label class="f-label">Password <span class="req" id="pwReqStar">*</span></label><input type="password" class="f-ctrl" id="mu-pass" placeholder="Min 6 characters"><div style="font-size:11px;color:var(--tx3);margin-top:3px">Leave blank to keep existing password</div></div>
       </div>
     </div>
     <div class="modal-ft">
@@ -2456,6 +2559,10 @@ function demoFn(fn,args){
   if(fn==='serverInitDatabase')return{success:true,message:'Database initialized successfully'};
   if(fn==='serverGetLogo'){var lv=LS.get('sc-logo')||'';return{success:true,value:lv};}
   if(fn==='serverSaveLogo'){if(args[1]){LS.set('sc-logo',args[1]);}else{LS.del('sc-logo');}return{success:true};}
+  if(fn==='serverBulkCreateTasks'){var cnt=0;if(args[1])for(var i=0;i<args[1].length;i++){DEMO.tasks.push(args[1][i]);cnt++;}return{success:true,count:cnt,created:[]};}
+  if(fn==='serverSavePhotoLog'){var lid='LOG'+Date.now();return{success:true,logID:lid};}
+  if(fn==='serverGetPhotoLogs'){return{success:true,data:[]};}
+
   if(fn==='serverAddDepartment'){if(!IS_GAS&&S.lookup&&S.lookup.departments){var found2=false;for(var i=0;i<S.lookup.departments.length;i++)if(S.lookup.departments[i].DeptName===args[1]){found2=true;break;}if(!found2)S.lookup.departments.push({DeptID:'D'+Date.now(),DeptName:args[1],Status:'Active'});}return{success:true};}
   if(fn==='serverAddDesignation'){if(!IS_GAS&&S.lookup&&S.lookup.designations){var found3=false;for(var i=0;i<S.lookup.designations.length;i++)if(S.lookup.designations[i].DesigName===args[1]){found3=true;break;}if(!found3)S.lookup.designations.push({DesigID:'DG'+Date.now(),DesigName:args[1],Status:'Active'});}return{success:true};}
   if(fn==='serverGetOfficerDashboard'){
@@ -2531,19 +2638,16 @@ function showApp(){
 }
 function applyRoleNav(role){
   var isAdmin=(role==='Admin'||role==='Commissioner'),isOfficer=(role==='Officer');
-  show('snav-taskEntry',isAdmin);show('snav-users',isAdmin);show('snav-commview',isAdmin);show('snav-settings',isAdmin);show('snav-chgpw',true);
+  show('snav-taskEntry',isAdmin);show('snav-users',isAdmin);show('snav-commview',isAdmin);show('snav-settings',isAdmin);show('snav-chgpw',true);show('snav-photolog',isAdmin);
   show('bnEntry',isAdmin);show('bnCommView',isAdmin);show('newTaskBtn',isAdmin);
-  // Show checkbox column header for admin only
   var thChk=id('thChk'); if(thChk) thChk.style.display=isAdmin?'':'none';
-  // Show/hide bulk bar for admin
   if(!isAdmin){var bb=id('bulkBar');if(bb)bb.classList.add('dn');}
-  S.allowedPages=isOfficer?['dashboard','tracker','about']:['dashboard','taskEntry','tracker','commview','users','settings','about'];
-  // Show/hide correct dashboard panel
+  S.allowedPages=isOfficer?['dashboard','tracker','about']:['dashboard','taskEntry','tracker','commview','users','settings','photolog','about'];
   var ad=id('adminDash'),od=id('officerDash');
   if(isOfficer){if(ad)ad.classList.add('dn');if(od)od.classList.remove('dn');}
   else{if(ad)ad.classList.remove('dn');if(od)od.classList.add('dn');}
 }
-var PAGE_META={dashboard:['Dashboard','Overview & Analytics'],taskEntry:['Task Entry','Create and assign tasks'],tracker:['Task Tracker','Monitor all tasks'],commview:['Commissioner View','Executive analytics'],users:['User Management','Manage accounts'],settings:['Settings','System configuration'],about:['About','Application information']};
+var PAGE_META={dashboard:['Dashboard','Overview & Analytics'],taskEntry:['Task Entry','Create and assign tasks'],tracker:['Task Tracker','Monitor all tasks'],commview:['Commissioner View','Executive analytics'],users:['User Management','Manage accounts'],settings:['Settings','System configuration'],photolog:['Photo Log','Field inspection records'],about:['About','Application information']};
 function go(page){
   if(S.allowedPages&&S.allowedPages.length&&S.allowedPages.indexOf(page)===-1){toast('Access restricted.','error');return;}
   S.page=page;
@@ -2578,6 +2682,7 @@ function go(page){
   else if(page==='commview')loadCommView();
   else if(page==='users')loadUsers();
   else if(page==='settings')loadSettings();
+  else if(page==='photolog')loadPhotoLog();
 }
 function refreshPage(){go(S.page);}
 function drillDown(type){S.drillFilter=type;go('tracker');}
@@ -3472,28 +3577,250 @@ function buildCVDept(ds){
   S.charts.cvd=new Chart(ctx,{type:'bar',data:{labels:depts,datasets:[{label:'Completed',data:doneData,backgroundColor:'#10b981',borderRadius:4},{label:'Pending',data:pendData,backgroundColor:'#f59e0b',borderRadius:4}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,scales:{x:{stacked:true},y:{stacked:true}},plugins:{legend:{position:'bottom',labels:{font:{size:11}}}}}});
 }
 function buildOfficerPerf(os){
-  var tbody=id('officerPerf');if(!tbody)return;
+  var el=id('officerPerf');if(!el)return;
   var names=Object.keys(os);
-  if(!names.length){tbody.innerHTML='<tr><td colspan="7" style="text-align:center;padding:30px;color:var(--tx3)">No data available</td></tr>';return;}
-
-  // Build officer name→department map from lookup as fallback
+  if(!names.length){el.innerHTML='<div class="empty"><span class="material-icons-round mi">group</span><p>No officer data</p></div>';return;}
   var offDeptMap={};
   var offs=(S.lookup&&S.lookup.officers)||[];
   for(var i=0;i<offs.length;i++) offDeptMap[offs[i].name]=offs[i].department||'';
-
-  var html='';
+  // Build interactive cards instead of table
+  var html='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px">';
   for(var i=0;i<names.length;i++){
     var n=names[i],s=os[n];
-    // Fix Bug 3: resolve department — use stat's dept if present, else look up from officers list
-    var dept=s.dept;
-    if(!dept||dept==='undefined'||dept==='null'||dept.trim()===''){
-      dept=offDeptMap[n]||'\u2014';
-    }
-    var isOk=(s.overdue===0);
-    var statusLabel=isOk?'<span style="color:var(--c-green);font-weight:700">\u2713 On Track</span>':'<span style="color:var(--c-red);font-weight:700">\u26a0 Has Overdue</span>';
-    html+='<tr><td><strong>'+n+'</strong></td><td style="font-size:12px;color:var(--tx2)">'+dept+'</td><td style="text-align:center;font-weight:700">'+s.total+'</td><td style="text-align:center;color:var(--c-green);font-weight:700">'+s.completed+'</td><td style="text-align:center;color:var(--c-gold)">'+s.pending+'</td><td style="text-align:center;font-weight:700;color:'+(s.overdue>0?'var(--c-red)':'var(--tx3)')+'">'+s.overdue+'</td><td>'+statusLabel+'</td></tr>';
+    var dept=s.dept&&s.dept!=='undefined'&&s.dept.trim()!==''?s.dept:(offDeptMap[n]||'');
+    var rate=s.total>0?Math.round(s.completed/s.total*100):0;
+    var color=rate>=70?'var(--c-green)':rate>=40?'var(--c-gold)':'var(--c-red)';
+    var statusIcon=s.overdue>0?'&#9888;':'&#10003;';
+    var statusCol=s.overdue>0?'var(--c-red)':'var(--c-green)';
+    html+='<div style="background:var(--surface2);border-radius:12px;padding:14px;border:1px solid var(--border)">'
+      +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">'
+      +'<div style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,var(--c-blue),var(--c-teal));display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:15px;flex-shrink:0">'+n.charAt(0)+'</div>'
+      +'<div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:700;color:var(--tx1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+n+'</div>'
+      +'<div style="font-size:11px;color:var(--tx3)">'+dept+'</div></div>'
+      +'<div style="font-size:18px;color:'+statusCol+'">'+statusIcon+'</div>'
+      +'</div>'
+      +'<div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:6px">'
+      +'<span style="color:var(--tx2)"><strong style="color:var(--c-blue)">'+s.total+'</strong> total</span>'
+      +'<span style="color:var(--c-green)"><strong>'+s.completed+'</strong> done</span>'
+      +'<span style="color:var(--c-gold)"><strong>'+s.pending+'</strong> pending</span>'
+      +(s.overdue>0?'<span style="color:var(--c-red)"><strong>'+s.overdue+'</strong> overdue</span>':'')
+      +'</div>'
+      +'<div style="display:flex;align-items:center;gap:6px">'
+      +'<div style="flex:1;background:var(--border);border-radius:999px;height:6px;overflow:hidden">'
+      +'<div style="height:100%;border-radius:999px;background:'+color+';width:'+rate+'%;transition:width .4s"></div></div>'
+      +'<span style="font-size:11px;font-weight:700;color:'+color+'">'+rate+'%</span>'
+      +'</div>'
+      +'</div>';
   }
-  tbody.innerHTML=html;
+  html+='</div>';
+  el.innerHTML=html;
+}
+
+// ── MULTI-OFFICER TASK ASSIGNMENT ────────────────────────────
+function saveTaskMultiOfficer(){
+  var baseForm=getTaskForm();
+  if(!validateTask(baseForm))return;
+  // Collect all selected officers
+  var offList=id('t-officers-list');
+  var selected=[];
+  if(offList){
+    var items=offList.querySelectorAll('.multi-off-item');
+    for(var i=0;i<items.length;i++){
+      selected.push({officerID:items[i].dataset.id,officerName:items[i].dataset.name,designation:items[i].dataset.desig});
+    }
+  }
+  if(!selected.length){
+    // Single officer mode — use standard save
+    saveTask(); return;
+  }
+  // Create one task per officer
+  var tasks=[];
+  for(var i=0;i<selected.length;i++){
+    var t={};for(var k in baseForm)t[k]=baseForm[k];
+    t.officerID=selected[i].officerID;
+    t.officerName=selected[i].officerName;
+    t.designation=selected[i].designation;
+    tasks.push(t);
+  }
+  showLoader('Creating '+tasks.length+' tasks...');
+  gasCall('serverBulkCreateTasks',S.token,tasks).then(function(r){
+    hideLoader();
+    if(r&&r.success){toast('Created '+r.count+' tasks across '+r.count+' officers!','ok');clearTaskForm();}
+    else toast((r&&r.message)||'Failed','error');
+  });
+}
+function addOfficerToList(){
+  var offEl=id('t-officer'),list=id('t-officers-list');if(!offEl||!offEl.value||!list)return;
+  var sel=offEl.selectedOptions&&offEl.selectedOptions[0];if(!sel)return;
+  var uid=offEl.value,name=sel.dataset.name||sel.textContent.split('\u2014')[0].trim();
+  var desig=sel.dataset.designation||'';
+  // Check not already added
+  var existing=list.querySelectorAll('.multi-off-item');
+  for(var i=0;i<existing.length;i++)if(existing[i].dataset.id===uid){toast('Already added.','info');return;}
+  var div=document.createElement('div');
+  div.className='multi-off-item';div.dataset.id=uid;div.dataset.name=name;div.dataset.desig=desig;
+  div.style.cssText='display:flex;align-items:center;justify-content:space-between;padding:6px 10px;background:var(--surface2);border-radius:7px;margin-bottom:5px;font-size:13px';
+  div.innerHTML='<span>'+name+' <span style="font-size:11px;color:var(--tx3)">'+desig+'</span></span>'
+    +'<button onclick="this.parentNode.remove();updateMultiOfficerBtn()" style="background:none;border:none;color:var(--c-red);cursor:pointer;font-size:18px;line-height:1">&times;</button>';
+  list.appendChild(div);
+  updateMultiOfficerBtn();
+}
+function updateMultiOfficerBtn(){
+  var list=id('t-officers-list'),btn=id('multiSaveBtn');if(!list||!btn)return;
+  var count=list.querySelectorAll('.multi-off-item').length;
+  if(count>0){btn.textContent='Assign Task to '+count+' Officer'+(count>1?'s':'');btn.style.display='';}
+  else{btn.style.display='none';}
+}
+
+// ── PHOTO LOG ────────────────────────────────────────────────
+var PL={photos:[],entries:[]};
+function loadPhotoLog(){
+  // Set defaults
+  var pd=id('pl-date');if(pd&&!pd.value)pd.value=new Date().toISOString().slice(0,10);
+  var pt=id('pl-time');if(pt&&!pt.value){var now=new Date();pt.value=String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0');}
+  // Load entries from server
+  showLoader('Loading photo logs...');
+  gasCall('serverGetPhotoLogs',S.token).then(function(r){
+    hideLoader();
+    if(r&&r.success){PL.entries=r.data||[];plRenderCards(PL.entries);}
+  });
+}
+function plToggleView(){
+  var fv=id('plFormView'),lv=id('plListView'),btn=id('plViewToggle');
+  if(fv.style.display==='none'){
+    fv.style.display=''; lv.style.display='none';
+    if(btn){btn.innerHTML='<span class="material-icons-round mi">view_list</span> View Entries';}
+  } else {
+    fv.style.display='none'; lv.style.display='';
+    if(btn){btn.innerHTML='<span class="material-icons-round mi">add_circle</span> New Entry';}
+    plRenderCards(PL.entries);
+  }
+}
+function plUpdateNotesLabel(){
+  var type=V('pl-type'),lbl=id('pl-notes-label');if(!lbl)return;
+  var map={Inspection:'Inspection Observations',Meeting:'Meeting Notes','Site Visit':'Site Visit Remarks'};
+  lbl.textContent=map[type]||'Notes';
+}
+function handlePlPhotoSelect(files){plAddPhotos(Array.prototype.slice.call(files));}
+function handlePlPhotoDrop(e){e.preventDefault();id('plDropZone').style.borderColor='var(--border)';var files=[];for(var i=0;i<e.dataTransfer.files.length;i++){var f=e.dataTransfer.files[i];if(f.type.indexOf('image/')===0)files.push(f);}plAddPhotos(files);}
+function plAddPhotos(files){
+  var rem=5-PL.photos.length,skipped=0;
+  for(var i=0;i<files.length&&i<rem;i++){if(files[i].size>2*1024*1024){skipped++;continue;}PL.photos.push(files[i]);}
+  if(skipped)toast(skipped+' photo(s) over 2MB skipped.','info');
+  plRenderPhotoPreview();
+}
+function plRenderPhotoPreview(){
+  var pp=id('plPhotoPreview');if(!pp)return;
+  var html='';
+  for(var i=0;i<PL.photos.length;i++){
+    var url=URL.createObjectURL(PL.photos[i]);
+    html+='<div style="position:relative;width:72px;height:72px;border-radius:8px;overflow:hidden;border:1px solid var(--border);flex-shrink:0">'
+      +'<img src="'+url+'" style="width:100%;height:100%;object-fit:cover">'
+      +'<button onclick="PL.photos.splice('+i+',1);plRenderPhotoPreview()" style="position:absolute;top:2px;right:2px;background:rgba(0,0,0,.6);border:none;border-radius:50%;width:18px;height:18px;color:#fff;cursor:pointer;font-size:12px;line-height:18px;text-align:center;padding:0">&times;</button></div>';
+  }
+  pp.innerHTML=html;
+}
+function savePlEntry(){
+  var date=V('pl-date'),time=V('pl-time'),type=V('pl-type'),zone=V('pl-zone'),loc=V('pl-location'),notes=V('pl-notes');
+  if(!date||!time||!type||!zone){toast('Date, Time, Type and Zone are required.','error');return;}
+  var entry={date:date,time:time,type:type,zone:zone,location:loc,notes:notes,photos:''};
+  if(PL.photos.length===0){doSavePlEntry(entry);return;}
+  showLoader('Uploading photos...');
+  var uploaded=[],idx=0;
+  function uploadNext(){
+    if(idx>=PL.photos.length){entry.photos=uploaded.join('\n');hideLoader();doSavePlEntry(entry);return;}
+    var f=PL.photos[idx];var lm=id('loaderMsg');if(lm)lm.textContent='Uploading photo '+(idx+1)+' of '+PL.photos.length+'...';
+    var reader=new FileReader();
+    reader.onload=function(e){var b64=e.target.result.split(',')[1];
+      gasCall('serverUploadPhoto',S.token,'PHOTO_LOG',f.name,f.type,b64).then(function(r){if(r&&r.url)uploaded.push(r.url);idx++;uploadNext();});};
+    reader.readAsDataURL(f);
+  }
+  uploadNext();
+}
+function doSavePlEntry(entry){
+  showLoader('Saving entry...');
+  gasCall('serverSavePhotoLog',S.token,entry).then(function(r){
+    hideLoader();
+    if(r&&r.success){
+      toast('Photo log entry saved!','ok');
+      clearPlForm();
+      entry.logID=r.logID;entry.createdBy=S.user?S.user.name:'';entry.createdAt=new Date().toISOString();
+      PL.entries.unshift(entry);
+    } else toast((r&&r.message)||'Save failed.','error');
+  });
+}
+function clearPlForm(){
+  var f=['pl-date','pl-time','pl-type','pl-zone','pl-location','pl-notes'];
+  for(var i=0;i<f.length;i++){var e=id(f[i]);if(e)e.value='';}
+  var pd=id('pl-date');if(pd)pd.value=new Date().toISOString().slice(0,10);
+  var pt=id('pl-time');if(pt){var now=new Date();pt.value=String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0');}
+  PL.photos=[];plRenderPhotoPreview();
+}
+function plRenderCards(entries){
+  var el=id('plCards');if(!el)return;
+  var pc=id('plCount');if(pc)pc.textContent=entries.length+' entr'+(entries.length===1?'y':'ies');
+  if(!entries.length){el.innerHTML='<div class="empty"><span class="material-icons-round mi">photo_library</span><h3>No entries yet</h3><p>Add your first photo log entry</p></div>';return;}
+  var typeColors={Inspection:'var(--c-blue)',Meeting:'var(--c-teal)','Site Visit':'var(--c-gold)'};
+  var html='';
+  for(var i=0;i<entries.length;i++){
+    var e=entries[i],col=typeColors[e.type]||'var(--c-blue)';
+    var photoCount=e.photos?e.photos.split('\n').filter(function(p){return p.trim();}).length:0;
+    html+='<div class="card mb10" style="cursor:pointer" onclick="plExpandCard(this,'+i+')">'
+      +'<div class="card-bd" style="display:flex;gap:12px;align-items:flex-start">'
+      +'<div style="text-align:center;min-width:48px;flex-shrink:0">'
+      +'<div style="font-size:18px;font-weight:800;color:var(--tx1)">'+e.date.split('-').slice(2).join('')+'</div>'
+      +'<div style="font-size:10px;color:var(--tx3)">'+(['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][parseInt(e.date.split('-')[1])-1]||'')+'</div>'
+      +'<div style="font-size:10px;color:var(--tx3)">'+e.time+'</div>'
+      +'</div>'
+      +'<div style="flex:1;min-width:0">'
+      +'<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">'
+      +'<span style="background:'+col+'22;color:'+col+';border:1px solid '+col+'44;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:700">'+e.type+'</span>'
+      +'<span style="font-size:12px;color:var(--tx3)">'+e.zone+'</span>'
+      +(e.location?'<span style="font-size:12px;color:var(--tx3)">\u00b7 '+e.location+'</span>':'')
+      +(photoCount>0?'<span style="font-size:12px;color:var(--c-teal);margin-left:auto"><span class="material-icons-round mi" style="font-size:13px;vertical-align:middle">attach_file</span>'+photoCount+'</span>':'')
+      +'</div>'
+      +'<div style="font-size:13px;color:var(--tx2);line-height:1.5;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical">'+e.notes+'</div>'
+      +'<div id="pl-expand-'+i+'" style="display:none;margin-top:10px;padding-top:10px;border-top:1px solid var(--border)">'
+      +'<div style="font-size:13px;color:var(--tx2);line-height:1.65;margin-bottom:8px">'+e.notes+'</div>'
+      +(photoCount>0?plPhotoThumbs(e.photos):'')
+      +'</div>'
+      +'</div>'
+      +'</div>'
+      +'</div>';
+  }
+  el.innerHTML=html;
+}
+function plPhotoThumbs(photosStr){
+  if(!photosStr)return'';
+  var links=photosStr.split('\n').filter(function(p){return p.trim();});
+  var html='<div style="display:flex;flex-wrap:wrap;gap:6px">';
+  for(var i=0;i<links.length;i++){
+    html+='<a href="'+links[i].trim()+'" target="_blank" style="display:inline-flex;align-items:center;gap:4px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:4px 8px;font-size:11.5px;color:var(--c-blue);text-decoration:none">'
+      +'<span class="material-icons-round mi" style="font-size:14px">photo</span>Photo '+(i+1)+'</a>';
+  }
+  return html+'</div>';
+}
+function plExpandCard(card,idx){
+  var exp=id('pl-expand-'+idx);if(!exp)return;
+  var isOpen=exp.style.display!=='none';
+  // Close all others
+  var allExp=document.querySelectorAll('[id^="pl-expand-"]');
+  for(var i=0;i<allExp.length;i++)allExp[i].style.display='none';
+  exp.style.display=isOpen?'none':'block';
+}
+function plFilter(){
+  var type=V('plFType'),zone=V('plFZone'),month=V('plFMonth');
+  var filtered=PL.entries.filter(function(e){
+    if(type&&e.type!==type)return false;
+    if(zone&&e.zone!==zone)return false;
+    if(month&&e.date.split('-')[1]!==month)return false;
+    return true;
+  });
+  plRenderCards(filtered);
+}
+function plClearFilter(){
+  var f=['plFType','plFZone','plFMonth'];for(var i=0;i<f.length;i++){var e=id(f[i]);if(e)e.value='';}
+  plRenderCards(PL.entries);
 }
 function buildCritical(){
   var el=id('criticalList');if(!el)return;
@@ -3534,6 +3861,10 @@ function showUserModal(uid){
   var mui=id('mu-id');if(mui)mui.value='';
   var fields=['mu-emp','mu-name','mu-mobile','mu-email','mu-uname','mu-pass'];
   for(var i=0;i<fields.length;i++){var e=id(fields[i]);if(e)e.value='';}
+  // Username: editable only when creating new user
+  var unEl=id('mu-uname'),unNote=id('mu-uname-note');
+  if(unEl){unEl.readOnly=!!uid;unEl.style.background=uid?'var(--surface2)':'';}
+  if(unNote)unNote.style.display=uid?'block':'none';
   if(S.lookup){fillSel('mu-desig',S.lookup.designations,'DesigName','DesigName','Select');fillSel('mu-dept',S.lookup.departments,'DeptName','DeptName','Select');fillSel('mu-zone',S.lookup.zones,'ZoneName','ZoneName','Select');}
   if(uid){
     if(mui)mui.value=uid;
@@ -3814,21 +4145,27 @@ function loadSavedLogo(){
   // Apply cached logo instantly for fast display
   var cached=LS.get('sc-logo');
   if(cached){applyLogoToUI(cached);if(window.refreshPWAIcon)window.refreshPWAIcon(cached);}
-  // Then fetch from server — this syncs logo across ALL devices
-  gasCall('serverGetLogo').then(function(r){
-    if(r&&r.success&&r.value&&r.value.length>100){
-      // Server has a logo — cache and apply
-      LS.set('sc-logo',r.value);
-      applyLogoToUI(r.value);
-      if(window.refreshPWAIcon)window.refreshPWAIcon(r.value);
-    } else if(r&&r.success&&r.value===''){
-      // Admin removed logo — clear locally too
-      LS.del('sc-logo');
-      try{localStorage.removeItem('sc-pwa-icon');}catch(e){}
-      applyLogoToUI(null);
-      if(window.refreshPWAIcon)window.refreshPWAIcon(null);
-    }
-  });
+  // Fetch from server — no token needed, getSetting is public
+  // Use GAS_URL if set (GitHub Pages mode) else use gasCall
+  var url = (typeof GAS_URL !== 'undefined' && GAS_URL) ? GAS_URL : null;
+  if(url){
+    fetch(url,{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'fn=serverGetLogo&payload=[]'})
+    .then(function(r){return r.json();}).then(function(r){applyServerLogo(r);}).catch(function(){});
+  } else {
+    gasCall('serverGetLogo').then(function(r){applyServerLogo(r);});
+  }
+}
+function applyServerLogo(r){
+  if(r&&r.success&&r.value&&r.value.length>100){
+    LS.set('sc-logo',r.value);
+    applyLogoToUI(r.value);
+    if(window.refreshPWAIcon)window.refreshPWAIcon(r.value);
+  } else if(r&&r.success&&r.value===''){
+    LS.del('sc-logo');
+    try{localStorage.removeItem('sc-pwa-icon');}catch(e){}
+    applyLogoToUI(null);
+    if(window.refreshPWAIcon)window.refreshPWAIcon(null);
+  }
 }
 
 // ── Fix renderSettings to show dept/desig with clickable delete-style list ──
