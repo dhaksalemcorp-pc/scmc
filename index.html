@@ -1164,8 +1164,9 @@ tbody tr:hover { background: var(--surface2); }
     padding: 12px 12px calc(var(--bottomnav-h) + 12px);
   }
 
-  /* Show bottom nav */
-  .bottom-nav { display: flex; }
+  /* Show bottom nav — only when app div is visible */
+  #app .bottom-nav { display: flex; }
+  .bottom-nav { display: none; }
 
   /* Toast above bottom nav */
   #toasts { bottom: calc(var(--bottomnav-h) + 10px); }
@@ -1677,10 +1678,22 @@ tbody tr:hover { background: var(--surface2); }
       <div class="card mt24">
         <div class="card-hd"><span class="card-title">App Logo</span></div>
         <div class="card-bd">
-          <p class="c-muted mb16">Upload your organisation logo to display on the login page and app header.</p>
-          <div class="flex-c gap8">
-            <button class="btn btn-primary" onclick="openModal('mLogoUpload')"><span class="material-icons-round mi">add_photo_alternate</span> Upload Logo</button>
-            <button class="btn btn-ghost" onclick="removeLogo()"><span class="material-icons-round mi">delete</span> Remove Logo</button>
+          <div style="display:flex;align-items:center;gap:16px;margin-bottom:14px">
+            <div id="settingsLogoPreview" style="text-align:center">
+              <div style="width:56px;height:56px;border-radius:50%;background:linear-gradient(135deg,#0b1f45,#1a3a6b);display:flex;align-items:center;justify-content:center;color:#fff;font-size:20px;font-weight:800">SC</div>
+              <div style="font-size:12px;color:var(--tx3);margin-top:6px">No logo set</div>
+            </div>
+            <div>
+              <p class="c-muted mb12" style="font-size:13px">Upload your organisation logo. It will appear on the login page and app header for all users.</p>
+              <div class="flex-c gap8">
+                <button class="btn btn-primary btn-sm" onclick="openLogoModal()"><span class="material-icons-round mi">add_photo_alternate</span> Upload Logo</button>
+                <button class="btn btn-ghost btn-sm" onclick="removeLogo()"><span class="material-icons-round mi">delete</span> Remove</button>
+              </div>
+            </div>
+          </div>
+          <div style="font-size:11.5px;color:var(--tx3);padding:8px 10px;background:var(--surface2);border-radius:7px">
+            <span class="material-icons-round mi" style="font-size:13px;vertical-align:middle">info</span>
+            For best results across all devices, use a square PNG or JPG image. Logo is automatically resized to 200x200px when saved.
           </div>
         </div>
       </div>
@@ -1689,10 +1702,11 @@ tbody tr:hover { background: var(--surface2); }
     <!-- PHOTO LOG PAGE -->
     <div class="page" id="page-photolog">
       <div class="ph">
-        <div class="ph-left"><h1>Photo Log</h1><p>Field inspection and visit records</p></div>
+        <div class="ph-left"><h1>&#128247; Photo Log</h1><p>Commissioner inspection &amp; meeting records</p></div>
         <div class="ph-actions">
-          <button class="btn btn-ghost btn-sm" id="plViewToggle" onclick="plToggleView()"><span class="material-icons-round mi">view_list</span> View Entries</button>
-          <button class="btn btn-ghost btn-sm" onclick="showExportChoice('photolog')"><span class="material-icons-round mi">ios_share</span> Export</button>
+          <button class="btn btn-ghost btn-sm" onclick="plToggleView('form')"><span class="material-icons-round mi">add_circle</span> New</button>
+          <button class="btn btn-ghost btn-sm" onclick="plToggleView('list')"><span class="material-icons-round mi">view_module</span> All Entries</button>
+          <button class="btn btn-primary btn-sm" onclick="showPlDiaryModal()"><span class="material-icons-round mi">auto_stories</span> AI Diary</button>
         </div>
       </div>
 
@@ -1742,7 +1756,7 @@ tbody tr:hover { background: var(--surface2); }
               <textarea class="f-ctrl" id="pl-notes" rows="4" placeholder="Enter your observations..."></textarea>
             </div>
             <div class="f-group">
-              <label class="f-label">Photos <span style="font-size:11px;color:var(--tx3)">(up to 5, max 2MB each)</span></label>
+              <label class="f-label">Photos <span style="font-size:11px;color:var(--tx3)">(up to 5, max 10MB each)</span></label>
               <div id="plDropZone" style="border:2px dashed var(--border);border-radius:10px;padding:20px;text-align:center;cursor:pointer;background:var(--surface2)"
                 ondragover="event.preventDefault();this.style.borderColor='var(--c-blue)'"
                 ondragleave="this.style.borderColor='var(--border)'"
@@ -1781,6 +1795,45 @@ tbody tr:hover { background: var(--surface2); }
           </div>
         </div>
         <div id="plCards"></div>
+      </div>
+
+      <!-- DIARY GENERATION MODAL (inside photolog) -->
+      <div class="modal-bg" id="mPlDiary">
+        <div class="modal-box" style="max-width:560px">
+          <div class="modal-hd"><span class="modal-title">&#129302; AI Commissioner Diary</span><button class="modal-close" onclick="closeModal('mPlDiary')"><span class="material-icons-round">close</span></button></div>
+          <div class="modal-body">
+            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px">
+              <button class="btn btn-ghost btn-sm" onclick="plDiaryPeriod('week')">This Week</button>
+              <button class="btn btn-ghost btn-sm" onclick="plDiaryPeriod('lastweek')">Last Week</button>
+              <button class="btn btn-ghost btn-sm" onclick="plDiaryPeriod('month')">This Month</button>
+              <button class="btn btn-ghost btn-sm" onclick="plDiaryPeriod('lastmonth')">Last Month</button>
+            </div>
+            <div class="f-row">
+              <div class="f-group"><label class="f-label">From Date <span class="req">*</span></label><input type="date" class="f-ctrl" id="pd-from"></div>
+              <div class="f-group"><label class="f-label">To Date <span class="req">*</span></label><input type="date" class="f-ctrl" id="pd-to"></div>
+            </div>
+            <div class="f-row">
+              <div class="f-group mb0">
+                <label class="f-label">Type</label>
+                <select class="f-sel" id="pd-type"><option value="">All (Inspection + Meeting)</option><option>Inspection</option><option>Meeting</option><option>Site Visit</option></select>
+              </div>
+              <div class="f-group mb0">
+                <label class="f-label">Report Style</label>
+                <select class="f-sel" id="pd-style"><option value="diary">Commissioner Diary</option><option value="weekly">Weekly Report</option><option value="monthly">Monthly Summary</option></select>
+              </div>
+            </div>
+            <div style="margin-top:12px;padding:10px 12px;background:rgba(124,58,237,.07);border:1px solid rgba(124,58,237,.2);border-radius:8px;font-size:12.5px;color:#7c3aed">
+              <span class="material-icons-round mi" style="font-size:13px;vertical-align:middle">auto_awesome</span>
+              AI reads your notes and generates crisp, professional diary entries. Each inspection or meeting is summarised into 2-3 lines suitable for the Commissioner's monthly diary.
+            </div>
+            <div id="pdPreview" style="margin-top:10px;font-size:12px;color:var(--tx3)"></div>
+          </div>
+          <div class="modal-ft">
+            <button class="btn btn-ghost" onclick="closeModal('mPlDiary')">Cancel</button>
+            <button class="btn btn-ghost" onclick="generatePlDiary('excel')"><span class="material-icons-round mi">table_chart</span> Excel</button>
+            <button class="btn btn-primary" onclick="generatePlDiary('pdf')"><span class="material-icons-round mi">picture_as_pdf</span> PDF Diary</button>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -1841,42 +1894,6 @@ tbody tr:hover { background: var(--surface2); }
                 <span style="background:var(--surface);border:1px solid var(--border);border-radius:999px;padding:3px 10px;font-size:11.5px;color:var(--tx2)">&#10003; Mobile Responsive</span>
                 <span style="background:var(--surface);border:1px solid var(--border);border-radius:999px;padding:3px 10px;font-size:11.5px;color:var(--tx2)">&#10003; Dark &amp; Light Theme</span>
               </div>
-            </div>
-          </div>
-        </div>
-        <div class="card mb16">
-          <div class="card-hd"><span class="card-title">&#128241; Install as App on Your Phone</span></div>
-          <div class="card-bd">
-            <p style="font-size:13px;color:var(--tx2);margin-bottom:14px">Add this portal to your phone home screen — it works just like a native app with no App Store needed.</p>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-              <div style="background:var(--surface2);border-radius:10px;padding:14px">
-                <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
-                  <span class="material-icons-round mi" style="color:#34a853;font-size:20px">android</span>
-                  <strong style="font-size:13px">Android (Chrome)</strong>
-                </div>
-                <ol style="font-size:12px;color:var(--tx2);padding-left:16px;line-height:1.8">
-                  <li>Open the app URL in Chrome</li>
-                  <li>Tap the <strong>&#8942; menu</strong> (3 dots, top right)</li>
-                  <li>Tap <strong>"Add to Home screen"</strong></li>
-                  <li>Tap <strong>Add</strong> to confirm</li>
-                </ol>
-              </div>
-              <div style="background:var(--surface2);border-radius:10px;padding:14px">
-                <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
-                  <span class="material-icons-round mi" style="color:#555;font-size:20px">phone_iphone</span>
-                  <strong style="font-size:13px">iPhone (Safari)</strong>
-                </div>
-                <ol style="font-size:12px;color:var(--tx2);padding-left:16px;line-height:1.8">
-                  <li>Open the app URL in Safari</li>
-                  <li>Tap the <strong>Share</strong> icon &#x2399;</li>
-                  <li>Scroll down &amp; tap <strong>"Add to Home Screen"</strong></li>
-                  <li>Tap <strong>Add</strong> to confirm</li>
-                </ol>
-              </div>
-            </div>
-            <div style="margin-top:12px;padding:10px 12px;background:rgba(29,78,216,.08);border-radius:8px;font-size:12px;color:var(--c-blue)">
-              <span class="material-icons-round mi" style="font-size:15px;vertical-align:middle">info</span>
-              Once installed, the app opens fullscreen like a native app — no browser bar, no address bar. Share the URL via WhatsApp or SMS so officials can install it on their phones.
             </div>
           </div>
         </div>
@@ -2075,7 +2092,7 @@ tbody tr:hover { background: var(--surface2); }
       </div>
       <div class="f-group"><label class="f-label">Progress Remarks</label><textarea class="f-ctrl" id="pu-remarks" rows="3" placeholder="Describe progress, actions taken, or observations..."></textarea></div>
       <div class="f-group mb0">
-        <label class="f-label">Attach Photos / Files <span style="font-size:10px;color:var(--tx3)">(Optional — max 5, 2MB each)</span></label>
+        <label class="f-label">Attach Photos / Files <span style="font-size:10px;color:var(--tx3)">(Optional — max 5, 10MB each)</span></label>
         <!-- Source selection -->
         <div class="flex-c gap8 mb8">
           <button type="button" class="btn btn-ghost btn-sm" onclick="document.getElementById('photoInput').click()"><span class="material-icons-round mi">upload</span> From Device</button>
@@ -2085,7 +2102,7 @@ tbody tr:hover { background: var(--surface2); }
         <div id="photoDropZone" style="border:2px dashed var(--border);border-radius:10px;padding:20px;text-align:center;cursor:pointer;background:var(--surface2);transition:border-color .2s" onclick="document.getElementById('photoInput').click()" ondragover="event.preventDefault();this.style.borderColor='var(--c-blue)'" ondragleave="this.style.borderColor='var(--border)'" ondrop="handlePhotoDrop(event)">
           <span class="material-icons-round mi" style="font-size:32px;color:var(--tx3);display:block;margin-bottom:6px">add_photo_alternate</span>
           <div style="font-size:12.5px;font-weight:600;color:var(--tx2)">Tap to select or drag &amp; drop</div>
-          <div style="font-size:11px;color:var(--tx3);margin-top:3px">JPG, PNG, WEBP, PDF · Max 5 files · 2MB each</div>
+          <div style="font-size:11px;color:var(--tx3);margin-top:3px">JPG, PNG, WEBP, PDF · Max 5 files · 10MB each</div>
         </div>
         <input type="file" id="photoInput" accept="image/*,.pdf" multiple style="display:none" onchange="handlePhotoSelect(this.files)">
         <!-- Drive link input -->
@@ -2270,15 +2287,15 @@ tbody tr:hover { background: var(--surface2); }
             <span class="material-icons-round" style="font-size:14px;color:#fff">camera_alt</span>
           </div>
         </div>
-        <div>
+        <div style="flex:1">
           <div style="color:#fff;font-size:17px;font-weight:800" id="mpDisplayName">Loading...</div>
           <div style="color:rgba(255,255,255,.6);font-size:12px;margin-top:3px" id="mpDisplayRole"></div>
           <div style="color:rgba(255,255,255,.5);font-size:11px;margin-top:2px" id="mpDisplayDept"></div>
-          <div style="margin-top:10px">
+          <div style="margin-top:10px;display:flex;gap:6px;flex-wrap:wrap">
             <button class="btn btn-ghost btn-sm" onclick="document.getElementById('mpPhotoInput').click()" style="background:rgba(255,255,255,.12);border-color:rgba(255,255,255,.25);color:#fff;font-size:11px">
-              <span class="material-icons-round mi">add_a_photo</span> Change Photo
+              <span class="material-icons-round mi">add_a_photo</span> Photo
             </button>
-            <button class="btn btn-ghost btn-sm" onclick="mpRemovePhoto()" style="background:rgba(255,255,255,.07);border-color:rgba(255,255,255,.15);color:rgba(255,255,255,.6);font-size:11px;margin-left:6px">
+            <button class="btn btn-ghost btn-sm" onclick="mpRemovePhoto()" style="background:rgba(255,255,255,.07);border-color:rgba(255,255,255,.15);color:rgba(255,255,255,.6);font-size:11px">
               <span class="material-icons-round mi">delete</span> Remove
             </button>
           </div>
@@ -2288,35 +2305,54 @@ tbody tr:hover { background: var(--surface2); }
 
       <!-- Tabs -->
       <div style="display:flex;border-bottom:2px solid var(--border)">
-        <div id="mpTab1" onclick="mpSwitchTab(1)" style="padding:11px 18px;font-size:13px;font-weight:700;cursor:pointer;border-bottom:3px solid var(--c-blue);color:var(--c-blue);margin-bottom:-2px">&#9998; Edit Profile</div>
-        <div id="mpTab2" onclick="mpSwitchTab(2)" style="padding:11px 18px;font-size:13px;font-weight:600;cursor:pointer;color:var(--tx3);margin-bottom:-2px;border-bottom:3px solid transparent">&#128274; Change Password</div>
+        <div id="mpTab1" onclick="mpSwitchTab(1)" style="padding:11px 18px;font-size:13px;font-weight:700;cursor:pointer;border-bottom:3px solid var(--c-blue);color:var(--c-blue);margin-bottom:-2px">&#128100; Profile</div>
+        <div id="mpTab2" onclick="mpSwitchTab(2)" style="padding:11px 18px;font-size:13px;font-weight:600;cursor:pointer;color:var(--tx3);margin-bottom:-2px;border-bottom:3px solid transparent">&#128274; Password</div>
       </div>
 
-      <!-- Tab 1: Edit Profile -->
-      <div id="mpSection1" style="padding:18px">
-        <div class="f-row">
-          <div class="f-group">
-            <label class="f-label">Employee ID</label>
-            <input type="text" class="f-ctrl" id="mp-empid" placeholder="EMP001">
+      <!-- Tab 1: View / Edit Profile -->
+      <div id="mpSection1" style="padding:16px">
+        <!-- VIEW mode (default) -->
+        <div id="mpViewMode">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px 16px;margin-bottom:14px">
+            <div><div style="font-size:10px;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">Employee ID</div><div style="font-size:14px;font-weight:600" id="mpV-empid">—</div></div>
+            <div><div style="font-size:10px;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">Username</div><div style="font-size:14px;font-weight:600" id="mpV-username">—</div></div>
+            <div><div style="font-size:10px;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">Mobile</div><div style="font-size:14px;font-weight:600" id="mpV-mobile">—</div></div>
+            <div><div style="font-size:10px;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">Email</div><div style="font-size:14px;font-weight:600" id="mpV-email">—</div></div>
+            <div><div style="font-size:10px;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">Designation</div><div style="font-size:14px;font-weight:600" id="mpV-desig">—</div></div>
+            <div><div style="font-size:10px;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">Department</div><div style="font-size:14px;font-weight:600" id="mpV-dept">—</div></div>
           </div>
-          <div class="f-group">
-            <label class="f-label">Username</label>
-            <input type="text" class="f-ctrl" id="mp-username" placeholder="your.username" autocomplete="off">
-          </div>
+          <button class="btn btn-primary btn-sm" onclick="mpEnableEdit()"><span class="material-icons-round mi">edit</span> Edit Profile</button>
         </div>
-        <div class="f-row">
-          <div class="f-group">
-            <label class="f-label">Mobile Number</label>
-            <input type="tel" class="f-ctrl" id="mp-mobile" placeholder="9876543210" maxlength="15">
+        <!-- EDIT mode (hidden by default) -->
+        <div id="mpEditMode" style="display:none">
+          <div class="f-row">
+            <div class="f-group">
+              <label class="f-label">Employee ID</label>
+              <input type="text" class="f-ctrl" id="mp-empid" placeholder="EMP001">
+            </div>
+            <div class="f-group">
+              <label class="f-label">Username <span id="mpUsernameNote" style="font-size:10px;color:var(--tx3)"></span></label>
+              <input type="text" class="f-ctrl" id="mp-username" placeholder="your.username" autocomplete="off">
+            </div>
           </div>
-          <div class="f-group mb0">
-            <label class="f-label">Email Address</label>
-            <input type="email" class="f-ctrl" id="mp-email" placeholder="name@corp.gov.in">
+          <div class="f-row">
+            <div class="f-group">
+              <label class="f-label">Mobile Number</label>
+              <input type="tel" class="f-ctrl" id="mp-mobile" placeholder="9876543210" maxlength="15">
+            </div>
+            <div class="f-group mb0">
+              <label class="f-label">Email Address</label>
+              <input type="email" class="f-ctrl" id="mp-email" placeholder="name@corp.gov.in">
+            </div>
           </div>
-        </div>
-        <div style="background:var(--surface2);border-radius:8px;padding:10px 12px;font-size:12px;color:var(--tx3);margin-top:4px">
-          <span class="material-icons-round mi" style="font-size:14px;vertical-align:middle">info</span>
-          Name, Designation, Department and Zone can only be changed by the Admin through User Management.
+          <div style="background:var(--surface2);border-radius:8px;padding:9px 12px;font-size:11.5px;color:var(--tx3);margin-top:4px;margin-bottom:12px">
+            <span class="material-icons-round mi" style="font-size:13px;vertical-align:middle">info</span>
+            Name, Designation, Department and Zone can only be changed by Admin.
+          </div>
+          <div style="display:flex;gap:8px">
+            <button class="btn btn-primary" onclick="mpSave()"><span class="material-icons-round mi">save</span> Save</button>
+            <button class="btn btn-ghost" onclick="mpCancelEdit()">Cancel</button>
+          </div>
         </div>
       </div>
 
@@ -2334,13 +2370,13 @@ tbody tr:hover { background: var(--surface2); }
           <label class="f-label">Confirm New Password <span class="req">*</span></label>
           <input type="password" class="f-ctrl" id="mp-confirm" placeholder="Re-enter new password">
         </div>
+        <div style="margin-top:14px">
+          <button class="btn btn-primary" onclick="mpSavePassword()"><span class="material-icons-round mi">lock</span> Change Password</button>
+        </div>
       </div>
 
     </div>
-    <div class="modal-ft" id="mpFooter">
-      <button class="btn btn-ghost" onclick="closeModal('mMyProfile')">Cancel</button>
-      <button class="btn btn-primary" id="mpSaveBtn" onclick="mpSave()"><span class="material-icons-round mi">save</span> Save Changes</button>
-    </div>
+    <div class="modal-ft" id="mpFooter" style="display:none"></div>
   </div>
 </div>
 <div class="modal-bg" id="mBulkImport">
@@ -2859,12 +2895,19 @@ function loadActivityLog(){
   });
 }
 function loadTasks(){
+  var isOfficer=(S.user&&S.user.role==='Officer');
+  // Officers get server-side filtered tasks — much faster
+  var fn = isOfficer ? 'serverGetOfficerTasks' : 'serverGetTasks';
+  var args = isOfficer ? [S.token] : [S.token, {}];
   showLoader('Loading tasks...');
-  gasCall('serverGetTasks',S.token,{}).then(function(r){
+  gasCall.apply(null, [fn].concat(args)).then(function(r){
     hideLoader();
-    if(!r||!r.success){var tb=id('tBody');if(tb)tb.innerHTML='<tr><td colspan="10"><div class="empty"><span class="material-icons-round mi">error_outline</span><h3>Could not load tasks</h3><p>'+(r?r.message:'Unknown error')+'</p><button class="btn btn-primary" style="margin-top:12px" onclick="loadTasks()">Retry</button></div></td></tr>';return;}
+    if(!r||!r.success){
+      var tb=id('tBody');
+      if(tb)tb.innerHTML='<tr><td colspan="11"><div class="empty"><span class="material-icons-round mi">error_outline</span><h3>Could not load tasks</h3><p>'+(r?r.message:'Unknown error')+'</p><button class="btn btn-primary" style="margin-top:12px" onclick="loadTasks()">Retry</button></div></td></tr>';
+      return;
+    }
     S.tasks=normalizeTaskList(r.data||[]);S.filtered=S.tasks.slice();
-    // Reset any previous selection when tasks reload
     var bb=id('bulkBar');if(bb){bb.style.display='none';bb.classList.add('dn');}
     var chkAll=id('chkAll');if(chkAll){chkAll.checked=false;chkAll.indeterminate=false;}
     if(S.drillFilter)applyDrillFilter();
@@ -3191,8 +3234,8 @@ function handlePhotoSelect(files){addPhotos(Array.prototype.slice.call(files));}
 function handlePhotoDrop(e){e.preventDefault();var dz=id('photoDropZone');if(dz)dz.style.borderColor='var(--border)';var files=[];for(var i=0;i<e.dataTransfer.files.length;i++){var f=e.dataTransfer.files[i];if(f.type.indexOf('image/')===0||f.type==='application/pdf')files.push(f);}addPhotos(files);}
 function addPhotos(files){
   var rem=5-S.selPhotos.length-S.driveLinks.length,skipped=0;
-  for(var i=0;i<files.length&&i<rem;i++){if(files[i].size>2*1024*1024){skipped++;continue;}S.selPhotos.push(files[i]);}
-  if(skipped)toast(skipped+' file(s) skipped - over 2MB.','info');renderPhotoPreview();
+  for(var i=0;i<files.length&&i<rem;i++){if(files[i].size>10*1024*1024){skipped++;continue;}S.selPhotos.push(files[i]);}
+  if(skipped)toast(skipped+' file(s) skipped - over 10MB.','info');renderPhotoPreview();
 }
 function addDriveLink(){var dlr=id('driveLinkRow');if(dlr){dlr.classList.remove('dn');dlr.style.display='flex';var inp=id('driveLinkInput');if(inp)inp.focus();}}
 function hideDriveLink(){var dlr=id('driveLinkRow');if(dlr)dlr.classList.add('dn');}
@@ -3675,38 +3718,30 @@ function updateMultiOfficerBtn(){
 // ── PHOTO LOG ────────────────────────────────────────────────
 var PL={photos:[],entries:[]};
 function loadPhotoLog(){
-  // Set defaults
   var pd=id('pl-date');if(pd&&!pd.value)pd.value=new Date().toISOString().slice(0,10);
-  var pt=id('pl-time');if(pt&&!pt.value){var now=new Date();pt.value=String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0');}
-  // Load entries from server
+  var pt=id('pl-time');if(pt&&!pt.value){var now=new Date();pt.value=String(now.getHours()).padStart?zeroPad(now.getHours(),2)+':'+zeroPad(now.getMinutes(),2):now.getHours()+':'+now.getMinutes();}
   showLoader('Loading photo logs...');
   gasCall('serverGetPhotoLogs',S.token).then(function(r){
     hideLoader();
-    if(r&&r.success){PL.entries=r.data||[];plRenderCards(PL.entries);}
+    if(r&&r.success){PL.entries=r.data||[];plToggleView('list');}
   });
 }
-function plToggleView(){
-  var fv=id('plFormView'),lv=id('plListView'),btn=id('plViewToggle');
-  if(fv.style.display==='none'){
-    fv.style.display=''; lv.style.display='none';
-    if(btn){btn.innerHTML='<span class="material-icons-round mi">view_list</span> View Entries';}
-  } else {
-    fv.style.display='none'; lv.style.display='';
-    if(btn){btn.innerHTML='<span class="material-icons-round mi">add_circle</span> New Entry';}
-    plRenderCards(PL.entries);
-  }
+function plToggleView(view){
+  var fv=id('plFormView'),lv=id('plListView');
+  if(view==='form'){if(fv)fv.style.display='block';if(lv)lv.style.display='none';}
+  else{if(fv)fv.style.display='none';if(lv)lv.style.display='block';plRenderCards(PL.entries);}
 }
 function plUpdateNotesLabel(){
   var type=V('pl-type'),lbl=id('pl-notes-label');if(!lbl)return;
-  var map={Inspection:'Inspection Observations',Meeting:'Meeting Notes','Site Visit':'Site Visit Remarks'};
-  lbl.textContent=map[type]||'Notes';
+  var map={Inspection:'Inspection Observations & Findings',Meeting:'Meeting Notes & Decisions','Site Visit':'Site Visit Remarks'};
+  lbl.textContent=(map[type]||'Notes');
 }
 function handlePlPhotoSelect(files){plAddPhotos(Array.prototype.slice.call(files));}
-function handlePlPhotoDrop(e){e.preventDefault();id('plDropZone').style.borderColor='var(--border)';var files=[];for(var i=0;i<e.dataTransfer.files.length;i++){var f=e.dataTransfer.files[i];if(f.type.indexOf('image/')===0)files.push(f);}plAddPhotos(files);}
+function handlePlPhotoDrop(e){e.preventDefault();var el=id('plDropZone');if(el)el.style.borderColor='var(--border)';var files=[];for(var i=0;i<e.dataTransfer.files.length;i++){var f=e.dataTransfer.files[i];if(f.type.indexOf('image/')===0)files.push(f);}plAddPhotos(files);}
 function plAddPhotos(files){
   var rem=5-PL.photos.length,skipped=0;
-  for(var i=0;i<files.length&&i<rem;i++){if(files[i].size>2*1024*1024){skipped++;continue;}PL.photos.push(files[i]);}
-  if(skipped)toast(skipped+' photo(s) over 2MB skipped.','info');
+  for(var i=0;i<files.length&&i<rem;i++){if(files[i].size>10*1024*1024){skipped++;continue;}PL.photos.push(files[i]);}
+  if(skipped)toast(skipped+' photo(s) over 10MB skipped.','info');
   plRenderPhotoPreview();
 }
 function plRenderPhotoPreview(){
@@ -3714,15 +3749,14 @@ function plRenderPhotoPreview(){
   var html='';
   for(var i=0;i<PL.photos.length;i++){
     var url=URL.createObjectURL(PL.photos[i]);
-    html+='<div style="position:relative;width:72px;height:72px;border-radius:8px;overflow:hidden;border:1px solid var(--border);flex-shrink:0">'
-      +'<img src="'+url+'" style="width:100%;height:100%;object-fit:cover">'
-      +'<button onclick="PL.photos.splice('+i+',1);plRenderPhotoPreview()" style="position:absolute;top:2px;right:2px;background:rgba(0,0,0,.6);border:none;border-radius:50%;width:18px;height:18px;color:#fff;cursor:pointer;font-size:12px;line-height:18px;text-align:center;padding:0">&times;</button></div>';
+    html+='<div style="position:relative;width:72px;height:72px;border-radius:8px;overflow:hidden;border:1px solid var(--border);flex-shrink:0"><img src="'+url+'" style="width:100%;height:100%;object-fit:cover"><button onclick="PL.photos.splice('+i+',1);plRenderPhotoPreview()" style="position:absolute;top:2px;right:2px;background:rgba(0,0,0,.6);border:none;border-radius:50%;width:18px;height:18px;color:#fff;cursor:pointer;font-size:12px;line-height:18px;text-align:center;padding:0">&times;</button></div>';
   }
   pp.innerHTML=html;
 }
 function savePlEntry(){
   var date=V('pl-date'),time=V('pl-time'),type=V('pl-type'),zone=V('pl-zone'),loc=V('pl-location'),notes=V('pl-notes');
-  if(!date||!time||!type||!zone){toast('Date, Time, Type and Zone are required.','error');return;}
+  if(!date||!type||!zone){toast('Date, Type and Zone are required.','error');return;}
+  if(!notes.trim()){toast('Please enter notes / observations.','error');return;}
   var entry={date:date,time:time,type:type,zone:zone,location:loc,notes:notes,photos:''};
   if(PL.photos.length===0){doSavePlEntry(entry);return;}
   showLoader('Uploading photos...');
@@ -3742,10 +3776,9 @@ function doSavePlEntry(entry){
   gasCall('serverSavePhotoLog',S.token,entry).then(function(r){
     hideLoader();
     if(r&&r.success){
-      toast('Photo log entry saved!','ok');
-      clearPlForm();
-      entry.logID=r.logID;entry.createdBy=S.user?S.user.name:'';entry.createdAt=new Date().toISOString();
-      PL.entries.unshift(entry);
+      toast('Entry saved!','ok');
+      entry.logID=r.logID||('LOG'+Date.now());entry.createdBy=S.user?S.user.name:'';entry.createdAt=new Date().toISOString();
+      PL.entries.unshift(entry);clearPlForm();plToggleView('list');
     } else toast((r&&r.message)||'Save failed.','error');
   });
 }
@@ -3753,74 +3786,177 @@ function clearPlForm(){
   var f=['pl-date','pl-time','pl-type','pl-zone','pl-location','pl-notes'];
   for(var i=0;i<f.length;i++){var e=id(f[i]);if(e)e.value='';}
   var pd=id('pl-date');if(pd)pd.value=new Date().toISOString().slice(0,10);
-  var pt=id('pl-time');if(pt){var now=new Date();pt.value=String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0');}
   PL.photos=[];plRenderPhotoPreview();
 }
 function plRenderCards(entries){
+  var strip=id('plSummaryStrip');
+  if(strip){
+    var ic=0,mc=0,sc=0,pc=0;
+    for(var i=0;i<entries.length;i++){
+      if(entries[i].type==='Inspection')ic++;else if(entries[i].type==='Meeting')mc++;else sc++;
+      if(entries[i].photos&&entries[i].photos.trim()){var ps=entries[i].photos.split('\n').filter(function(p){return p.trim();});pc+=ps.length;}
+    }
+    strip.innerHTML='<div style="background:rgba(29,78,216,.08);border:1px solid rgba(29,78,216,.2);border-radius:8px;padding:8px 14px;font-size:12.5px;color:#1d4ed8;display:flex;gap:4px;align-items:center"><span class="material-icons-round mi" style="font-size:14px">search</span><strong>'+ic+'</strong> Inspections</div>'
+      +'<div style="background:rgba(5,150,105,.08);border:1px solid rgba(5,150,105,.2);border-radius:8px;padding:8px 14px;font-size:12.5px;color:#059669;display:flex;gap:4px;align-items:center"><span class="material-icons-round mi" style="font-size:14px">groups</span><strong>'+mc+'</strong> Meetings</div>'
+      +(sc>0?'<div style="background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.2);border-radius:8px;padding:8px 14px;font-size:12.5px;color:#d97706;display:flex;gap:4px;align-items:center"><span class="material-icons-round mi" style="font-size:14px">location_on</span><strong>'+sc+'</strong> Site Visits</div>':'')
+      +'<div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 14px;font-size:12.5px;color:var(--tx2);display:flex;gap:4px;align-items:center"><span class="material-icons-round mi" style="font-size:14px">photo_camera</span><strong>'+pc+'</strong> Photos</div>';
+  }
   var el=id('plCards');if(!el)return;
-  var pc=id('plCount');if(pc)pc.textContent=entries.length+' entr'+(entries.length===1?'y':'ies');
-  if(!entries.length){el.innerHTML='<div class="empty"><span class="material-icons-round mi">photo_library</span><h3>No entries yet</h3><p>Add your first photo log entry</p></div>';return;}
-  var typeColors={Inspection:'var(--c-blue)',Meeting:'var(--c-teal)','Site Visit':'var(--c-gold)'};
+  var pc2=id('plCount');if(pc2)pc2.textContent=entries.length+' entr'+(entries.length===1?'y':'ies');
+  if(!entries.length){el.innerHTML='<div class="empty"><span class="material-icons-round mi">photo_library</span><h3>No entries yet</h3><p>Tap New above to add your first Photo Log entry.</p></div>';return;}
+  var months=['','January','February','March','April','May','June','July','August','September','October','November','December'];
+  var typeColors={Inspection:{bg:'rgba(29,78,216,.08)',c:'#1d4ed8',border:'rgba(29,78,216,.2)',icon:'search'},Meeting:{bg:'rgba(5,150,105,.08)',c:'#059669',border:'rgba(5,150,105,.2)',icon:'groups'},'Site Visit':{bg:'rgba(245,158,11,.08)',c:'#d97706',border:'rgba(245,158,11,.2)',icon:'location_on'}};
+  var monthGroups={},monthOrder=[];
+  for(var i=0;i<entries.length;i++){var mk=entries[i].date?entries[i].date.slice(0,7):'Unknown';if(!monthGroups[mk]){monthGroups[mk]=[];monthOrder.push(mk);}monthGroups[mk].push(entries[i]);}
   var html='';
-  for(var i=0;i<entries.length;i++){
-    var e=entries[i],col=typeColors[e.type]||'var(--c-blue)';
-    var photoCount=e.photos?e.photos.split('\n').filter(function(p){return p.trim();}).length:0;
-    html+='<div class="card mb10" style="cursor:pointer" onclick="plExpandCard(this,'+i+')">'
-      +'<div class="card-bd" style="display:flex;gap:12px;align-items:flex-start">'
-      +'<div style="text-align:center;min-width:48px;flex-shrink:0">'
-      +'<div style="font-size:18px;font-weight:800;color:var(--tx1)">'+e.date.split('-').slice(2).join('')+'</div>'
-      +'<div style="font-size:10px;color:var(--tx3)">'+(['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][parseInt(e.date.split('-')[1])-1]||'')+'</div>'
-      +'<div style="font-size:10px;color:var(--tx3)">'+e.time+'</div>'
-      +'</div>'
-      +'<div style="flex:1;min-width:0">'
-      +'<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">'
-      +'<span style="background:'+col+'22;color:'+col+';border:1px solid '+col+'44;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:700">'+e.type+'</span>'
-      +'<span style="font-size:12px;color:var(--tx3)">'+e.zone+'</span>'
-      +(e.location?'<span style="font-size:12px;color:var(--tx3)">\u00b7 '+e.location+'</span>':'')
-      +(photoCount>0?'<span style="font-size:12px;color:var(--c-teal);margin-left:auto"><span class="material-icons-round mi" style="font-size:13px;vertical-align:middle">attach_file</span>'+photoCount+'</span>':'')
-      +'</div>'
-      +'<div style="font-size:13px;color:var(--tx2);line-height:1.5;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical">'+e.notes+'</div>'
-      +'<div id="pl-expand-'+i+'" style="display:none;margin-top:10px;padding-top:10px;border-top:1px solid var(--border)">'
-      +'<div style="font-size:13px;color:var(--tx2);line-height:1.65;margin-bottom:8px">'+e.notes+'</div>'
-      +(photoCount>0?plPhotoThumbs(e.photos):'')
-      +'</div>'
-      +'</div>'
-      +'</div>'
-      +'</div>';
+  for(var mi=0;mi<monthOrder.length;mi++){
+    var mk=monthOrder[mi],mEntries=monthGroups[mk],parts=mk.split('-');
+    var mLabel=parts.length===2?months[parseInt(parts[1])]+(parts[0]?' '+parts[0]:''):mk;
+    html+='<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--tx3);padding:10px 0 6px;border-bottom:1px solid var(--border);margin-bottom:10px">'+mLabel+' &middot; '+mEntries.length+' entries</div>';
+    for(var ei=0;ei<mEntries.length;ei++){
+      var e=mEntries[ei],tc=typeColors[e.type]||typeColors['Site Visit'];
+      var photoLinks=e.photos?e.photos.split('\n').filter(function(p){return p.trim();}).length:0;
+      var eid='plx_'+mi+'_'+ei;
+      html+='<div class="card mb10" style="cursor:pointer;border-left:4px solid '+tc.border+'" data-eid="'+eid+'" onclick="plToggleCard(this.dataset.eid)">'
+        +'<div class="card-bd" style="padding:12px 14px">'
+        +'<div style="display:flex;gap:10px;align-items:flex-start">'
+        +'<div style="text-align:center;min-width:44px;flex-shrink:0">'
+        +'<div style="font-size:20px;font-weight:800;color:var(--tx1);line-height:1">'+e.date.split('-').slice(2).join('')+'</div>'
+        +'<div style="font-size:10px;color:var(--tx3)">'+months[parseInt((e.date||'0-0').split('-')[1]||1)].slice(0,3)+'</div>'
+        +(e.time?'<div style="font-size:10px;color:var(--tx3)">'+e.time+'</div>':'')+'</div>'
+        +'<div style="flex:1;min-width:0">'
+        +'<div style="display:flex;align-items:center;gap:6px;margin-bottom:5px;flex-wrap:wrap">'
+        +'<span style="background:'+tc.bg+';color:'+tc.c+';border:1px solid '+tc.border+';padding:2px 9px;border-radius:999px;font-size:11px;font-weight:700;display:flex;align-items:center;gap:3px"><span class="material-icons-round" style="font-size:12px">'+tc.icon+'</span>'+e.type+'</span>'
+        +'<span style="font-size:12px;color:var(--tx3)">'+e.zone+(e.location?' &middot; '+e.location:'')+'</span>'
+        +(photoLinks>0?'<span style="font-size:12px;color:var(--c-teal);margin-left:auto"><span class="material-icons-round mi" style="font-size:13px;vertical-align:middle">photo_camera</span>'+photoLinks+'</span>':'')+'</div>'
+        +'<div id="pl-preview-'+eid+'" style="font-size:13px;color:var(--tx2);line-height:1.55;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical">'+e.notes+'</div>'
+        +'<div id="pl-full-'+eid+'" style="display:none;margin-top:10px">'
+        +'<div style="font-size:13px;color:var(--tx2);line-height:1.65;white-space:pre-wrap;padding:10px;background:var(--surface2);border-radius:8px;margin-bottom:8px">'+e.notes+'</div>'
+        +(photoLinks>0?'<div style="display:flex;gap:6px;flex-wrap:wrap">'+plPhotoThumbs(e.photos)+'</div>':'')
+        +'</div></div></div></div></div>';
+    }
   }
   el.innerHTML=html;
+}
+function plToggleCard(eid){
+  var preview=id('pl-preview-'+eid),full=id('pl-full-'+eid);if(!full)return;
+  var isOpen=full.style.display!=='none';
+  full.style.display=isOpen?'none':'block';
+  if(preview)preview.style.display=isOpen?'':'none';
 }
 function plPhotoThumbs(photosStr){
   if(!photosStr)return'';
   var links=photosStr.split('\n').filter(function(p){return p.trim();});
-  var html='<div style="display:flex;flex-wrap:wrap;gap:6px">';
-  for(var i=0;i<links.length;i++){
-    html+='<a href="'+links[i].trim()+'" target="_blank" style="display:inline-flex;align-items:center;gap:4px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:4px 8px;font-size:11.5px;color:var(--c-blue);text-decoration:none">'
-      +'<span class="material-icons-round mi" style="font-size:14px">photo</span>Photo '+(i+1)+'</a>';
-  }
-  return html+'</div>';
-}
-function plExpandCard(card,idx){
-  var exp=id('pl-expand-'+idx);if(!exp)return;
-  var isOpen=exp.style.display!=='none';
-  // Close all others
-  var allExp=document.querySelectorAll('[id^="pl-expand-"]');
-  for(var i=0;i<allExp.length;i++)allExp[i].style.display='none';
-  exp.style.display=isOpen?'none':'block';
+  var html='';
+  for(var i=0;i<links.length;i++){html+='<a href="'+links[i].trim()+'" target="_blank" style="display:inline-flex;align-items:center;gap:4px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:4px 10px;font-size:12px;color:var(--c-blue);text-decoration:none"><span class="material-icons-round mi" style="font-size:14px">photo</span>Photo '+(i+1)+'</a>';}
+  return html;
 }
 function plFilter(){
-  var type=V('plFType'),zone=V('plFZone'),month=V('plFMonth');
-  var filtered=PL.entries.filter(function(e){
-    if(type&&e.type!==type)return false;
-    if(zone&&e.zone!==zone)return false;
-    if(month&&e.date.split('-')[1]!==month)return false;
-    return true;
-  });
+  var type=V('plFType'),zone=V('plFZone'),month=V('plFMonth'),filtered=[];
+  for(var i=0;i<PL.entries.length;i++){
+    var e=PL.entries[i];
+    if(type&&e.type!==type)continue;
+    if(zone&&e.zone!==zone)continue;
+    if(month&&e.date&&e.date.split('-')[1]!==month)continue;
+    filtered.push(e);
+  }
   plRenderCards(filtered);
 }
 function plClearFilter(){
   var f=['plFType','plFZone','plFMonth'];for(var i=0;i<f.length;i++){var e=id(f[i]);if(e)e.value='';}
   plRenderCards(PL.entries);
+}
+// ── AI DIARY ────────────────────────────────────────────────
+function showPlDiaryModal(){plDiaryPeriod('month');openModal('mPlDiary');}
+function plDiaryPeriod(period){
+  var now=new Date(),from=new Date(),to=new Date();
+  if(period==='week'){var day=now.getDay()||7;from.setDate(now.getDate()-(day-1));to.setDate(from.getDate()+6);}
+  else if(period==='lastweek'){var day=now.getDay()||7;to.setDate(now.getDate()-day);from.setDate(to.getDate()-6);}
+  else if(period==='month'){from=new Date(now.getFullYear(),now.getMonth(),1);to=new Date(now.getFullYear(),now.getMonth()+1,0);}
+  else if(period==='lastmonth'){from=new Date(now.getFullYear(),now.getMonth()-1,1);to=new Date(now.getFullYear(),now.getMonth(),0);}
+  var fi=id('pd-from'),ti=id('pd-to');
+  if(fi)fi.value=from.toISOString().slice(0,10);if(ti)ti.value=to.toISOString().slice(0,10);
+  var fromS=from.toISOString().slice(0,10),toS=to.toISOString().slice(0,10),count=0;
+  for(var i=0;i<PL.entries.length;i++){var d=PL.entries[i].date;if(d>=fromS&&d<=toS)count++;}
+  var pv=id('pdPreview');if(pv)pv.innerHTML='<div style="padding:8px 10px;background:var(--surface2);border-radius:7px;color:var(--tx2)"><strong>'+count+'</strong> entries will be included.</div>';
+}
+function generatePlDiary(fmt){
+  var from=V('pd-from'),to=V('pd-to'),type=V('pd-type'),style=V('pd-style');
+  if(!from||!to){toast('Please select a date range.','error');return;}
+  var entries=[];
+  for(var i=0;i<PL.entries.length;i++){var e=PL.entries[i];if(e.date<from||e.date>to)continue;if(type&&e.type!==type)continue;entries.push(e);}
+  if(!entries.length){toast('No entries in selected period.','info');return;}
+  closeModal('mPlDiary');
+  if(fmt==='excel'){exportPlDiaryExcel(entries,from,to);return;}
+  showLoader('AI is generating diary...');
+  var notesText='';
+  for(var i=0;i<entries.length;i++){var e=entries[i];notesText+='---\nDate: '+e.date+' '+e.time+'\nType: '+e.type+'\nZone: '+e.zone+(e.location?' | Location: '+e.location:'')+' \nNotes: '+e.notes+'\n';}
+  var styleMap={diary:"Write as Commissioner's official diary. 2-3 crisp sentences per entry, past tense, third person, formal government style. Format: Date | Type | Summary.",weekly:"Weekly activity report. Group by type. Each item: date, location, 1-sentence summary and action.",monthly:"Monthly summary. Date-wise one-liners: Date | Type | Location | Short Summary."};
+  var prompt='You are an administrative assistant for Salem City Municipal Corporation. Generate a professional '+style+' for the Commissioner.\n\n'+(styleMap[style]||styleMap.diary)+'\n\nPeriod: '+from+' to '+to+'\nEntries:\n'+notesText+'\n\nOutput only the diary content. Be concise and formal.';
+  fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1000,messages:[{role:'user',content:prompt}]})})
+  .then(function(r){return r.json();})
+  .then(function(data){
+    hideLoader();
+    var aiText='';
+    if(data&&data.content&&data.content[0]&&data.content[0].text)aiText=data.content[0].text;
+    else aiText=plBasicDiary(entries,style,from,to);
+    exportPlDiaryPDF(entries,aiText,style,from,to);
+  }).catch(function(){hideLoader();exportPlDiaryPDF(entries,plBasicDiary(entries,style,from,to),style,from,to);});
+}
+function plBasicDiary(entries,style,from,to){
+  var months=['','January','February','March','April','May','June','July','August','September','October','November','December'];
+  var lines=[];
+  for(var i=0;i<entries.length;i++){
+    var e=entries[i],d=new Date(e.date),dateStr=d.getDate()+' '+months[d.getMonth()]+' '+d.getFullYear();
+    var summary=e.notes.split('.')[0].trim();
+    lines.push(dateStr+' | '+e.type+' | '+(e.location||e.zone)+' | '+summary+'.');
+  }
+  return lines.join('\n');
+}
+function exportPlDiaryPDF(entries,aiText,style,from,to){
+  var titles={diary:"Commissioner's Diary",weekly:'Weekly Activity Report',monthly:'Monthly Summary'};
+  var title=titles[style]||titles.diary;
+  var months=['','Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  var typeColors={Inspection:'#1d4ed8',Meeting:'#059669','Site Visit':'#d97706'};
+  var rows='';
+  for(var i=0;i<entries.length;i++){
+    var e=entries[i],col=typeColors[e.type]||'#475569';
+    var d=new Date(e.date),dateStr=d.getDate()+' '+months[d.getMonth()]+' '+d.getFullYear();
+    var pc=e.photos?e.photos.split('\n').filter(function(p){return p.trim();}).length:0;
+    rows+='<tr><td style="padding:7px 9px;font-size:9.5px;font-weight:700;color:#0b1f45;white-space:nowrap">'+dateStr+(e.time?'<br><span style="font-weight:400;color:#94a3b8">'+e.time+'</span>':'')+' </td>'
+      +'<td style="padding:7px 9px"><span style="background:'+col+'22;color:'+col+';border:1px solid '+col+'44;padding:2px 7px;border-radius:4px;font-size:9px;font-weight:700">'+e.type+'</span></td>'
+      +'<td style="padding:7px 9px;font-size:9.5px;color:#475569">'+e.zone+(e.location?'<br><em>'+e.location+'</em>':'')+' </td>'
+      +'<td style="padding:7px 9px;font-size:10px;color:#1e293b">'+e.notes.substring(0,180)+'</td>'
+      +'<td style="padding:7px 9px;text-align:center;font-size:9.5px;color:#0ea5e9">'+(pc>0?pc:'\u2014')+'</td></tr>';
+  }
+  var css='@page{size:A4;margin:15mm}*{box-sizing:border-box;margin:0;padding:0}body{font-family:"Segoe UI",Arial,sans-serif;font-size:11px;color:#1e293b;background:#fff}.hband{background:linear-gradient(135deg,#0b1f45,#1a3a6b);color:#fff;padding:18px 22px;display:flex;justify-content:space-between;align-items:center}.gbar{height:4px;background:linear-gradient(90deg,#f59e0b,#d97706)}.ai-box{background:#f5f3ff;border:1px solid #ddd6fe;border-radius:8px;padding:14px 16px;margin:16px 0;font-size:11px;line-height:1.75;color:#1e293b;white-space:pre-wrap}.sechd{display:flex;align-items:center;gap:8px;margin:16px 0 10px;padding-bottom:5px;border-bottom:2px solid #0b1f45}.sechd h2{font-size:11px;font-weight:800;color:#0b1f45;text-transform:uppercase;letter-spacing:.07em}table{width:100%;border-collapse:collapse}thead tr{background:#0b1f45;color:#fff}thead th{padding:7px 9px;text-align:left;font-size:9px;font-weight:700;text-transform:uppercase}tbody tr:nth-child(even){background:#f8fafc}.fband{margin-top:16px;border-top:2px solid #e2e8f0;padding-top:7px;display:flex;justify-content:space-between;font-size:8.5px;color:#94a3b8}@media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact}}';
+  var now=new Date(),dateStr2=now.toLocaleDateString('en-IN',{day:'2-digit',month:'long',year:'numeric'});
+  var aiHtml=aiText.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');
+  var html='<!DOCTYPE html><html><head><meta charset="UTF-8"><title>'+title+'</title><style>'+css+'</style></head><body>'
+    +'<div class="hband"><div>'
+    +'<div style="font-size:14px;font-weight:800">Salem City Municipal Corporation</div>'
+    +'<div style="font-size:9px;color:rgba(255,255,255,.6);margin-top:2px;text-transform:uppercase;letter-spacing:.05em">Tamil Nadu Government \u00b7 Urban Local Body</div>'
+    +'</div><div style="text-align:right">'
+    +'<div style="font-size:16px;font-weight:800">'+title+'</div>'
+    +'<div style="font-size:9px;color:rgba(255,255,255,.6);margin-top:3px">'+from+' to '+to+'</div>'
+    +'</div></div>'
+    +'<div class="gbar"></div>'
+    +'<div style="padding:14px 0">'
+    +'<div class="sechd"><h2>\u2728 AI-Generated Summary</h2></div>'
+    +'<div class="ai-box"><div style="font-size:9px;font-weight:700;color:#7c3aed;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">Summarised by Claude AI from field notes</div>'+aiHtml+'</div>'
+    +'<div class="sechd"><h2>Complete Entry Log</h2></div>'
+    +'<table><thead><tr><th>Date &amp; Time</th><th>Type</th><th>Zone / Location</th><th>Notes</th><th>Photos</th></tr></thead><tbody>'+rows+'</tbody></table>'
+    +'<div class="fband"><div><strong>Salem City Municipal Corporation</strong> \u00b7 Photo Log \u00b7 '+title+'<br>Period: '+from+' to '+to+' \u00b7 Generated: '+dateStr2+'</div>'
+    +'<div style="text-align:right">'+entries.length+' entries \u00b7 '+(S.user?S.user.name:'Admin')+'</div></div>'
+    +'</div><scr'+'ipt>window.onload=function(){setTimeout(function(){window.print();},500);};<\/scr'+'ipt></body></html>';
+  var w=window.open('','_blank');
+  if(w){w.document.write(html);w.document.close();}
+  else toast('Allow pop-ups to generate PDF.','info');
+}
+function exportPlDiaryExcel(entries,from,to){
+  var rows=[['Salem City Municipal Corporation - Photo Log Export'],['Period: '+from+' to '+to],[],['Date','Time','Type','Zone','Location','Notes','Photos']];
+  for(var i=0;i<entries.length;i++){var e=entries[i];rows.push([e.date,e.time,e.type,e.zone,e.location||'','"'+(e.notes||'').replace(/"/g,'"')+'"',e.photos||'']);}
+  dlFile(rows.map(function(r){return r.join(',');}).join('\n'),'PhotoLog_'+from+'_to_'+to+'.csv','text/csv');
 }
 function buildCritical(){
   var el=id('criticalList');if(!el)return;
@@ -3963,6 +4099,9 @@ function loadSettings(){
 }
 function renderSettings(){
   var ld=S.lookup;if(!ld)return;
+  // Show current logo in settings
+  var existingLogo=LS.get('sc-logo');
+  updateSettingsLogoPreview(existingLogo||null);
   var aml=id('aiMapList');
   if(aml){
     var html='',maps=ld.aiMappings||[];
@@ -4003,6 +4142,15 @@ function deleteMapping(keyword){
     if(r&&r.success){toast('Mapping "'+keyword+'" deleted.','ok');loadLookup().then(function(){renderSettings();});}
     else toast((r&&r.message)||'Delete failed.','error');
   });
+}
+function openLogoModal(){
+  var wrap=id('logoPreviewWrap');
+  if(wrap){
+    var existing=LS.get('sc-logo');
+    if(existing){wrap.innerHTML='<img src="'+existing+'" style="width:80px;height:80px;border-radius:50%;object-fit:cover;border:2px solid var(--border)"><div style="font-size:11px;color:var(--tx3);margin-top:4px">Current logo</div>';}
+    else{wrap.innerHTML='<span class="material-icons-round mi" style="font-size:48px;color:var(--tx3)">add_photo_alternate</span>';}
+  }
+  openModal('mLogoUpload');
 }
 function initDB(){
   if(!confirm('Initialize all Google Sheet tables? Run only once during initial setup.'))return;
@@ -4078,35 +4226,49 @@ function saveNewDesig(){
 function previewLogo(input){
   if(!input.files||!input.files[0])return;
   var f=input.files[0];
-  if(f.size>500*1024){toast('Logo must be under 500KB.','error');return;}
   var reader=new FileReader();
   reader.onload=function(e){
-    var wrap=id('logoPreviewWrap');
-    if(wrap)wrap.innerHTML='<img src="'+e.target.result+'" style="width:80px;height:80px;border-radius:50%;object-fit:cover;border:2px solid var(--border)">';
-    S._pendingLogo=e.target.result;
+    // Resize logo to max 200x200px and quality 0.7 so it fits in Sheets (under 40KB base64)
+    var img=new Image();
+    img.onload=function(){
+      var canvas=document.createElement('canvas');
+      var maxSize=200;
+      var scale=Math.min(maxSize/img.width, maxSize/img.height, 1);
+      canvas.width=Math.round(img.width*scale);
+      canvas.height=Math.round(img.height*scale);
+      var ctx=canvas.getContext('2d');
+      ctx.drawImage(img,0,0,canvas.width,canvas.height);
+      // Try quality 0.7, if still too large reduce further
+      var dataUrl=canvas.toDataURL('image/jpeg',0.7);
+      if(dataUrl.length>50000) dataUrl=canvas.toDataURL('image/jpeg',0.4);
+      S._pendingLogo=dataUrl;
+      var wrap=id('logoPreviewWrap');
+      if(wrap)wrap.innerHTML='<img src="'+dataUrl+'" style="width:80px;height:80px;border-radius:50%;object-fit:cover;border:2px solid var(--border)"><div style="font-size:11px;color:var(--tx3);margin-top:4px">'+Math.round(dataUrl.length/1024)+'KB (resized)</div>';
+    };
+    img.src=e.target.result;
   };
   reader.readAsDataURL(f);
 }
 
 function applyLogo(){
   if(!S._pendingLogo){toast('Please choose a logo file first.','error');return;}
-  var logoData = S._pendingLogo;
-  // Save to localStorage for instant load on this device
-  LS.set('sc-logo', logoData);
+  var logoData=S._pendingLogo;
+  LS.set('sc-logo',logoData);
   applyLogoToUI(logoData);
-  // Pre-render PWA icon
   if(window.refreshPWAIcon) window.refreshPWAIcon(logoData);
-  // Save to Google Sheets so ALL devices load it automatically
-  showLoader('Saving logo to server...');
-  gasCall('serverSaveLogo', S.token, logoData).then(function(r){
+  // Save to server for universal sync
+  showLoader('Saving logo...');
+  gasCall('serverSaveLogo',S.token,logoData).then(function(r){
     hideLoader();
-    if(r && r.success){
-      toast('Logo saved! It will appear for all users on their next login.','ok');
+    if(r&&r.success){
+      toast('Logo saved and will appear for all users on next load.','ok');
     } else {
-      toast('Logo saved on this device. Server save failed: '+(r?r.message:''),'info');
+      // Size too large for Sheets — it works locally but won't sync
+      toast('Logo saved on this device. To sync to all devices, use a smaller logo image (under 200KB).','info');
     }
+    updateSettingsLogoPreview(logoData);
   });
-  S._pendingLogo = null;
+  S._pendingLogo=null;
   closeModal('mLogoUpload');
 }
 
@@ -4115,11 +4277,20 @@ function removeLogo(){
   try{localStorage.removeItem('sc-pwa-icon');}catch(e){}
   applyLogoToUI(null);
   if(window.refreshPWAIcon) window.refreshPWAIcon(null);
-  // Remove from server too
-  if(S.token){
-    gasCall('serverSaveLogo', S.token, '').then(function(){});
+  if(S.token) gasCall('serverSaveLogo',S.token,'').then(function(){});
+  updateSettingsLogoPreview(null);
+  toast('Logo removed.','info');
+}
+
+function updateSettingsLogoPreview(dataUrl){
+  var el=id('settingsLogoPreview');if(!el)return;
+  if(dataUrl){
+    el.innerHTML='<img src="'+dataUrl+'" style="width:56px;height:56px;border-radius:50%;object-fit:cover;border:2px solid var(--border);display:block">'
+      +'<div style="font-size:12px;color:var(--c-green);margin-top:6px;font-weight:500">&#10003; Logo active</div>';
+  } else {
+    el.innerHTML='<div style="width:56px;height:56px;border-radius:50%;background:linear-gradient(135deg,#0b1f45,#1a3a6b);display:flex;align-items:center;justify-content:center;color:#fff;font-size:20px;font-weight:800">SC</div>'
+      +'<div style="font-size:12px;color:var(--tx3);margin-top:6px">No logo set</div>';
   }
-  toast('Logo removed for all users.','info');
 }
 
 function applyLogoToUI(dataUrl){
@@ -4436,22 +4607,109 @@ function showMyProfile(){
   var u = S.user; if(!u) return;
   MP.photo = null; MP.tab = 1;
   mpSwitchTab(1);
-  // Fill display header
+  // Show whatever we have immediately
+  mpPopulateView(u);
+  // Load saved photo
+  var savedPhoto = LS.get('sc-photo-' + u.userID);
+  mpSetAvatarDisplay(savedPhoto || null, u.name);
+  openModal('mMyProfile');
+  // Fetch full fresh profile from server
+  showLoader('Loading profile...');
+  gasCall('serverGetMyProfile', S.token).then(function(r){
+    hideLoader();
+    if(r && r.success){
+      // Merge fresh data into S.user
+      S.user.employeeID  = r.employeeID;
+      S.user.mobile      = r.mobile;
+      S.user.email       = r.email;
+      S.user.username    = r.username;
+      S.user.designation = r.designation;
+      S.user.department  = r.department;
+      S.user.zone        = r.zone;
+      LS.set('sc-usr', JSON.stringify(S.user));
+      mpPopulateView(S.user);
+    }
+  });
+}
+
+function mpPopulateView(u){
+  // Header
   var dn=id('mpDisplayName'); if(dn) dn.textContent=u.name||'';
   var dr=id('mpDisplayRole'); if(dr) dr.textContent=u.role||'';
-  var dd=id('mpDisplayDept'); if(dd) dd.textContent=(u.designation||'')+(u.department?' \u00b7 '+u.department:'');
-  // Fill edit fields from user object
-  var me=id('mp-empid');    if(me) me.value=u.employeeID||'';
-  var mu=id('mp-username'); if(mu) mu.value=u.username||'';
-  var mm=id('mp-mobile');   if(mm) mm.value=u.mobile||'';
-  var mel=id('mp-email');   if(mel) mel.value=u.email||'';
-  // Clear password fields
-  var f=['mp-current','mp-new','mp-confirm'];
-  for(var i=0;i<f.length;i++){var e=id(f[i]);if(e)e.value='';}
-  // Load saved photo
-  var savedPhoto=LS.get('sc-photo-'+u.userID);
-  mpSetAvatarDisplay(savedPhoto||null, u.name);
-  openModal('mMyProfile');
+  var dd=id('mpDisplayDept'); if(dd) dd.textContent=(u.designation||'')+(u.department?'\u00b7 '+u.department:'');
+  // View mode fields
+  var fields=[['mpV-empid',u.employeeID],['mpV-username',u.username],['mpV-mobile',u.mobile],['mpV-email',u.email],['mpV-desig',u.designation],['mpV-dept',u.department]];
+  for(var i=0;i<fields.length;i++){var el=id(fields[i][0]);if(el)el.textContent=fields[i][1]||'\u2014';}
+}
+
+function mpEnableEdit(){
+  var u=S.user;
+  // Fill edit fields
+  var ef=[['mp-empid',u.employeeID],['mp-mobile',u.mobile],['mp-email',u.email]];
+  for(var i=0;i<ef.length;i++){var el=id(ef[i][0]);if(el)el.value=ef[i][1]||'';}
+  // Username: editable only for Admin, read-only for Officer
+  var unEl=id('mp-username'),unNote=id('mpUsernameNote');
+  var isOfficer=(u.role==='Officer');
+  if(unEl){unEl.value=u.username||'';unEl.readOnly=isOfficer;unEl.style.background=isOfficer?'var(--surface2)':'';}
+  if(unNote)unNote.textContent=isOfficer?'(read-only for officers)':'';
+  id('mpViewMode').style.display='none';
+  id('mpEditMode').style.display='block';
+}
+
+function mpCancelEdit(){
+  id('mpViewMode').style.display='block';
+  id('mpEditMode').style.display='none';
+}
+
+function mpSwitchTab(tab){
+  MP.tab=tab;
+  var s1=id('mpSection1'),s2=id('mpSection2'),t1=id('mpTab1'),t2=id('mpTab2');
+  if(tab===1){
+    if(s1)s1.style.display='block';if(s2)s2.style.display='none';
+    if(t1){t1.style.borderBottomColor='var(--c-blue)';t1.style.color='var(--c-blue)';}
+    if(t2){t2.style.borderBottomColor='transparent';t2.style.color='var(--tx3)';}
+    // Go back to view mode when switching tabs
+    var vm=id('mpViewMode'),em=id('mpEditMode');
+    if(vm)vm.style.display='block';if(em)em.style.display='none';
+  } else {
+    if(s1)s1.style.display='none';if(s2)s2.style.display='block';
+    if(t1){t1.style.borderBottomColor='transparent';t1.style.color='var(--tx3)';}
+    if(t2){t2.style.borderBottomColor='var(--c-blue)';t2.style.color='var(--c-blue)';}
+    var f=['mp-current','mp-new','mp-confirm'];for(var i=0;i<f.length;i++){var e=id(f[i]);if(e)e.value='';}
+  }
+}
+
+function mpSave(){
+  mpSaveProfile();
+}
+
+function mpSaveProfile(){
+  var u=S.user,isOfficer=(u&&u.role==='Officer');
+  var empid    = V('mp-empid').trim();
+  var username = isOfficer ? (u.username||'') : V('mp-username').trim(); // officers cannot change username
+  var mobile   = V('mp-mobile').trim();
+  var email    = V('mp-email').trim();
+  if(!username){toast('Username cannot be empty.','error');return;}
+  showLoader('Saving profile...');
+  gasCall('serverUpdateProfile', S.token, {
+    employeeID: empid, username: username, mobile: mobile, email: email
+  }).then(function(r){
+    hideLoader();
+    if(r && r.success){
+      S.user.employeeID=empid;S.user.username=username;S.user.mobile=mobile;S.user.email=email;
+      LS.set('sc-usr',JSON.stringify(S.user));
+      if(MP.photo==='__remove__'){
+        LS.del('sc-photo-'+S.user.userID);mpSetAvatarDisplay(null,S.user.name);
+      } else if(MP.photo){
+        LS.set('sc-photo-'+S.user.userID,MP.photo);mpSetAvatarDisplay(MP.photo,S.user.name);
+      }
+      MP.photo=null;
+      mpPopulateView(S.user);
+      mpCancelEdit();
+      if(S.users.length) loadUsers();
+      toast('Profile updated!','ok');
+    } else toast((r&&r.message)||'Update failed.','error');
+  });
 }
 
 function mpSwitchTab(tab){
