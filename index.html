@@ -1428,8 +1428,8 @@ tbody tr:hover { background: var(--surface2); }
                 <select class="f-sel" id="t-priority"><option value="">Select</option><option>High</option><option>Medium</option><option>Low</option></select>
               </div>
               <div class="f-group">
-                <label class="f-label">Department <span class="req">*</span></label>
-                <select class="f-sel" id="t-dept" onchange="filterOfficers()"></select>
+                <label class="f-label">Designation</label>
+                <select class="f-sel" id="t-desig"></select>
               </div>
             </div>
             <div class="f-group">
@@ -1596,7 +1596,17 @@ tbody tr:hover { background: var(--surface2); }
             <table>
               <thead><tr>
                 <th id="thChk" style="width:36px;display:none"><input type="checkbox" id="chkAll" onchange="toggleSelectAll(this)" style="width:16px;height:16px;cursor:pointer" title="Select all"></th>
-                <th>Task ID</th><th>Type</th><th>Description</th><th>Zone</th><th>Dept</th><th>Officer</th><th>Priority</th><th>Inspection Date</th><th>Due Date</th><th>Status</th><th>Actions</th>
+                <th onclick="sortBy('taskID')" style="cursor:pointer;white-space:nowrap">Task ID <span id="sort-taskID"></span></th>
+                <th onclick="sortBy('taskType')" style="cursor:pointer;white-space:nowrap">Type <span id="sort-taskType"></span></th>
+                <th>Description</th>
+                <th onclick="sortBy('zone')" style="cursor:pointer;white-space:nowrap">Zone <span id="sort-zone"></span></th>
+                <th onclick="sortBy('department')" style="cursor:pointer;white-space:nowrap">Dept <span id="sort-department"></span></th>
+                <th onclick="sortBy('officerName')" style="cursor:pointer;white-space:nowrap">Officer <span id="sort-officerName"></span></th>
+                <th onclick="sortBy('priority')" style="cursor:pointer;white-space:nowrap">Priority <span id="sort-priority"></span></th>
+                <th onclick="sortBy('dateAssigned')" style="cursor:pointer;white-space:nowrap">Insp. Date <span id="sort-dateAssigned"></span></th>
+                <th onclick="sortBy('dueDate')" style="cursor:pointer;white-space:nowrap">Due Date <span id="sort-dueDate"></span></th>
+                <th onclick="sortBy('status')" style="cursor:pointer;white-space:nowrap">Status <span id="sort-status"></span></th>
+                <th>Actions</th>
               </tr></thead>
               <tbody id="tBody"></tbody>
             </table>
@@ -2470,7 +2480,7 @@ tbody tr:hover { background: var(--surface2); }
 <div id="toasts"></div>
 <script>
 var LS={get:function(k){try{return localStorage.getItem(k);}catch(e){return null;}},set:function(k,v){try{localStorage.setItem(k,v);}catch(e){}},del:function(k){try{localStorage.removeItem(k);}catch(e){}}};
-var S={token:null,user:null,lookup:null,tasks:[],users:[],filtered:[],drillFilter:'',page:'dashboard',allowedPages:[],theme:LS.get('sc-theme')||'light',charts:{},exportCtx:'tracker',aiTasks:[],selPhotos:[],driveLinks:[]};
+var S={token:null,user:null,lookup:null,tasks:[],users:[],filtered:[],drillFilter:'',page:'dashboard',allowedPages:[],theme:LS.get('sc-theme')||'light',charts:{},exportCtx:'tracker',aiTasks:[],selPhotos:[],driveLinks:[],sortCol:'dateAssigned',sortDir:1};
 // ── GAS URL for GitHub Pages hosting ─────────────────────────
 // When hosted on GitHub Pages, set this to your GAS /exec URL
 // When hosted on GAS itself, leave as empty string ''
@@ -2966,6 +2976,24 @@ function clearFilters(){
   S.filtered=S.tasks.slice();var s=id('filterSummary');if(s)s.classList.add('dn');
   renderTable(S.filtered);renderKanban(S.filtered);updateTaskCount();
 }
+var PRIORITY_ORDER={'High':1,'Medium':2,'Low':3};
+function sortBy(col){
+  if(S.sortCol===col){S.sortDir*=-1;}else{S.sortCol=col;S.sortDir=1;}
+  // Update sort indicators
+  var cols=['taskID','taskType','zone','department','officerName','priority','dateAssigned','dueDate','status'];
+  for(var i=0;i<cols.length;i++){var el=id('sort-'+cols[i]);if(el)el.textContent='';}
+  var el=id('sort-'+col);if(el)el.textContent=S.sortDir===1?' ▲':' ▼';
+  // Sort filtered tasks
+  S.filtered.sort(function(a,b){
+    var av=a[col]||'',bv=b[col]||'';
+    if(col==='priority'){av=PRIORITY_ORDER[av]||9;bv=PRIORITY_ORDER[bv]||9;return(av-bv)*S.sortDir;}
+    if(col==='dateAssigned'||col==='dueDate'||col==='createdAt'){
+      av=av?av.slice(0,10):'9999';bv=bv?bv.slice(0,10):'9999';
+    }
+    return av<bv?-S.sortDir:av>bv?S.sortDir:0;
+  });
+  renderTable(S.filtered);renderKanban(S.filtered);
+}
 function renderTable(tasks){
   var tbody=id('tBody');if(!tbody)return;
   var tc=id('taskCount');if(tc)tc.textContent=tasks.length+' task'+(tasks.length!==1?'s':'');
@@ -3029,7 +3057,8 @@ function getTaskForm(){
   }
   return{
     taskType:V('t-type'),zone:V('t-zone'),dateAssigned:V('t-date'),time:V('t-time'),
-    priority:V('t-priority'),department:V('t-dept'),
+    priority:V('t-priority'),
+    department: MO.officers.length>0 ? MO.officers[0].department : (V('t-add-dept')||''),
     designation:designation,
     officerID:officerID,officerName:officerName,
     description:V('t-desc'),dueDate:V('t-due'),
@@ -3037,12 +3066,16 @@ function getTaskForm(){
   };
 }
 function validateTask(d){
-  var req=[['taskType','Task Type'],['zone','Zone'],['dateAssigned','Date Assigned'],['priority','Priority'],['department','Department'],['officerID','Officer'],['description','Task Description']];
+  var req=[['taskType','Task Type'],['zone','Zone'],['dateAssigned','Date Assigned'],['priority','Priority'],['description','Task Description']];
   for(var i=0;i<req.length;i++){if(!d[req[i][0]]){toast('Please fill: '+req[i][1],'error');return false;}}
   return true;
 }
 function saveTask(){
-  var d=getTaskForm();if(!validateTask(d))return;
+  // If officers added to list, use multi-save
+  if(MO.officers.length>0){saveTaskMultiOfficer();return;}
+  var d=getTaskForm();
+  if(!d.taskType||!d.zone||!d.priority||!d.description){toast('Please fill all required fields.','error');return;}
+  if(!d.officerID){toast('Please add at least one officer.','error');return;}
   showLoader('Saving task...');
   gasCall('serverCreateTask',S.token,d).then(function(r){
     hideLoader();
@@ -3051,15 +3084,13 @@ function saveTask(){
   });
 }
 function clearTaskForm(){
-  var ids=['t-type','t-zone','t-priority','t-dept','t-desig','t-attach'];
+  var ids=['t-type','t-zone','t-priority','t-desig','t-attach'];
   for(var i=0;i<ids.length;i++){var e=id(ids[i]);if(e)e.value='';}
   var td=id('t-desc');if(td)td.value='';
   var ti=id('t-time');if(ti)ti.value='';
   var tdu=id('t-due');if(tdu)tdu.value='';
   var tda=id('t-date');if(tda)tda.value=new Date().toISOString().slice(0,10);
-  // Reset multi-officer assignment
   clearMultiOfficerList();
-  // Re-init the dept dropdown for add-officer row
   initAddOfficerDepts();
 }
 function previewTask(){
@@ -3115,28 +3146,28 @@ function taskDetailHTML(t){
       +'</div>';
   }
 
-  // Photos — show as thumbnails if Drive links, else as clickable links
+  // Photos — inline grid with timestamp
   if(t.photoLinks&&t.photoLinks.trim()){
     var links=t.photoLinks.split('\n').filter(function(p){return p.trim();});
     if(links.length){
-      html+='<div>'
-        +'<div style="font-size:10px;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:7px">Attached Photos ('+links.length+')</div>'
-        +'<div style="display:flex;flex-wrap:wrap;gap:8px">';
-      for(var i=0;i<links.length;i++){
-        var lnk=links[i].trim();
-        // Try to render as image if it looks like a direct image URL
-        var isImg=/\.(jpg|jpeg|png|gif|webp)(\?|$)/i.test(lnk);
-        var isDrive=lnk.indexOf('drive.google.com')>=0||lnk.indexOf('docs.google.com')>=0;
-        if(isImg){
-          html+='<a href="'+lnk+'" target="_blank" style="display:block;width:80px;height:80px;border-radius:8px;overflow:hidden;border:1px solid var(--border)">'
-            +'<img src="'+lnk+'" style="width:100%;height:100%;object-fit:cover" onerror="this.parentNode.innerHTML=\'Photo '+(i+1)+'\'">'
-            +'</a>';
-        } else {
-          html+='<a href="'+lnk+'" target="_blank" style="display:inline-flex;align-items:center;gap:5px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:6px 12px;font-size:12px;color:var(--c-blue);text-decoration:none">'
-            +'<span class="material-icons-round mi" style="font-size:16px">'+(isDrive?'folder':'attach_file')+'</span>'
-            +(isDrive?'Drive File':'Photo '+(i+1))
-            +'</a>';
-        }
+      html+='<div style="margin-top:12px">'
+        +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">'
+        +'<div style="font-size:10px;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em">&#128247; Officer Photos ('+links.length+')</div>'
+        +(t.updatedAt?'<div style="font-size:10.5px;color:var(--tx3)">Uploaded: '+fDateShort(t.updatedAt)+(t.updatedBy?' by <strong>'+t.updatedBy+'</strong>':'')+'</div>':'')
+        +'</div>'
+        +'<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:8px">';
+      for(var pi=0;pi<links.length;pi++){
+        var lnk=links[pi].trim();
+        var imgSrc=driveToImgUrl(lnk);
+        html+='<a href="'+lnk+'" target="_blank" title="Tap to view full size" '
+          +'style="display:block;border-radius:10px;overflow:hidden;border:2px solid var(--border);background:var(--surface2);aspect-ratio:1">'
+          +'<img src="'+imgSrc+'" alt="Photo '+(pi+1)+'" loading="lazy" '
+          +'style="width:100%;height:100%;object-fit:cover;display:block" '
+          +'onerror="this.style.display=\'none\';this.nextSibling.style.display=\'flex\'">'
+          +'<div style="display:none;width:100%;height:100%;align-items:center;justify-content:center;flex-direction:column;gap:4px;padding:8px">'
+          +'<span class="material-icons-round" style="font-size:28px;color:var(--tx3)">photo_camera</span>'
+          +'<span style="font-size:9px;color:var(--tx3);text-align:center">Photo '+(pi+1)+'<br><span style="font-size:9px">Tap to open</span></span>'
+          +'</div></a>';
       }
       html+='</div></div>';
     }
@@ -3659,7 +3690,9 @@ function exportPDF(tasks,context){
   function priColor(p){return p==='High'?'#be123c':p==='Medium'?'#b45309':'#15803d';}
   function pct(c,t){return t>0?Math.round(c/t*100):0;}
   function progBar(r){var bc=r>=70?'#22c55e':r>=40?'#f59e0b':'#ef4444';return'<div style="display:flex;align-items:center;gap:4px"><div style="width:60px;background:#e2e8f0;border-radius:999px;height:6px;overflow:hidden"><div style="height:100%;border-radius:999px;background:'+bc+';width:'+r+'%"></div></div><span style="font-size:9px;font-weight:700;color:'+bc+'">'+r+'%</span></div>';}
+  var ZONE_ORDER={'Main Office':1,'Main office':1,'Suramangalam Zone-1':2,'Suramangalam':2,'Hasthampatti Zone-2':3,'Hasthampatti':3,'Ammapet Zone-3':4,'Ammapet':4,'Kondalampatti Zone-4':5,'Kondalampatti':5};
   var zoneRows='',zk=Object.keys(zoneMap);
+  zk.sort(function(a,b){return (ZONE_ORDER[a]||99)-(ZONE_ORDER[b]||99);});
   for(var i=0;i<zk.length;i++){var z=zk[i],s=zoneMap[z],r2=pct(s.completed,s.total);zoneRows+='<tr><td style="padding:7px 9px;font-weight:600">'+z+'</td><td style="padding:7px 9px;text-align:center;font-weight:700">'+s.total+'</td><td style="padding:7px 9px;text-align:center;color:#15803d;font-weight:700">'+s.completed+'</td><td style="padding:7px 9px;text-align:center;color:#b45309">'+s.notCompleted+'</td><td style="padding:7px 9px;text-align:center;color:'+(s.overdue>0?'#be123c':'#64748b')+';font-weight:'+(s.overdue>0?'700':'400')+'">'+s.overdue+'</td><td style="padding:7px 9px">'+progBar(r2)+'</td></tr>';}
   var deptRows='',dk=Object.keys(deptMap);
   for(var i=0;i<dk.length;i++){var d=dk[i],s=deptMap[d],r2=pct(s.completed,s.total);deptRows+='<tr><td style="padding:7px 9px;font-weight:600">'+d+'</td><td style="padding:7px 9px;text-align:center;font-weight:700">'+s.total+'</td><td style="padding:7px 9px;text-align:center;color:#15803d;font-weight:700">'+s.completed+'</td><td style="padding:7px 9px;text-align:center;color:#b45309">'+s.notCompleted+'</td><td style="padding:7px 9px;text-align:center;color:'+(s.overdue>0?'#be123c':'#64748b')+';font-weight:'+(s.overdue>0?'700':'400')+'">'+s.overdue+'</td><td style="padding:7px 9px">'+progBar(r2)+'</td></tr>';}
@@ -4033,27 +4066,38 @@ function plToggleCard(eid){
   full.style.display=isOpen?'none':'block';
   if(preview)preview.style.display=isOpen?'':'none';
 }
+function driveToImgUrl(url){
+  // Convert any Drive URL to uc?export=view which works without Google login
+  if(!url)return'';
+  url=url.trim();
+  // Already uc export — use as-is
+  if(url.indexOf('uc?export=view')>=0)return url;
+  // lh3 format — extract ID and convert
+  if(url.indexOf('lh3.googleusercontent.com/d/')>=0){
+    var fid=url.split('/d/')[1];
+    if(fid)return'https://drive.google.com/uc?export=view&id='+fid.split('?')[0];
+  }
+  // drive.google.com/file/d/ID/view
+  var m=url.match(/\/d\/([a-zA-Z0-9_-]+)/);
+  if(m)return'https://drive.google.com/uc?export=view&id='+m[1];
+  // drive.google.com/uc?...&id=ID or open?id=ID
+  var m2=url.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+  if(m2)return'https://drive.google.com/uc?export=view&id='+m2[1];
+  return url;
+}
+
 function plPhotoThumbs(photosStr){
   if(!photosStr)return'';
   var links=photosStr.split('\n').filter(function(p){return p.trim();});
   if(!links.length)return'';
-  var html='<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:4px">';
+  var html='<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px">';
   for(var i=0;i<links.length;i++){
     var lnk=links[i].trim();
-    // Drive URLs: convert to direct image URL for inline display
-    var imgSrc=lnk;
-    if(lnk.indexOf('drive.google.com/file/d/')>=0){
-      var fid=lnk.split('/file/d/')[1].split('/')[0];
-      imgSrc='https://drive.google.com/uc?export=view&id='+fid;
-    } else if(lnk.indexOf('drive.google.com/open?id=')>=0){
-      var fid=lnk.split('id=')[1];
-      imgSrc='https://drive.google.com/uc?export=view&id='+fid;
-    }
-    // Show as inline thumbnail — tap to open full size
-    html+='<a href="'+lnk+'" target="_blank" style="display:block;border-radius:8px;overflow:hidden;border:1px solid var(--border);flex-shrink:0">'
+    var imgSrc=driveToImgUrl(lnk);
+    html+='<a href="'+lnk+'" target="_blank" style="display:block;width:88px;height:88px;border-radius:8px;overflow:hidden;border:1.5px solid var(--border);flex-shrink:0;background:var(--surface2)">'
       +'<img src="'+imgSrc+'" alt="Photo '+(i+1)+'" loading="lazy" '
-      +'style="width:90px;height:90px;object-fit:cover;display:block" '
-      +'onerror="this.parentNode.style.padding=\'6px 10px\';this.style.display=\'none\';this.parentNode.innerHTML+=\'<span style=\\\"font-size:11px;color:var(--c-blue)\\\">Photo '+(i+1)+'</span>\'">'
+      +'style="width:100%;height:100%;object-fit:cover;display:block" '
+      +'onerror="this.style.display=\'none\';this.parentNode.innerHTML=\'<div style=\\\"width:100%;height:100%;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:4px\\\"><span class=\\\"material-icons-round\\\" style=\\\"font-size:28px;color:var(--c-blue)\\\">photo</span><span style=\\\"font-size:9px;color:var(--tx3)\\\">Photo '+(i+1)+'</span></div>\'">'
       +'</a>';
   }
   html+='</div>';
@@ -4483,38 +4527,46 @@ function previewLogo(input){
 
 function applyLogo(){
   if(!S._pendingLogo){toast('Please choose a logo file first.','error');return;}
-  var logoData=S._pendingLogo;
-  LS.set('sc-logo',logoData);
-  applyLogoToUI(logoData);
-  if(window.refreshPWAIcon) window.refreshPWAIcon(logoData);
-  // Extract base64 from data URL and upload to Google Drive
-  // Drive gives a real URL that works on all devices without size limits
-  showLoader('Uploading logo to server...');
-  var parts=logoData.split(',');
-  var mime=logoData.split(';')[0].split(':')[1]||'image/jpeg';
-  var b64=parts[1]||'';
-  gasCall('serverSaveLogoToDrive',S.token,b64,mime).then(function(r){
-    hideLoader();
-    if(r&&r.success&&r.url){
-      // Save Drive URL locally so PWA icon and all devices load from Drive
-      LS.set('sc-logo-url',r.url);
-      toast('Logo uploaded! Will appear for all users across all devices.','ok');
-      updateSettingsLogoPreview(logoData);
-    } else {
-      // Fallback: save base64 directly to Sheets
-      gasCall('serverSaveLogo',S.token,logoData).then(function(r2){
-        hideLoader();
-        if(r2&&r2.success){
-          toast('Logo saved (limited sync). For full sync use a smaller image.','info');
-        } else {
-          toast('Logo saved on this device only.','info');
-        }
-        updateSettingsLogoPreview(logoData);
-      });
-    }
-  });
-  S._pendingLogo=null;
-  closeModal('mLogoUpload');
+  var originalData=S._pendingLogo;
+
+  // Resize to 100x100 JPEG at quality 0.6 = ~3-5KB = safe for Sheets cell
+  var img=new Image();
+  img.onload=function(){
+    var canvas=document.createElement('canvas');
+    canvas.width=100;canvas.height=100;
+    var ctx=canvas.getContext('2d');
+    // Fill white background first
+    ctx.fillStyle='#ffffff';
+    ctx.fillRect(0,0,100,100);
+    // Scale keeping aspect ratio, center crop
+    var scale=Math.max(100/img.width,100/img.height);
+    var sw=Math.round(img.width*scale),sh=Math.round(img.height*scale);
+    var ox=Math.round((sw-100)/2),oy=Math.round((sh-100)/2);
+    ctx.drawImage(img,0,0,img.width,img.height,-ox,-oy,sw,sh);
+    var tinyBase64=canvas.toDataURL('image/jpeg',0.6);
+    var sizeKB=Math.round(tinyBase64.length*0.75/1024);
+
+    // Apply to UI immediately
+    LS.set('sc-logo',tinyBase64);
+    applyLogoToUI(tinyBase64);
+    if(window.refreshPWAIcon) window.refreshPWAIcon(tinyBase64);
+    updateSettingsLogoPreview(tinyBase64);
+    S._pendingLogo=null;
+    closeModal('mLogoUpload');
+
+    // Save to Sheets — tiny base64 fits perfectly in a cell
+    showLoader('Saving logo ('+sizeKB+'KB)...');
+    gasCall('serverSaveLogo',S.token,tinyBase64).then(function(r){
+      hideLoader();
+      if(r&&r.success){
+        toast('Logo saved! All devices will see it on next page load.','ok');
+      } else {
+        toast('Logo saved on this device. Server error: '+(r?r.message:''),'info');
+      }
+    });
+  };
+  img.onerror=function(){toast('Invalid image file.','error');};
+  img.src=originalData;
 }
 
 function removeLogo(){
@@ -4529,9 +4581,10 @@ function removeLogo(){
 
 function updateSettingsLogoPreview(dataUrl){
   var el=id('settingsLogoPreview');if(!el)return;
-  if(dataUrl){
-    el.innerHTML='<img src="'+dataUrl+'" style="width:56px;height:56px;border-radius:50%;object-fit:cover;border:2px solid var(--border);display:block">'
-      +'<div style="font-size:12px;color:var(--c-green);margin-top:6px;font-weight:500">&#10003; Logo active</div>';
+  if(dataUrl&&dataUrl!=='undefined'&&dataUrl.length>5){
+    // For lh3 URLs we need crossOrigin anonymous to avoid canvas taint issues
+    var imgTag='<img src="'+dataUrl+'" style="width:56px;height:56px;border-radius:50%;object-fit:cover;border:2px solid var(--border);display:block" onerror="this.style.display=\'none\'">';
+    el.innerHTML=imgTag+'<div style="font-size:12px;color:var(--c-green);margin-top:6px;font-weight:500">&#10003; Logo active</div>';
   } else {
     el.innerHTML='<div style="width:56px;height:56px;border-radius:50%;background:linear-gradient(135deg,#0b1f45,#1a3a6b);display:flex;align-items:center;justify-content:center;color:#fff;font-size:20px;font-weight:800">SC</div>'
       +'<div style="font-size:12px;color:var(--tx3);margin-top:6px">No logo set</div>';
@@ -4553,32 +4606,38 @@ function applyLogoToUI(dataUrl){
   }
 }
 
-// Single authoritative loadSavedLogo — no duplicates
+// Single authoritative loadSavedLogo
 function loadSavedLogo(){
+  // 1. Apply cached version instantly
   var cached=LS.get('sc-logo');
-  if(cached&&cached!=='undefined'&&cached.length>5){
+  if(cached&&cached.length>10){
     applyLogoToUI(cached);
     if(window.refreshPWAIcon)window.refreshPWAIcon(cached);
   }
+  // 2. Fetch from server — stored as base64 in Settings sheet
+  //    Works on ALL devices with no redirect, no cross-origin issue
   var url=(typeof GAS_URL!=='undefined'&&GAS_URL)?GAS_URL:null;
   function applyFromServer(r){
     if(!r||!r.success)return;
     var val=String(r.value||'');
     if(val==='undefined'||val==='null')val='';
-    if(val.length>5){
+    if(val.length>100){
+      // Valid base64 data URL — cache and apply
       LS.set('sc-logo',val);
       applyLogoToUI(val);
       if(window.refreshPWAIcon)window.refreshPWAIcon(val);
     } else if(val===''){
+      // Logo was removed — clear local cache
       LS.del('sc-logo');
-      try{localStorage.removeItem('sc-pwa-icon');}catch(e){}
+      try{localStorage.removeItem('sc-pwa-icon');}catch(ex){}
       applyLogoToUI(null);
       if(window.refreshPWAIcon)window.refreshPWAIcon(null);
     }
   }
   if(url){
-    fetch(url,{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'fn=serverGetLogo&payload=[]'})
-    .then(function(r){return r.json();}).then(applyFromServer).catch(function(){});
+    fetch(url,{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},
+      body:'fn=serverGetLogo&payload=[]'})
+      .then(function(r){return r.json();}).then(applyFromServer).catch(function(){});
   } else {
     gasCall('serverGetLogo').then(applyFromServer);
   }
@@ -5014,14 +5073,17 @@ function mpPreviewPhoto(input){
   reader.onload=function(e){
     var img=new Image();
     img.onload=function(){
+      // Resize to 80x80 JPEG at 0.7 quality = ~2-4KB = safe for Sheets cell
       var canvas=document.createElement('canvas');
-      var maxSize=150;
-      var scale=Math.min(maxSize/img.width,maxSize/img.height,1);
-      canvas.width=Math.round(img.width*scale);
-      canvas.height=Math.round(img.height*scale);
-      canvas.getContext('2d').drawImage(img,0,0,canvas.width,canvas.height);
-      var dataUrl=canvas.toDataURL('image/jpeg',0.75);
-      if(dataUrl.length>40000)dataUrl=canvas.toDataURL('image/jpeg',0.4);
+      canvas.width=80;canvas.height=80;
+      var ctx=canvas.getContext('2d');
+      ctx.fillStyle='#ffffff';ctx.fillRect(0,0,80,80);
+      // Center-crop
+      var scale=Math.max(80/img.width,80/img.height);
+      var sw=Math.round(img.width*scale),sh=Math.round(img.height*scale);
+      var ox=Math.round((sw-80)/2),oy=Math.round((sh-80)/2);
+      ctx.drawImage(img,0,0,img.width,img.height,-ox,-oy,sw,sh);
+      var dataUrl=canvas.toDataURL('image/jpeg',0.7);
       MP.photo=dataUrl;
       mpSetAvatarDisplay(dataUrl,S.user?S.user.name:'');
     };
@@ -5039,23 +5101,22 @@ function mpRemovePhoto(){
 
 function loadProfilePhoto(){
   if(!S.user)return;
-  // Show cached version immediately (may be a URL or base64)
+  // Show cached version instantly
   var cached=LS.get('sc-photo-'+S.user.userID);
-  if(cached&&cached!=='undefined'&&cached!=='null'&&cached.length>5){
+  if(cached&&cached.length>10&&cached!=='undefined'){
     mpSetAvatarDisplay(cached,S.user.name);
   }
-  // Always fetch from server — profile photo is now stored as a Drive URL
+  // Fetch from Users sheet col 15 — stored as tiny base64
   gasCall('serverGetProfilePhoto',S.token).then(function(r){
     if(!r||!r.success)return;
     var photo=r.photo||'';
-    // Guard against literal "undefined" string
-    if(photo==='undefined'||photo==='null'||photo.length<5){
-      // No photo on server — clear local cache
+    if(photo==='undefined'||photo==='null'||photo.length<10){
+      // No photo — use initial
       LS.del('sc-photo-'+S.user.userID);
-      if(!cached||cached.length<5) mpSetAvatarDisplay(null,S.user.name);
+      if(!cached||cached.length<10) mpSetAvatarDisplay(null,S.user.name);
       return;
     }
-    // Save to local cache so it loads instantly next time
+    // Valid base64 — cache and show
     LS.set('sc-photo-'+S.user.userID,photo);
     mpSetAvatarDisplay(photo,S.user.name);
   });
@@ -5213,7 +5274,20 @@ function biImportAll(){
   }
   importNext(0);
 }
-function fDateShort(d){if(!d)return'\u2014';try{return new Date(d).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'});}catch(e){return String(d);}}
+function fDateShort(d){
+  if(!d)return'\u2014';
+  try{
+    // If it's already a date string like "2026-06-01", parse as local date
+    // to avoid UTC->local timezone shift (which causes date to show as previous day)
+    var s=String(d).slice(0,10);
+    if(/^\d{4}-\d{2}-\d{2}$/.test(s)){
+      var parts=s.split('-');
+      var dt=new Date(parseInt(parts[0]),parseInt(parts[1])-1,parseInt(parts[2]));
+      return dt.toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'});
+    }
+    return new Date(d).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'});
+  }catch(e){return String(d);}
+}
 function statusClass(s){var m={Pending:'pending','In Progress':'progress',Completed:'completed','Review Pending':'review',Overdue:'overdue',Closed:'closed'};return m[s]||'pending';}
 // Patch loadSettings to also refresh dept/desig lists
 (function(){
