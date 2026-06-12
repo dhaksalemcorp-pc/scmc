@@ -1596,7 +1596,7 @@ tbody tr:hover { background: var(--surface2); }
             <table>
               <thead><tr>
                 <th id="thChk" style="width:36px;display:none"><input type="checkbox" id="chkAll" onchange="toggleSelectAll(this)" style="width:16px;height:16px;cursor:pointer" title="Select all"></th>
-                <th>Task ID</th><th>Type</th><th>Description</th><th>Zone</th><th>Dept</th><th>Officer</th><th>Priority</th><th>Due Date</th><th>Status</th><th>Actions</th>
+                <th>Task ID</th><th>Type</th><th>Description</th><th>Zone</th><th>Dept</th><th>Officer</th><th>Priority</th><th>Inspection Date</th><th>Due Date</th><th>Status</th><th>Actions</th>
               </tr></thead>
               <tbody id="tBody"></tbody>
             </table>
@@ -2280,7 +2280,7 @@ tbody tr:hover { background: var(--surface2); }
 </div>
 <!-- My Profile Modal -->
 <div class="modal-bg" id="mMyProfile">
-  <div class="modal-box" style="max-width:520px">
+  <div class="modal-box" style="max-width:520px;max-height:92vh;overflow-y:auto;display:flex;flex-direction:column">
     <div class="modal-hd">
       <span class="modal-title">&#128100; My Profile</span>
       <button class="modal-close" onclick="closeModal('mMyProfile')"><span class="material-icons-round">close</span></button>
@@ -2987,11 +2987,12 @@ function renderTable(tasks){
       +chkCell
       +'<td><span class="mono" style="color:var(--c-blue)">'+t.taskID+'</span></td>'
       +'<td>'+t.taskType+'</td>'
-      +'<td style="max-width:200px" class="ellipsis" title="'+t.description+'">'+t.description+photoIcon+'</td>'
+      +'<td style="max-width:180px" class="ellipsis" title="'+t.description+'">'+t.description+photoIcon+'</td>'
       +'<td class="nowrap">'+t.zone+'</td>'
       +'<td class="nowrap">'+t.department+'</td>'
       +'<td class="nowrap">'+t.officerName+'</td>'
       +'<td><span class="badge badge-'+t.priority.toLowerCase()+'">'+t.priority+'</span></td>'
+      +'<td class="nowrap">'+fDateShort(t.dateAssigned)+'</td>'
       +'<td class="nowrap'+(t.isOverdue?' text-red':'')+'">'+fDateShort(t.dueDate)+'</td>'
       +'<td><span class="badge badge-'+statusClass(t.status)+'">'+t.status+'</span></td>'
       +'<td><div class="flex-c" style="gap:4px"><button class="btn btn-ghost btn-sm btn-icon" onclick="viewTask(\''+t.taskID+'\')" title="View"><span class="material-icons-round mi">visibility</span></button>'+adminBtns+'</div></td>'
@@ -3633,6 +3634,13 @@ function exportExcel(tasks){
 }
 function exportPDF(tasks,context){
   if(!tasks.length){toast('No tasks to export.','info');return;}
+  // Sort tasks by dateAssigned ascending (oldest first)
+  var sorted=tasks.slice().sort(function(a,b){
+    var da=a.dateAssigned||a.createdAt||'';
+    var db=b.dateAssigned||b.createdAt||'';
+    return da<db?-1:da>db?1:0;
+  });
+  tasks=sorted;
   var now=new Date(),dateStr=now.toLocaleDateString('en-IN',{day:'2-digit',month:'long',year:'numeric'}),timeStr=now.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',hour12:true});
   var reportNo='RPT/'+now.getFullYear()+'/'+String(now.getMonth()+1).padStart(2,'0')+'/'+String(now.getDate()).padStart(2,'0')+'-'+String(now.getHours()).padStart(2,'0')+String(now.getMinutes()).padStart(2,'0');
   var preparedBy=S.user?S.user.name:'Administrator',isComm=(context==='commissioner');
@@ -3656,9 +3664,26 @@ function exportPDF(tasks,context){
   var deptRows='',dk=Object.keys(deptMap);
   for(var i=0;i<dk.length;i++){var d=dk[i],s=deptMap[d],r2=pct(s.completed,s.total);deptRows+='<tr><td style="padding:7px 9px;font-weight:600">'+d+'</td><td style="padding:7px 9px;text-align:center;font-weight:700">'+s.total+'</td><td style="padding:7px 9px;text-align:center;color:#15803d;font-weight:700">'+s.completed+'</td><td style="padding:7px 9px;text-align:center;color:#b45309">'+s.notCompleted+'</td><td style="padding:7px 9px;text-align:center;color:'+(s.overdue>0?'#be123c':'#64748b')+';font-weight:'+(s.overdue>0?'700':'400')+'">'+s.overdue+'</td><td style="padding:7px 9px">'+progBar(r2)+'</td></tr>';}
   var overdueRows='',overdueTasks=[];for(var i=0;i<tasks.length;i++)if(tasks[i].isOverdue)overdueTasks.push(tasks[i]);
-  for(var i=0;i<overdueTasks.length;i++){var t=overdueTasks[i],days=t.dueDate?Math.floor((new Date()-new Date(t.dueDate))/86400000):0;overdueRows+='<tr style="background:#fff1f2"><td style="padding:6px 9px;font-family:monospace;font-size:9px;color:#be123c;font-weight:700">'+t.taskID+'</td><td style="padding:6px 9px;font-size:10px">'+t.description.substring(0,70)+(t.description.length>70?'...':'')+'</td><td style="padding:6px 9px">'+t.zone+'</td><td style="padding:6px 9px">'+t.department+'</td><td style="padding:6px 9px;font-weight:700">'+t.officerName+'</td><td style="padding:6px 9px;color:#be123c;font-weight:700">'+(t.dueDate||'\u2014')+'</td><td style="padding:6px 9px;text-align:center;color:#be123c;font-weight:800">'+days+' day'+(days!==1?'s':'')+'</td></tr>';}
+  for(var i=0;i<overdueTasks.length;i++){var t=overdueTasks[i],days=t.dueDate?Math.floor((new Date()-new Date(t.dueDate))/86400000):0;overdueRows+='<tr style="background:#fff1f2"><td style="padding:6px 9px;font-family:monospace;font-size:9px;color:#be123c;font-weight:700">'+t.taskID+'</td><td style="padding:6px 9px;font-size:10px">'+t.description.substring(0,70)+'</td><td style="padding:6px 9px">'+t.zone+'</td><td style="padding:6px 9px">'+t.department+'</td><td style="padding:6px 9px;font-weight:700">'+t.officerName+'</td><td style="padding:6px 9px;color:#be123c;font-weight:700">'+(t.dueDate||'\u2014')+'</td><td style="padding:6px 9px;text-align:center;color:#be123c;font-weight:800">'+days+' day'+(days!==1?'s':'')+'</td></tr>';}
   var taskRows='';
-  for(var i=0;i<tasks.length;i++){var t=tasks[i],isC=(t.status==='Completed'||t.status==='Closed');taskRows+='<tr style="'+(t.isOverdue?'background:#fff1f2':'')+'"><td style="padding:6px 9px;color:#94a3b8;font-size:9px">'+(i+1)+'</td><td style="padding:6px 9px;font-family:monospace;font-size:9px;color:#1d4ed8;font-weight:700">'+t.taskID+'</td><td style="padding:6px 9px;font-size:10px;max-width:150px">'+t.description.substring(0,80)+(t.description.length>80?'...':'')+'</td><td style="padding:6px 9px;font-size:9.5px">'+t.zone+'</td><td style="padding:6px 9px;font-size:9.5px">'+t.department+'</td><td style="padding:6px 9px;font-size:9.5px;font-weight:600">'+t.officerName+'</td><td style="padding:6px 9px;font-weight:700;color:'+priColor(t.priority)+';font-size:9.5px">'+t.priority+'</td><td style="padding:6px 9px;font-size:9px;'+(t.isOverdue?'color:#be123c;font-weight:700':'')+'">'+( t.dueDate||'Not set')+(t.isOverdue?' \u26a0':'')+'</td><td style="padding:6px 9px"><span style="'+sStyle(t.status)+'">'+t.status+'</span></td><td style="padding:6px 9px;text-align:center;font-weight:700;color:'+(isC?'#15803d':'#b45309')+';font-size:14px">'+(isC?'\u2713':'\u2013')+'</td>'+(isComm?'<td style="padding:6px 9px;font-size:9px;color:#475569">'+(t.officerRemarks?t.officerRemarks.substring(0,50)+'\u2026':'\u2014')+'</td>':'')+'</tr>';}
+  for(var i=0;i<tasks.length;i++){
+    var t=tasks[i],isC=(t.status==='Completed'||t.status==='Closed');
+    // Date of Inspection column added, sorted by dateAssigned
+    taskRows+='<tr style="'+(t.isOverdue?'background:#fff1f2':'')+'">'
+      +'<td style="padding:6px 9px;color:#94a3b8;font-size:9px">'+(i+1)+'</td>'
+      +'<td style="padding:6px 9px;font-family:monospace;font-size:9px;color:#1d4ed8;font-weight:700">'+t.taskID+'</td>'
+      +'<td style="padding:6px 9px;font-size:9px;color:#475569;white-space:nowrap">'+(t.dateAssigned||'\u2014')+'</td>'
+      +'<td style="padding:6px 9px;font-size:10px;max-width:130px">'+t.description.substring(0,70)+(t.description.length>70?'...':'')+'</td>'
+      +'<td style="padding:6px 9px;font-size:9.5px">'+t.zone+'</td>'
+      +'<td style="padding:6px 9px;font-size:9.5px">'+t.department+'</td>'
+      +'<td style="padding:6px 9px;font-size:9.5px;font-weight:600">'+t.officerName+'</td>'
+      +'<td style="padding:6px 9px;font-weight:700;color:'+priColor(t.priority)+';font-size:9.5px">'+t.priority+'</td>'
+      +'<td style="padding:6px 9px;font-size:9px;'+(t.isOverdue?'color:#be123c;font-weight:700':'')+'">'+( t.dueDate||'Not set')+(t.isOverdue?' \u26a0':'')+'</td>'
+      +'<td style="padding:6px 9px"><span style="'+sStyle(t.status)+'">'+t.status+'</span></td>'
+      +'<td style="padding:6px 9px;text-align:center;font-weight:700;color:'+(isC?'#15803d':'#b45309')+';font-size:14px">'+(isC?'\u2713':'\u2013')+'</td>'
+      +(isComm?'<td style="padding:6px 9px;font-size:9px;color:#475569">'+(t.officerRemarks?t.officerRemarks.substring(0,50)+'\u2026':'\u2014')+'</td>':'')
+      +'</tr>';
+  }
   var sigHTML=isComm?'<div style="margin-top:36px;padding:16px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px"><div style="font-size:9.5px;color:#475569;margin-bottom:18px;font-style:italic;text-align:center">This report has been generated from the Salem City Municipal Corporation Task Management System for the Commissioner\'s review and appropriate action.</div><div style="display:flex;gap:40px"><div style="flex:1;text-align:center"><div style="height:36px"></div><div style="border-top:1.5px solid #0b1f45;padding-top:6px"><div style="font-size:11px;font-weight:700;color:#0b1f45">Personal Clerk to Commissioner</div><div style="font-size:9px;color:#64748b;margin-top:2px">Submitted By</div><div style="font-size:9px;color:#94a3b8;margin-top:1px">Date: '+dateStr+'</div></div></div><div style="flex:1;text-align:center"><div style="height:36px"></div><div style="border-top:1.5px solid #0b1f45;padding-top:6px"><div style="font-size:11px;font-weight:700;color:#0b1f45">Commissioner</div><div style="font-size:9px;color:#64748b;margin-top:2px">Salem City Municipal Corporation</div><div style="font-size:9px;color:#94a3b8;margin-top:1px">Date: _______________</div></div></div></div></div>':'';
   var css='@page{size:A4;margin:15mm}*{box-sizing:border-box;margin:0;padding:0}body{font-family:"Segoe UI",Arial,sans-serif;font-size:11px;color:#1e293b;background:#fff;line-height:1.5}.watermark{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%) rotate(-35deg);font-size:80px;font-weight:900;color:rgba(11,31,69,.03);white-space:nowrap;pointer-events:none;letter-spacing:10px}.hband{background:linear-gradient(135deg,#0b1f45,#1a3a6b);color:#fff;display:flex;align-items:stretch}.gbar{width:8px;background:linear-gradient(180deg,#f59e0b,#d97706);flex-shrink:0}.hmain{flex:1;padding:16px 18px;display:flex;justify-content:space-between;align-items:center}.emblem{width:52px;height:52px;background:linear-gradient(135deg,#f59e0b,#d97706);border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-size:20px;font-weight:900;flex-shrink:0}.gdiv{height:3px;background:linear-gradient(90deg,#f59e0b,#d97706,#f59e0b)}.metarow{background:#f8fafc;border-bottom:1px solid #e2e8f0;padding:7px 16px;display:flex;gap:20px;flex-wrap:wrap;font-size:9.5px;color:#475569}.sechd{display:flex;align-items:center;gap:8px;margin:16px 0 10px;padding-bottom:5px;border-bottom:2px solid #0b1f45}.secnum{width:20px;height:20px;background:#0b1f45;color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9.5px;font-weight:800;flex-shrink:0}.sechd h2{font-size:11px;font-weight:800;color:#0b1f45;text-transform:uppercase;letter-spacing:.07em}.kpirow{display:flex;gap:10px;margin-bottom:16px}.kbox{flex:1;border-radius:7px;padding:11px 10px;text-align:center;border:1px solid}.kbox .knum{font-size:22px;font-weight:900;line-height:1}.kbox .klbl{font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;margin-top:3px}.knavy{background:#eff6ff;border-color:#bfdbfe}.knavy .knum,.knavy .klbl{color:#1d4ed8}.kgreen{background:#f0fdf4;border-color:#bbf7d0}.kgreen .knum,.kgreen .klbl{color:#15803d}.kgold{background:#fffbeb;border-color:#fde68a}.kgold .knum,.kgold .klbl{color:#b45309}.kred{background:#fff1f2;border-color:#fecdd3}.kred .knum,.kred .klbl{color:#be123c}.kteal{background:#f0f9ff;border-color:#bae6fd}.kteal .knum,.kteal .klbl{color:#0369a1}.bgrid{display:flex;gap:12px}.bcol{flex:1}.twrap{border:1px solid #e2e8f0;border-radius:6px;overflow:hidden;margin-bottom:14px}table{width:100%;border-collapse:collapse}thead tr{background:#0b1f45;color:#fff}thead th{padding:7px 9px;text-align:left;font-weight:700;font-size:9px;text-transform:uppercase;letter-spacing:.05em;white-space:nowrap}tbody tr:nth-child(even){background:#f8fafc}.pbreak{page-break-before:always}.fband{margin-top:16px;border-top:2px solid #e2e8f0;padding-top:7px;display:flex;justify-content:space-between;align-items:center;font-size:8.5px;color:#94a3b8}@media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact}}';
   var html='<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>Task Report \u2014 Salem Corporation</title><style>'+css+'</style></head><body>'
@@ -3675,7 +3700,7 @@ function exportPDF(tasks,context){
     +'<div class="bcol"><div style="font-size:9.5px;font-weight:700;color:#0b1f45;margin-bottom:5px;text-transform:uppercase">Department-wise Summary</div><div class="twrap"><table><thead><tr><th>Department</th><th style="text-align:center">Total</th><th style="text-align:center">Completed</th><th style="text-align:center">Pending</th><th style="text-align:center">Overdue</th><th>Completion</th></tr></thead><tbody>'+deptRows+'</tbody></table></div></div></div>'
     +(overdueTasks.length>0?'<div class="sechd pbreak"><div class="secnum">3</div><h2>\u26a0 Overdue Tasks \u2014 Immediate Action Required</h2></div><div class="twrap" style="border-color:#fecdd3"><table><thead style="background:#be123c"><tr><th>Task ID</th><th>Description</th><th>Zone</th><th>Department</th><th>Officer</th><th>Due Date</th><th>Days Overdue</th></tr></thead><tbody>'+overdueRows+'</tbody></table></div>':'')
     +'<div class="sechd'+(overdueTasks.length>0?' pbreak':'')+'"><div class="secnum">'+(overdueTasks.length>0?4:3)+'</div><h2>Complete Task List</h2></div>'
-    +'<div class="twrap"><table><thead><tr><th style="width:20px">#</th><th style="width:78px">Task ID</th><th>Description</th><th>Zone</th><th>Dept</th><th>Officer</th><th>Priority</th><th>Due Date</th><th>Status</th><th style="text-align:center">Done?</th>'+(isComm?'<th>Remarks</th>':'')+'</tr></thead><tbody>'+taskRows+'</tbody></table></div>'
+    +'<div class="twrap"><table><thead><tr><th style="width:20px">#</th><th style="width:75px">Task ID</th><th style="width:72px">Insp. Date</th><th>Description</th><th>Zone</th><th>Dept</th><th>Officer</th><th>Priority</th><th>Due Date</th><th>Status</th><th style="text-align:center">Done?</th>'+(isComm?'<th>Remarks</th>':'')+'</tr></thead><tbody>'+taskRows+'</tbody></table></div>'
     +sigHTML
     +'<div class="fband"><div><strong>Salem City Municipal Corporation</strong> \u00b7 Task Management System<br>Report No: '+reportNo+' \u00b7 '+dateStr+' '+timeStr+'</div><div style="text-align:right">Official Government Document<br>For Internal Use Only</div></div>'
     +'<script>window.onload=function(){setTimeout(function(){window.print();},500);};<\/script></body></html>';
@@ -3864,18 +3889,36 @@ function clearMultiOfficerList(){
 // ── PHOTO LOG ────────────────────────────────────────────────
 var PL={photos:[],entries:[]};
 function loadPhotoLog(){
+  // Set form defaults
   var pd=id('pl-date');if(pd&&!pd.value)pd.value=new Date().toISOString().slice(0,10);
-  var pt=id('pl-time');if(pt&&!pt.value){var now=new Date();pt.value=String(now.getHours()).padStart?zeroPad(now.getHours(),2)+':'+zeroPad(now.getMinutes(),2):now.getHours()+':'+now.getMinutes();}
-  showLoader('Loading photo logs...');
+  var pt=id('pl-time');if(pt&&!pt.value){var now=new Date();pt.value=zeroPad(now.getHours(),2)+':'+zeroPad(now.getMinutes(),2);}
+  // Show form view by default
+  plToggleView('form');
+  // Load entries silently in background
   gasCall('serverGetPhotoLogs',S.token).then(function(r){
-    hideLoader();
-    if(r&&r.success){PL.entries=r.data||[];plToggleView('list');}
+    if(r&&r.success){
+      PL.entries=r.data||[];
+      var pc=id('plCount');
+      if(pc)pc.textContent=PL.entries.length+' entr'+(PL.entries.length===1?'y':'ies')+' saved';
+    }
   });
 }
 function plToggleView(view){
   var fv=id('plFormView'),lv=id('plListView');
-  if(view==='form'){if(fv)fv.style.display='block';if(lv)lv.style.display='none';}
-  else{if(fv)fv.style.display='none';if(lv)lv.style.display='block';plRenderCards(PL.entries);}
+  if(view==='form'){
+    if(fv)fv.style.display='block';
+    if(lv)lv.style.display='none';
+  } else {
+    if(fv)fv.style.display='none';
+    if(lv)lv.style.display='block';
+    // Always reload from server when viewing list
+    showLoader('Loading entries...');
+    gasCall('serverGetPhotoLogs',S.token).then(function(r){
+      hideLoader();
+      if(r&&r.success){PL.entries=r.data||[];}
+      plRenderCards(PL.entries);
+    });
+  }
 }
 function plUpdateNotesLabel(){
   var type=V('pl-type'),lbl=id('pl-notes-label');if(!lbl)return;
@@ -3993,8 +4036,27 @@ function plToggleCard(eid){
 function plPhotoThumbs(photosStr){
   if(!photosStr)return'';
   var links=photosStr.split('\n').filter(function(p){return p.trim();});
-  var html='';
-  for(var i=0;i<links.length;i++){html+='<a href="'+links[i].trim()+'" target="_blank" style="display:inline-flex;align-items:center;gap:4px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:4px 10px;font-size:12px;color:var(--c-blue);text-decoration:none"><span class="material-icons-round mi" style="font-size:14px">photo</span>Photo '+(i+1)+'</a>';}
+  if(!links.length)return'';
+  var html='<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:4px">';
+  for(var i=0;i<links.length;i++){
+    var lnk=links[i].trim();
+    // Drive URLs: convert to direct image URL for inline display
+    var imgSrc=lnk;
+    if(lnk.indexOf('drive.google.com/file/d/')>=0){
+      var fid=lnk.split('/file/d/')[1].split('/')[0];
+      imgSrc='https://drive.google.com/uc?export=view&id='+fid;
+    } else if(lnk.indexOf('drive.google.com/open?id=')>=0){
+      var fid=lnk.split('id=')[1];
+      imgSrc='https://drive.google.com/uc?export=view&id='+fid;
+    }
+    // Show as inline thumbnail — tap to open full size
+    html+='<a href="'+lnk+'" target="_blank" style="display:block;border-radius:8px;overflow:hidden;border:1px solid var(--border);flex-shrink:0">'
+      +'<img src="'+imgSrc+'" alt="Photo '+(i+1)+'" loading="lazy" '
+      +'style="width:90px;height:90px;object-fit:cover;display:block" '
+      +'onerror="this.parentNode.style.padding=\'6px 10px\';this.style.display=\'none\';this.parentNode.innerHTML+=\'<span style=\\\"font-size:11px;color:var(--c-blue)\\\">Photo '+(i+1)+'</span>\'">'
+      +'</a>';
+  }
+  html+='</div>';
   return html;
 }
 function plFilter(){
@@ -4127,7 +4189,8 @@ function renderUsers(users){
   var html='';
   for(var i=0;i<users.length;i++){
     var u=users[i],isActive=(u.status==='Active');
-    html+='<tr><td class="mono">'+u.employeeID+'</td><td><strong>'+u.name+'</strong></td><td style="font-size:12.5px">'+(u.designation||'\u2014')+'</td><td style="font-size:12.5px">'+(u.department||'\u2014')+'</td><td style="font-size:12.5px">'+(u.zone||'\u2014')+'</td><td><span class="badge badge-progress">'+u.role+'</span></td><td><span class="badge '+(isActive?'badge-completed':'badge-overdue')+'">'+u.status+'</span></td>'
+    var empID = (u.employeeID !== null && u.employeeID !== undefined) ? String(u.employeeID) : '\u2014';
+    html+='<tr><td class="mono" style="font-size:12px">'+empID+'</td><td><strong>'+u.name+'</strong></td><td style="font-size:12.5px">'+(u.designation||'\u2014')+'</td><td style="font-size:12.5px">'+(u.department||'\u2014')+'</td><td style="font-size:12.5px">'+(u.zone||'\u2014')+'</td><td><span class="badge badge-progress">'+u.role+'</span></td><td><span class="badge '+(isActive?'badge-completed':'badge-overdue')+'">'+u.status+'</span></td>'
       +'<td><div class="flex-c" style="gap:3px">'
       +'<button class="btn btn-ghost btn-sm btn-icon" onclick="editUser(\''+u.userID+'\')" title="Edit"><span class="material-icons-round mi">edit</span></button>'
       +'<button class="btn btn-ghost btn-sm btn-icon" onclick="showResetPwModal(\''+u.userID+'\',\''+u.name+'\')" title="Reset Password"><span class="material-icons-round mi">lock_reset</span></button>'
@@ -4454,41 +4517,6 @@ function applyLogo(){
   closeModal('mLogoUpload');
 }
 
-function loadSavedLogo(){
-  // 1. Apply cached base64 immediately
-  var cached=LS.get('sc-logo');
-  if(cached){applyLogoToUI(cached);if(window.refreshPWAIcon)window.refreshPWAIcon(cached);}
-  // 2. Fetch the saved setting from server (may be a Drive URL or base64)
-  var url=(typeof GAS_URL!=='undefined'&&GAS_URL)?GAS_URL:null;
-  function applyFromServer(r){
-    if(r&&r.success&&r.value&&r.value.length>5){
-      var val=r.value;
-      if(val.indexOf('http')===0){
-        // It's a Drive URL — use as img src directly
-        LS.set('sc-logo',val);
-        applyLogoToUI(val);
-        if(window.refreshPWAIcon)window.refreshPWAIcon(val);
-      } else if(val.length>100){
-        // It's base64
-        LS.set('sc-logo',val);
-        applyLogoToUI(val);
-        if(window.refreshPWAIcon)window.refreshPWAIcon(val);
-      }
-    } else if(r&&r.success&&(r.value===''||!r.value)){
-      LS.del('sc-logo');LS.del('sc-logo-url');
-      try{localStorage.removeItem('sc-pwa-icon');}catch(e){}
-      applyLogoToUI(null);
-      if(window.refreshPWAIcon)window.refreshPWAIcon(null);
-    }
-  }
-  if(url){
-    fetch(url,{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'fn=serverGetLogo&payload=[]'})
-    .then(function(r){return r.json();}).then(applyFromServer).catch(function(){});
-  } else {
-    gasCall('serverGetLogo').then(applyFromServer);
-  }
-}
-
 function removeLogo(){
   LS.del('sc-logo');
   try{localStorage.removeItem('sc-pwa-icon');}catch(e){}
@@ -4511,16 +4539,12 @@ function updateSettingsLogoPreview(dataUrl){
 }
 
 function applyLogoToUI(dataUrl){
-  // Login page logo
   var loginLogo=id('loginLogo'),loginIcon=id('loginIcon');
-  if(dataUrl){
+  if(dataUrl&&dataUrl!=='undefined'&&dataUrl.length>5){
     if(loginLogo){loginLogo.src=dataUrl;loginLogo.style.display='block';}
     if(loginIcon)loginIcon.style.display='none';
-    // Sidebar brand
-    var sbLogo=id('sbLogoImg');
-    if(sbLogo){sbLogo.src=dataUrl;sbLogo.style.display='block';}
-    var sbIcon=id('sbLogoIcon');
-    if(sbIcon)sbIcon.style.display='none';
+    var sbLogo=id('sbLogoImg');if(sbLogo){sbLogo.src=dataUrl;sbLogo.style.display='block';}
+    var sbIcon=id('sbLogoIcon');if(sbIcon)sbIcon.style.display='none';
   } else {
     if(loginLogo)loginLogo.style.display='none';
     if(loginIcon)loginIcon.style.display='';
@@ -4529,30 +4553,34 @@ function applyLogoToUI(dataUrl){
   }
 }
 
+// Single authoritative loadSavedLogo — no duplicates
 function loadSavedLogo(){
-  // Apply cached logo instantly for fast display
   var cached=LS.get('sc-logo');
-  if(cached){applyLogoToUI(cached);if(window.refreshPWAIcon)window.refreshPWAIcon(cached);}
-  // Fetch from server — no token needed, getSetting is public
-  // Use GAS_URL if set (GitHub Pages mode) else use gasCall
-  var url = (typeof GAS_URL !== 'undefined' && GAS_URL) ? GAS_URL : null;
+  if(cached&&cached!=='undefined'&&cached.length>5){
+    applyLogoToUI(cached);
+    if(window.refreshPWAIcon)window.refreshPWAIcon(cached);
+  }
+  var url=(typeof GAS_URL!=='undefined'&&GAS_URL)?GAS_URL:null;
+  function applyFromServer(r){
+    if(!r||!r.success)return;
+    var val=String(r.value||'');
+    if(val==='undefined'||val==='null')val='';
+    if(val.length>5){
+      LS.set('sc-logo',val);
+      applyLogoToUI(val);
+      if(window.refreshPWAIcon)window.refreshPWAIcon(val);
+    } else if(val===''){
+      LS.del('sc-logo');
+      try{localStorage.removeItem('sc-pwa-icon');}catch(e){}
+      applyLogoToUI(null);
+      if(window.refreshPWAIcon)window.refreshPWAIcon(null);
+    }
+  }
   if(url){
     fetch(url,{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'fn=serverGetLogo&payload=[]'})
-    .then(function(r){return r.json();}).then(function(r){applyServerLogo(r);}).catch(function(){});
+    .then(function(r){return r.json();}).then(applyFromServer).catch(function(){});
   } else {
-    gasCall('serverGetLogo').then(function(r){applyServerLogo(r);});
-  }
-}
-function applyServerLogo(r){
-  if(r&&r.success&&r.value&&r.value.length>100){
-    LS.set('sc-logo',r.value);
-    applyLogoToUI(r.value);
-    if(window.refreshPWAIcon)window.refreshPWAIcon(r.value);
-  } else if(r&&r.success&&r.value===''){
-    LS.del('sc-logo');
-    try{localStorage.removeItem('sc-pwa-icon');}catch(e){}
-    applyLogoToUI(null);
-    if(window.refreshPWAIcon)window.refreshPWAIcon(null);
+    gasCall('serverGetLogo').then(applyFromServer);
   }
 }
 
@@ -4860,22 +4888,22 @@ function mpPopulateView(u){
 }
 
 function mpEnableEdit(){
-  var u=S.user;
-  // Fill edit fields
+  var u=S.user;if(!u)return;
   var ef=[['mp-empid',u.employeeID],['mp-mobile',u.mobile],['mp-email',u.email]];
-  for(var i=0;i<ef.length;i++){var el=id(ef[i][0]);if(el)el.value=ef[i][1]||'';}
-  // Username: editable only for Admin, read-only for Officer
+  for(var i=0;i<ef.length;i++){var el=id(ef[i][0]);if(el)el.value=String(ef[i][1]||'');}
   var unEl=id('mp-username'),unNote=id('mpUsernameNote');
   var isOfficer=(u.role==='Officer');
-  if(unEl){unEl.value=u.username||'';unEl.readOnly=isOfficer;unEl.style.background=isOfficer?'var(--surface2)':'';}
+  if(unEl){unEl.value=String(u.username||'');unEl.readOnly=isOfficer;unEl.style.background=isOfficer?'var(--surface2)':'';}
   if(unNote)unNote.textContent=isOfficer?'(read-only for officers)':'';
-  id('mpViewMode').style.display='none';
-  id('mpEditMode').style.display='block';
+  var vm=id('mpViewMode'),em=id('mpEditMode');
+  if(vm)vm.style.display='none';
+  if(em)em.style.display='block';
 }
 
 function mpCancelEdit(){
-  id('mpViewMode').style.display='block';
-  id('mpEditMode').style.display='none';
+  var vm=id('mpViewMode'),em=id('mpEditMode');
+  if(vm)vm.style.display='block';
+  if(em)em.style.display='none';
 }
 
 function mpSwitchTab(tab){
@@ -4941,23 +4969,44 @@ function mpSaveProfile(){
   });
 }
 
-function mpSwitchTab(tab){
-  MP.tab = tab;
-  var s1=id('mpSection1'),s2=id('mpSection2');
-  var t1=id('mpTab1'),t2=id('mpTab2');
-  if(tab===1){
-    if(s1)s1.style.display='block'; if(s2)s2.style.display='none';
-    if(t1){t1.style.borderBottomColor='var(--c-blue)';t1.style.color='var(--c-blue)';}
-    if(t2){t2.style.borderBottomColor='transparent';t2.style.color='var(--tx3)';}
-    var btn=id('mpSaveBtn');if(btn)btn.textContent='Save Changes';
+function mpSavePassword(){
+  var current=V('mp-current'),nw=V('mp-new'),confirm=V('mp-confirm');
+  if(!current||!nw||!confirm){toast('All password fields are required.','error');return;}
+  if(nw.length<6){toast('New password must be at least 6 characters.','error');return;}
+  if(nw!==confirm){toast('Passwords do not match.','error');return;}
+  showLoader('Changing password...');
+  gasCall('serverChangePassword', S.token, current, nw).then(function(r){
+    hideLoader();
+    if(r&&r.success){
+      closeModal('mMyProfile');
+      toast('Password changed successfully! Please sign in again.','ok');
+      setTimeout(doLogout, 2000);
+    } else {
+      toast((r&&r.message)||'Failed. Check your current password.','error');
+    }
+  });
+}
+
+// Avatar display — handles both base64 data URLs and Drive/https URLs
+function mpSetAvatarDisplay(dataUrl, name){
+  var sImg=id('sbAvatarImg'),sTxt=id('sbAvatarTxt');
+  var mImg=id('mpAvatarImg'),mTxt=id('mpAvatarTxt');
+  var initial=(name||'A').charAt(0).toUpperCase();
+  var hasPhoto = dataUrl && dataUrl !== 'undefined' && dataUrl !== 'null' && dataUrl.length > 5;
+  if(hasPhoto){
+    if(sImg){sImg.src=dataUrl;sImg.style.display='block';}
+    if(sTxt)sTxt.style.display='none';
+    if(mImg){mImg.src=dataUrl;mImg.style.display='block';}
+    if(mTxt)mTxt.style.display='none';
   } else {
-    if(s1)s1.style.display='none'; if(s2)s2.style.display='block';
-    if(t1){t1.style.borderBottomColor='transparent';t1.style.color='var(--tx3)';}
-    if(t2){t2.style.borderBottomColor='var(--c-blue)';t2.style.color='var(--c-blue)';}
-    var btn=id('mpSaveBtn');if(btn)btn.textContent='Change Password';
+    if(sImg)sImg.style.display='none';
+    if(sTxt){sTxt.style.display='';sTxt.textContent=initial;}
+    if(mImg)mImg.style.display='none';
+    if(mTxt){mTxt.style.display='';mTxt.textContent=initial;}
   }
 }
 
+// Resize photo to 150px JPEG before upload (fits within 40KB Sheets limit)
 function mpPreviewPhoto(input){
   if(!input.files||!input.files[0])return;
   var f=input.files[0];
@@ -4980,24 +5029,6 @@ function mpPreviewPhoto(input){
   };
   reader.readAsDataURL(f);
 }
-function mpSetAvatarDisplay(dataUrl, name){
-  // Sidebar avatar
-  var sImg=id('sbAvatarImg'),sTxt=id('sbAvatarTxt');
-  // Profile modal avatar
-  var mImg=id('mpAvatarImg'),mTxt=id('mpAvatarTxt');
-  var initial=(name||'A').charAt(0).toUpperCase();
-  if(dataUrl){
-    if(sImg){sImg.src=dataUrl;sImg.style.display='block';}
-    if(sTxt)sTxt.style.display='none';
-    if(mImg){mImg.src=dataUrl;mImg.style.display='block';}
-    if(mTxt)mTxt.style.display='none';
-  } else {
-    if(sImg)sImg.style.display='none';
-    if(sTxt){sTxt.style.display='';sTxt.textContent=initial;}
-    if(mImg)mImg.style.display='none';
-    if(mTxt){mTxt.style.display='';mTxt.textContent=initial;}
-  }
-}
 
 function mpRemovePhoto(){
   MP.photo='__remove__';
@@ -5006,89 +5037,27 @@ function mpRemovePhoto(){
   toast('Photo removed. Tap Save to apply.','info');
 }
 
-function mpSave(){
-  if(MP.tab===2){ mpSavePassword(); return; }
-  mpSaveProfile();
-}
-
-function mpSaveProfile(){
-  var empid   = V('mp-empid').trim();
-  var username= V('mp-username').trim();
-  var mobile  = V('mp-mobile').trim();
-  var email   = V('mp-email').trim();
-  if(!username){toast('Username cannot be empty.','error');return;}
-  // Check username conflict with other users (not self)
-  for(var i=0;i<S.users.length;i++){
-    var u=S.users[i];
-    if(u.userID!==S.user.userID && u.username.toLowerCase()===username.toLowerCase()){
-      toast('Username "'+username+'" is already taken by another user.','error');return;
-    }
-  }
-  showLoader('Saving profile...');
-  gasCall('serverUpdateProfile', S.token, {
-    employeeID: empid,
-    username:   username,
-    mobile:     mobile,
-    email:      email
-  }).then(function(r){
-    hideLoader();
-    if(r&&r.success){
-      // Update local user object
-      S.user.employeeID = empid;
-      S.user.username   = username;
-      S.user.mobile     = mobile;
-      S.user.email      = email;
-      // Save updated user to localStorage
-      LS.set('sc-usr', JSON.stringify(S.user));
-      // Save/remove photo in localStorage
-      if(MP.photo==='__remove__'){
-        LS.del('sc-photo-'+S.user.userID);
-        mpSetAvatarDisplay(null, S.user.name);
-      } else if(MP.photo){
-        LS.set('sc-photo-'+S.user.userID, MP.photo);
-        mpSetAvatarDisplay(MP.photo, S.user.name);
-      }
-      MP.photo=null;
-      // Refresh users list if admin loaded it
-      if(S.users.length) loadUsers();
-      closeModal('mMyProfile');
-      toast('Profile updated successfully!','ok');
-    } else {
-      toast((r&&r.message)||'Update failed.','error');
-    }
-  });
-}
-
-function mpSavePassword(){
-  var current=V('mp-current'),nw=V('mp-new'),confirm=V('mp-confirm');
-  if(!current||!nw||!confirm){toast('All password fields are required.','error');return;}
-  if(nw.length<6){toast('New password must be at least 6 characters.','error');return;}
-  if(nw!==confirm){toast('Passwords do not match.','error');return;}
-  showLoader('Changing password...');
-  gasCall('serverChangePassword', S.token, current, nw).then(function(r){
-    hideLoader();
-    if(r&&r.success){
-      closeModal('mMyProfile');
-      toast('Password changed successfully! Please sign in again.','ok');
-      setTimeout(doLogout, 2000);
-    } else {
-      toast((r&&r.message)||'Failed. Check your current password.','error');
-    }
-  });
-}
-
 function loadProfilePhoto(){
   if(!S.user)return;
+  // Show cached version immediately (may be a URL or base64)
   var cached=LS.get('sc-photo-'+S.user.userID);
-  if(cached)mpSetAvatarDisplay(cached,S.user.name);
+  if(cached&&cached!=='undefined'&&cached!=='null'&&cached.length>5){
+    mpSetAvatarDisplay(cached,S.user.name);
+  }
+  // Always fetch from server — profile photo is now stored as a Drive URL
   gasCall('serverGetProfilePhoto',S.token).then(function(r){
-    if(r&&r.photo&&r.photo.length>10){
-      LS.set('sc-photo-'+S.user.userID,r.photo);
-      mpSetAvatarDisplay(r.photo,S.user.name);
-    } else if(r&&r.success&&r.photo===''){
+    if(!r||!r.success)return;
+    var photo=r.photo||'';
+    // Guard against literal "undefined" string
+    if(photo==='undefined'||photo==='null'||photo.length<5){
+      // No photo on server — clear local cache
       LS.del('sc-photo-'+S.user.userID);
-      mpSetAvatarDisplay(null,S.user.name);
+      if(!cached||cached.length<5) mpSetAvatarDisplay(null,S.user.name);
+      return;
     }
+    // Save to local cache so it loads instantly next time
+    LS.set('sc-photo-'+S.user.userID,photo);
+    mpSetAvatarDisplay(photo,S.user.name);
   });
 }
 // ── BULK USER IMPORT ─────────────────────────────────────────
