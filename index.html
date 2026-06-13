@@ -3149,46 +3149,18 @@ function taskDetailHTML(t){
       +'</div>';
   }
 
-  // Photos — inline grid with timestamp
+  // Photos — proxy fetched via GAS, displayed as actual images
   if(t.photoLinks&&t.photoLinks.trim()){
-    var rawPL=t.photoLinks.trim();
-    var photoItems;
-    if(rawPL.indexOf('||')>=0) photoItems=rawPL.split('||');
-    else photoItems=rawPL.split('\n');
-    var validPhotos=[];
-    for(var pi=0;pi<photoItems.length;pi++){
-      var ps=photoItems[pi].trim();
-      if(ps.indexOf('data:image/')===0||ps.indexOf('http')===0) validPhotos.push(ps);
-    }
-    if(validPhotos.length){
+    var plCount=t.photoLinks.indexOf('||')>=0?t.photoLinks.split('||').filter(function(p){return p.trim().length>10;}).length:t.photoLinks.split('\n').filter(function(p){return p.trim().length>10;}).length;
+    if(plCount>0){
+      var tkPrefix='tk_'+String(t.taskID||'x').replace(/[^a-zA-Z0-9]/g,'');
       html+='<div style="margin-top:12px">'
-        +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">'
-        +'<div style="font-size:10px;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em">&#128247; Officer Photos ('+validPhotos.length+')</div>'
+        +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">'
+        +'<div style="font-size:10px;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em">&#128247; Officer Photos ('+plCount+')</div>'
         +(t.updatedAt?'<div style="font-size:10.5px;color:var(--tx3)">Updated: '+fDateShort(t.updatedAt)+(t.updatedBy?' by <strong>'+t.updatedBy+'</strong>':'')+'</div>':'')
         +'</div>'
-        +'<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:8px">';
-      for(var pi=0;pi<validPhotos.length;pi++){
-        var psrc=validPhotos[pi];
-        var isB64=psrc.indexOf('data:image/')===0;
-        if(isB64){
-          // Base64 — use onclick to open, not href (browsers truncate base64 hrefs)
-          html+='<div onclick="plOpenPhoto(\'tk_img_'+pi+'\')" '
-            +'style="border-radius:10px;overflow:hidden;border:2px solid var(--border);cursor:pointer;background:var(--surface2);aspect-ratio:1;display:block">'
-            +'<img id="tk_img_'+pi+'" src="'+psrc+'" alt="Photo '+(pi+1)+'" '
-            +'style="width:100%;height:100%;object-fit:cover;display:block" '
-            +'onerror="this.style.display=\'none\'">'
-            +'</div>';
-        } else {
-          var vSrc=driveToImgUrl(psrc);
-          html+='<a href="'+psrc+'" target="_blank" rel="noopener" '
-            +'style="display:block;border-radius:10px;overflow:hidden;border:2px solid var(--border);background:var(--surface2);aspect-ratio:1">'
-            +'<img src="'+vSrc+'" alt="Photo '+(pi+1)+'" loading="lazy" '
-            +'style="width:100%;height:100%;object-fit:cover;display:block" '
-            +'onerror="this.style.display=\'none\'">'
-            +'</a>';
-        }
-      }
-      html+='</div></div>';
+        +buildPhotoGrid(t.photoLinks,tkPrefix)
+        +'</div>';
     }
   }
 
@@ -4099,7 +4071,7 @@ function plRenderCards(entries){
         +'<div id="pl-preview-'+eid+'" style="font-size:13px;color:var(--tx2);line-height:1.55;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical">'+e.notes+'</div>'
         +'<div id="pl-full-'+eid+'" style="display:none;margin-top:10px">'
         +'<div style="font-size:13px;color:var(--tx2);line-height:1.65;white-space:pre-wrap;padding:10px;background:var(--surface2);border-radius:8px;margin-bottom:8px">'+e.notes+'</div>'
-        +(photoLinks>0?'<div style="display:flex;gap:6px;flex-wrap:wrap">'+plPhotoThumbs(e.photos)+'</div>':'')
+        +(photoLinks>0?buildPhotoGrid(e.photos,'pl'+mi+'_'+ei):'')
         +'</div></div></div></div></div>';
     }
   }
@@ -4131,61 +4103,105 @@ function driveToImgUrl(url){
   return url;
 }
 
-function plPhotoThumbs(photosStr){
-  if(!photosStr||!photosStr.trim())return'';
-  // Parse photos — new format uses || separator, old uses \n
-  var raw=photosStr.trim();
-  var items;
-  if(raw.indexOf('||')>=0){
-    items=raw.split('||');
-  } else {
-    items=raw.split('\n');
+// ── UNIVERSAL PHOTO DISPLAY ──────────────────────────────────
+// Extracts Drive file ID from any Drive URL format
+function getDriveFileId(url){
+  if(!url)return'';
+  // https://drive.google.com/file/d/FILE_ID/view
+  var m1=url.match(/\/d\/([a-zA-Z0-9_-]{10,})/);
+  if(m1)return m1[1];
+  // https://drive.google.com/uc?...&id=FILE_ID or open?id=FILE_ID
+  var m2=url.match(/[?&]id=([a-zA-Z0-9_-]{10,})/);
+  if(m2)return m2[1];
+  // https://lh3.googleusercontent.com/d/FILE_ID
+  var m3=url.match(/lh3\.googleusercontent\.com\/d\/([a-zA-Z0-9_-]{10,})/);
+  if(m3)return m3[1];
+  return'';
+}
+
+// Loads a photo into an <img> element.
+// For base64: sets src directly.
+// For Drive URLs: fetches via GAS proxy → converts to base64 → sets src.
+// This is the ONLY reliable cross-device approach.
+function loadPhotoIntoImg(imgEl, url, onLoad){
+  if(!imgEl||!url)return;
+  if(url.indexOf('data:image/')===0){
+    imgEl.src=url;
+    if(onLoad)onLoad();
+    return;
   }
-  // Filter: valid entries must be base64 data URLs or http URLs
+  var fileId=getDriveFileId(url);
+  if(!fileId){imgEl.src=url;return;}// not a Drive URL — try direct
+  // Show loading indicator
+  imgEl.style.opacity='0.4';
+  gasCall('serverFetchDriveImage',S.token,fileId).then(function(r){
+    imgEl.style.opacity='1';
+    if(r&&r.success&&r.data){
+      imgEl.src=r.data;
+      if(onLoad)onLoad();
+    }
+  });
+}
+
+// Builds photo thumbnail HTML — uses lazy loader via data-photo-url attribute
+// so photos load only when the card is expanded
+var _photoCache={};
+function buildPhotoGrid(photosStr, idPrefix){
+  if(!photosStr||!photosStr.trim())return'';
+  var items=photosStr.indexOf('||')>=0?photosStr.split('||'):photosStr.split('\n');
   var photos=[];
   for(var i=0;i<items.length;i++){
     var s=items[i].trim();
-    if(s.indexOf('data:image/')===0||s.indexOf('http')===0){photos.push(s);}
+    if(s.length>10)photos.push(s);
   }
   if(!photos.length)return'';
-
   var html='<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:10px">';
   for(var i=0;i<photos.length;i++){
-    var src=photos[i];
-    var isBase64=src.indexOf('data:image/')===0;
-    // For base64: use onclick to open in new tab (href with full base64 is truncated by browsers)
-    // For Drive URLs: use driveToImgUrl for display, href for full view
-    if(isBase64){
-      html+='<div onclick="plOpenPhoto(\'ph_img_'+i+'\')" '
-        +'style="width:100px;height:100px;border-radius:10px;overflow:hidden;border:2px solid var(--border);cursor:pointer;background:var(--surface2);flex-shrink:0">'
-        +'<img id="ph_img_'+i+'" src="'+src+'" alt="Photo '+(i+1)+'" '
-        +'style="width:100%;height:100%;object-fit:cover;display:block" '
-        +'onerror="this.parentNode.style.display=\'flex\';this.parentNode.style.alignItems=\'center\';this.parentNode.style.justifyContent=\'center\';this.style.display=\'none\'">'
-        +'</div>';
-    } else {
-      var viewSrc=driveToImgUrl(src);
-      html+='<a href="'+src+'" target="_blank" rel="noopener" '
-        +'style="display:block;width:100px;height:100px;border-radius:10px;overflow:hidden;border:2px solid var(--border);background:var(--surface2);flex-shrink:0">'
-        +'<img src="'+viewSrc+'" alt="Photo '+(i+1)+'" loading="lazy" '
-        +'style="width:100%;height:100%;object-fit:cover;display:block" '
-        +'onerror="this.style.display=\'none\'">'
-        +'</a>';
-    }
+    var uid=idPrefix+'_'+i;
+    html+='<div id="pw_'+uid+'" onclick="openPhotoFull(\'img_'+uid+'\')" '
+      +'style="width:100px;height:100px;border-radius:10px;overflow:hidden;border:2px solid var(--border);cursor:pointer;background:var(--surface2);display:flex;align-items:center;justify-content:center;flex-shrink:0;position:relative">'
+      +'<span class="material-icons-round" style="font-size:28px;color:var(--tx3)">hourglass_empty</span>'
+      +'<img id="img_'+uid+'" data-photo-url="'+photos[i]+'" '
+      +'style="display:none;width:100%;height:100%;object-fit:cover;position:absolute;top:0;left:0" '
+      +'alt="Photo '+(i+1)+'">'
+      +'</div>';
   }
-  html+='</div>';
+  html+='</div>'
+    +'<div style="font-size:10.5px;color:var(--tx3);margin-top:5px">Tap a photo to view full size</div>';
+  // Schedule lazy loading of all photos in this grid
+  setTimeout(function(){
+    for(var i=0;i<photos.length;i++){
+      (function(uid,url){
+        var img=document.getElementById('img_'+uid);
+        var wrap=document.getElementById('pw_'+uid);
+        if(!img)return;
+        loadPhotoIntoImg(img,url,function(){
+          img.style.display='block';
+          if(wrap){
+            var icon=wrap.querySelector('.material-icons-round');
+            if(icon)icon.style.display='none';
+          }
+        });
+      })(idPrefix+'_'+i, photos[i]);
+    }
+  },100);
   return html;
 }
 
-function plOpenPhoto(imgId){
+function openPhotoFull(imgId){
   var img=document.getElementById(imgId);
-  if(!img||!img.src)return;
-  var w=window.open();
+  if(!img||!img.src||img.style.display==='none')return;
+  var w=window.open('','_blank');
   if(w){
-    w.document.write('<html><body style="margin:0;background:#000;display:flex;align-items:center;justify-content:center;min-height:100vh">'
-      +'<img src="'+img.src+'" style="max-width:100%;max-height:100vh;object-fit:contain">'
+    w.document.write('<html><body style="margin:0;background:#111;display:flex;align-items:center;justify-content:center;min-height:100vh;touch-action:pinch-zoom">'
+      +'<img src="'+img.src+'" style="max-width:100%;max-height:100vh;object-fit:contain" onclick="window.close()">'
       +'</body></html>');
     w.document.close();
   }
+}
+
+function plPhotoThumbs(photosStr,idPrefix){
+  return buildPhotoGrid(photosStr,idPrefix||('pl'+Date.now()));
 }
 function plFilter(){
   var type=V('plFType'),zone=V('plFZone'),month=V('plFMonth'),filtered=[];
