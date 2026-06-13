@@ -471,8 +471,9 @@ body {
   display: flex; align-items: center; justify-content: center;
   color: #fff; font-size: 15px; font-weight: 700;
 }
-.sb-user-name { color: #fff; font-size: 13px; font-weight: 600; line-height: 1.3; }
-.sb-user-role { color: rgba(255,255,255,.42); font-size: 11px; }
+.filter-chip{padding:4px 12px;border-radius:999px;font-size:12px;font-weight:500;cursor:pointer;border:1.5px solid var(--border);background:var(--surface2);color:var(--tx2);transition:all .15s;white-space:nowrap}
+.filter-chip.active{background:var(--c-blue);color:#fff;border-color:var(--c-blue)}
+.filter-chip:hover:not(.active){background:var(--border);color:var(--tx1)}
 
 /* nav */
 .sb-nav { flex: 1; padding: 10px 10px; overflow-y: auto; scrollbar-width: none; }
@@ -1539,47 +1540,98 @@ tbody tr:hover { background: var(--surface2); }
           <span class="material-icons-round mi">close</span> Clear Selection
         </button>
       </div>
-      <!-- Advanced Filter Panel -->
+      <!-- Advanced Filter Panel - redesigned -->
       <div id="advFilterPanel" class="dn">
-        <div class="card mb16">
-          <div class="card-hd">
-            <span class="card-title">Advanced Filters</span>
-            <button class="btn btn-ghost btn-sm" onclick="clearFilters()"><span class="material-icons-round mi">filter_alt_off</span> Clear All</button>
+        <div class="card mb12" style="border:1.5px solid var(--c-blue);border-radius:12px">
+          <div class="card-hd" style="background:rgba(29,78,216,.04)">
+            <span class="material-icons-round mi" style="color:var(--c-blue)">tune</span>
+            <span class="card-title" style="color:var(--c-blue)">Advanced Filters</span>
+            <div style="margin-left:auto;display:flex;gap:8px;align-items:center">
+              <span id="filterCountBadge" style="display:none;background:var(--c-blue);color:#fff;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px"></span>
+              <button class="btn btn-ghost btn-sm" onclick="clearFilters()" style="font-size:12px"><span class="material-icons-round mi">filter_alt_off</span> Clear All</button>
+              <button class="btn btn-ghost btn-sm" onclick="toggleAdvFilter()" style="font-size:12px"><span class="material-icons-round mi">close</span></button>
+            </div>
           </div>
-          <div class="card-bd">
-            <div class="f-row-3">
-              <div class="f-group mb0"><label class="f-label">Zone</label><select class="f-sel" id="fZone" onchange="filterTasks()"><option value="">All Zones</option></select></div>
-              <div class="f-group mb0"><label class="f-label">Department</label><select class="f-sel" id="fDept" onchange="filterTasks()"><option value="">All Departments</option></select></div>
-              <div class="f-group mb0"><label class="f-label">Status</label>
-                <select class="f-sel" id="fStatus" onchange="filterTasks()">
-                  <option value="">All Status</option><option>Pending</option><option>In Progress</option><option>Completed</option><option>Review Pending</option><option>Overdue</option><option>Closed</option>
-                </select>
+          <div class="card-bd" style="padding:14px 16px">
+            <!-- Row 1: Zone, Dept, Officer -->
+            <div class="f-row" style="margin-bottom:10px">
+              <div class="f-group mb0">
+                <label class="f-label" style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--tx3)">Zone</label>
+                <select class="f-sel" id="fZone" onchange="filterTasks()" style="font-size:13px"></select>
               </div>
-              <div class="f-group mb0"><label class="f-label">Priority</label>
-                <select class="f-sel" id="fPri" onchange="filterTasks()"><option value="">All Priority</option><option>High</option><option>Medium</option><option>Low</option></select>
+              <div class="f-group mb0">
+                <label class="f-label" style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--tx3)">Department</label>
+                <select class="f-sel" id="fDept" onchange="filterTasks()" style="font-size:13px"></select>
               </div>
-              <div class="f-group mb0"><label class="f-label">Task Type</label>
-                <select class="f-sel" id="fType" onchange="filterTasks()"><option value="">All Types</option><option>Inspection</option><option>Meeting</option><option>Follow-up</option><option>Review</option><option>Action</option></select>
-              </div>
-              <div class="f-group mb0"><label class="f-label">Source</label>
-                <select class="f-sel" id="fSource" onchange="filterTasks()"><option value="">All Sources</option><option>Manual</option><option>AI</option></select>
-              </div>
-              <div class="f-group mb0"><label class="f-label">Due From</label><input type="date" class="f-ctrl" id="fDueFrom" onchange="filterTasks()"></div>
-              <div class="f-group mb0"><label class="f-label">Due To</label><input type="date" class="f-ctrl" id="fDueTo" onchange="filterTasks()"></div>
-              <div class="f-group mb0"><label class="f-label">Created From</label><input type="date" class="f-ctrl" id="fCreatedFrom" onchange="filterTasks()"></div>
-            </div>
-            <div class="mt16">
-              <div class="search-wrap" style="max-width:400px">
-                <span class="material-icons-round mi-prefix">search</span>
-                <input type="text" class="f-ctrl" id="fSearch" placeholder="Search by ID, description, officer..." oninput="filterTasks()">
+              <div class="f-group mb0">
+                <label class="f-label" style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--tx3)">Officer</label>
+                <select class="f-sel" id="fOfficer" onchange="filterTasks()" style="font-size:13px"><option value="">All Officers</option></select>
               </div>
             </div>
-            <div id="filterSummary" class="mt8 dn">
-              <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-                <span style="font-size:12px;font-weight:600;color:var(--tx2)">Active filters:</span>
+            <!-- Row 2: Status chips -->
+            <div style="margin-bottom:10px">
+              <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--tx3);margin-bottom:6px">Status</div>
+              <div style="display:flex;flex-wrap:wrap;gap:6px" id="statusChips">
+                <button onclick="toggleChip(this,'fStatus')" data-val="" class="filter-chip active">All</button>
+                <button onclick="toggleChip(this,'fStatus')" data-val="Pending" class="filter-chip">Pending</button>
+                <button onclick="toggleChip(this,'fStatus')" data-val="In Progress" class="filter-chip">In Progress</button>
+                <button onclick="toggleChip(this,'fStatus')" data-val="Completed" class="filter-chip">Completed</button>
+                <button onclick="toggleChip(this,'fStatus')" data-val="Review Pending" class="filter-chip">Review Pending</button>
+                <button onclick="toggleChip(this,'fStatus')" data-val="Closed" class="filter-chip">Closed</button>
+                <button onclick="toggleChip(this,'fStatus')" data-val="Overdue" class="filter-chip" style="color:var(--c-red)">&#9888; Overdue</button>
+              </div>
+              <input type="hidden" id="fStatus" value="">
+            </div>
+            <!-- Row 3: Priority + Type + Source chips -->
+            <div class="f-row" style="margin-bottom:10px;gap:20px;flex-wrap:wrap">
+              <div style="flex:1;min-width:180px">
+                <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--tx3);margin-bottom:6px">Priority</div>
+                <div style="display:flex;gap:6px;flex-wrap:wrap" id="priorityChips">
+                  <button onclick="toggleChip(this,'fPri')" data-val="" class="filter-chip active">All</button>
+                  <button onclick="toggleChip(this,'fPri')" data-val="High" class="filter-chip" style="color:#be123c">&#9679; High</button>
+                  <button onclick="toggleChip(this,'fPri')" data-val="Medium" class="filter-chip" style="color:#b45309">&#9679; Medium</button>
+                  <button onclick="toggleChip(this,'fPri')" data-val="Low" class="filter-chip" style="color:#15803d">&#9679; Low</button>
+                </div>
+                <input type="hidden" id="fPri" value="">
+              </div>
+              <div style="flex:1;min-width:180px">
+                <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--tx3);margin-bottom:6px">Source</div>
+                <div style="display:flex;gap:6px;flex-wrap:wrap" id="sourceChips">
+                  <button onclick="toggleChip(this,'fSource')" data-val="" class="filter-chip active">All</button>
+                  <button onclick="toggleChip(this,'fSource')" data-val="Manual" class="filter-chip">Manual</button>
+                  <button onclick="toggleChip(this,'fSource')" data-val="AI" class="filter-chip">&#129302; AI</button>
+                </div>
+                <input type="hidden" id="fSource" value="">
+              </div>
+            </div>
+            <!-- Row 4: Date range + Search -->
+            <div class="f-row" style="margin-bottom:10px;align-items:flex-end">
+              <div class="f-group mb0">
+                <label class="f-label" style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--tx3)">Inspection Date From</label>
+                <input type="date" class="f-ctrl" id="fDueFrom" onchange="filterTasks()" style="font-size:13px">
+              </div>
+              <div class="f-group mb0">
+                <label class="f-label" style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--tx3)">Inspection Date To</label>
+                <input type="date" class="f-ctrl" id="fDueTo" onchange="filterTasks()" style="font-size:13px">
+              </div>
+              <div class="f-group mb0" style="flex:2">
+                <label class="f-label" style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--tx3)">Search</label>
+                <div class="search-wrap">
+                  <span class="material-icons-round mi-prefix">search</span>
+                  <input type="text" class="f-ctrl" id="fSearch" placeholder="Task ID, description, officer name..." oninput="filterTasks()" style="font-size:13px">
+                </div>
+              </div>
+            </div>
+            <!-- Active filter summary -->
+            <div id="filterSummary" class="dn" style="margin-top:4px">
+              <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:8px 10px;background:var(--surface2);border-radius:8px">
+                <span style="font-size:12px;font-weight:600;color:var(--tx2)">Active:</span>
                 <div id="filterTags" style="display:flex;gap:6px;flex-wrap:wrap"></div>
               </div>
             </div>
+          </div>
+        </div>
+      </div>
           </div>
         </div>
       </div>
@@ -1625,6 +1677,17 @@ tbody tr:hover { background: var(--surface2); }
           <button class="btn btn-success btn-sm" onclick="showExportChoice('commissioner')"><span class="material-icons-round mi">ios_share</span> Export Report</button>
         </div>
       </div>
+      <!-- Department drill-down filter -->
+      <div class="card mb14">
+        <div class="card-bd" style="padding:10px 14px">
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+            <span style="font-size:12px;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:.04em;white-space:nowrap">View by Dept:</span>
+            <div id="cvDeptTabs" style="display:flex;gap:6px;flex-wrap:wrap">
+              <button class="filter-chip active" data-dept="" onclick="cvFilterDept(this)">All Departments</button>
+            </div>
+          </div>
+        </div>
+      </div>
       <div class="kpi-grid mb16">
         <div class="kpi blue"><div class="kpi-stripe"></div><div class="kpi-icon-wrap"><span class="material-icons-round mi">assignment</span></div><div class="kpi-val" id="cv-total">&#8212;</div><div class="kpi-lbl">Total Tasks</div></div>
         <div class="kpi green"><div class="kpi-stripe"></div><div class="kpi-icon-wrap"><span class="material-icons-round mi">check_circle</span></div><div class="kpi-val" id="cv-done">&#8212;</div><div class="kpi-lbl">Completed</div></div>
@@ -1636,10 +1699,10 @@ tbody tr:hover { background: var(--surface2); }
         <div class="card"><div class="card-hd"><span class="card-title">Department Tasks</span></div><div class="card-bd" style="height:250px"><canvas id="cvDept"></canvas></div></div>
       </div>
       <div class="card mb16">
-        <div class="card-hd"><span class="card-title">Officer Task Summary</span><button class="btn btn-ghost btn-sm" onclick="loadCommView()"><span class="material-icons-round mi">refresh</span></button></div>
+        <div class="card-hd"><span class="card-title" id="cvOfficerTitle">Officer Task Summary</span><button class="btn btn-ghost btn-sm" onclick="loadCommView()"><span class="material-icons-round mi">refresh</span></button></div>
         <div class="card-bd" id="officerPerf" style="max-height:420px;overflow-y:auto"></div>
       </div>
-      <div class="card"><div class="card-hd"><span class="card-title">Critical &amp; Delayed Tasks</span></div><div class="card-bd-0" id="criticalList"></div></div>
+      <div class="card"><div class="card-hd"><span class="card-title" id="cvCriticalTitle">Critical &amp; Delayed Tasks</span></div><div class="card-bd-0" id="criticalList"></div></div>
     </div>
 
     <!-- USER MANAGEMENT -->
@@ -1974,10 +2037,16 @@ tbody tr:hover { background: var(--surface2); }
         <div class="f-group"><label class="f-label">Designation</label><select class="f-sel" id="mu-desig"><option value="">Select</option></select></div>
         <div class="f-group"><label class="f-label">Department</label><select class="f-sel" id="mu-dept"><option value="">Select</option></select></div>
       </div>
+      <!-- HOD multi-department field — shown only when role = HOD -->
+      <div id="hodDeptRow" style="display:none" class="f-group">
+        <label class="f-label">HOD Departments <span class="req">*</span><span style="font-size:11px;color:var(--tx3);font-weight:400"> — Select all departments this HOD manages</span></label>
+        <div id="hodDeptCheckboxes" style="display:flex;flex-wrap:wrap;gap:8px;padding:10px;background:var(--surface2);border-radius:8px;border:1px solid var(--border)"></div>
+        <div style="font-size:11.5px;color:var(--tx3);margin-top:4px">Selected departments will be stored comma-separated. HOD can see all tasks from these departments.</div>
+      </div>
       <div class="f-row">
         <div class="f-group"><label class="f-label">Zone</label><select class="f-sel" id="mu-zone"><option value="">Select</option></select></div>
         <div class="f-group"><label class="f-label">Role <span class="req">*</span></label>
-          <select class="f-sel" id="mu-role"><option value="">Select Role</option><option>Commissioner</option><option>Admin</option><option>ViewAll</option><option>Officer</option></select>
+          <select class="f-sel" id="mu-role" onchange="onRoleChange()"><option value="">Select Role</option><option>Commissioner</option><option>Admin</option><option>HOD</option><option>Officer</option></select>
         </div>
       </div>
       <div class="f-row">
@@ -2697,12 +2766,30 @@ function showApp(){
   }
 }
 function applyRoleNav(role){
-  var isAdmin=(role==='Admin'||role==='Commissioner'),isOfficer=(role==='Officer');
-  show('snav-taskEntry',isAdmin);show('snav-users',isAdmin);show('snav-commview',isAdmin);show('snav-settings',isAdmin);show('snav-chgpw',true);show('snav-photolog',isAdmin);
-  show('bnEntry',isAdmin);show('bnCommView',isAdmin);show('newTaskBtn',isAdmin);
-  var thChk=id('thChk'); if(thChk) thChk.style.display=isAdmin?'':'none';
-  if(!isAdmin){var bb=id('bulkBar');if(bb)bb.classList.add('dn');}
-  S.allowedPages=isOfficer?['dashboard','tracker','about']:['dashboard','taskEntry','tracker','commview','users','settings','photolog','about'];
+  var isAdmin=(role==='Admin'||role==='Commissioner');
+  var isHOD=(role==='HOD');
+  var isOfficer=(role==='Officer');
+
+  show('snav-taskEntry', isAdmin||isHOD);
+  show('snav-users', isAdmin);
+  show('snav-commview', isAdmin);
+  show('snav-settings', isAdmin);
+  show('snav-chgpw', true);
+  show('snav-photolog', isAdmin);
+  show('bnEntry', isAdmin||isHOD);
+  show('bnCommView', isAdmin);
+  show('newTaskBtn', isAdmin||isHOD);
+  var thChk=id('thChk');if(thChk)thChk.style.display=isAdmin?'':'none';
+  if(!isAdmin&&!isHOD){var bb=id('bulkBar');if(bb)bb.classList.add('dn');}
+
+  if(isOfficer){
+    S.allowedPages=['dashboard','tracker','about'];
+  } else if(isHOD){
+    S.allowedPages=['dashboard','taskEntry','tracker','about'];
+  } else {
+    S.allowedPages=['dashboard','taskEntry','tracker','commview','users','settings','photolog','about'];
+  }
+
   var ad=id('adminDash'),od=id('officerDash');
   if(isOfficer){if(ad)ad.classList.add('dn');if(od)od.classList.remove('dn');}
   else{if(ad)ad.classList.remove('dn');if(od)od.classList.add('dn');}
@@ -2795,6 +2882,43 @@ function fillOfficers(deptFilter){
 function filterOfficers(){fillOfficers(V('t-dept')||null);}
 
 // Bug Fix 2: auto-fill designation when officer is selected in task entry
+function onRoleChange(){
+  var role=V('mu-role');
+  var hodRow=id('hodDeptRow');
+  if(!hodRow)return;
+  if(role==='HOD'){
+    hodRow.style.display='block';
+    buildHODDeptCheckboxes();
+  } else {
+    hodRow.style.display='none';
+  }
+}
+function buildHODDeptCheckboxes(selectedDepts){
+  var wrap=id('hodDeptCheckboxes');if(!wrap)return;
+  var depts=(S.lookup&&S.lookup.departments)||[];
+  var selectedArr=selectedDepts?selectedDepts.split(',').map(function(d){return d.trim();}):[];
+  var html='';
+  for(var i=0;i<depts.length;i++){
+    var d=depts[i].DeptName||depts[i];
+    var checked=selectedArr.indexOf(d)>=0?'checked':'';
+    html+='<label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;padding:5px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:7px;user-select:none">'
+      +'<input type="checkbox" value="'+d+'" '+checked+' style="width:15px;height:15px;cursor:pointer" onchange="updateHODDeptField()">'+d+'</label>';
+  }
+  wrap.innerHTML=html;
+}
+function updateHODDeptField(){
+  var wrap=id('hodDeptCheckboxes');if(!wrap)return;
+  var checks=wrap.querySelectorAll('input[type=checkbox]:checked');
+  var vals=[];for(var i=0;i<checks.length;i++)vals.push(checks[i].value);
+  // Store in mu-dept field as comma-separated
+  var deptEl=id('mu-dept');if(deptEl)deptEl.value=vals.join(',');
+}
+function getHODSelectedDepts(){
+  var wrap=id('hodDeptCheckboxes');if(!wrap)return'';
+  var checks=wrap.querySelectorAll('input[type=checkbox]:checked');
+  var vals=[];for(var i=0;i<checks.length;i++)vals.push(checks[i].value);
+  return vals.join(',');
+}
 function onOfficerChange(){
   var el=id('t-officer');if(!el||!el.value)return;
   var sel=el.selectedOptions&&el.selectedOptions[0];
@@ -2920,12 +3044,17 @@ function loadActivityLog(){
   });
 }
 function loadTasks(){
-  var isOfficer=(S.user&&S.user.role==='Officer');
-  // Officers get server-side filtered tasks — much faster
-  var fn = isOfficer ? 'serverGetOfficerTasks' : 'serverGetTasks';
-  var args = isOfficer ? [S.token] : [S.token, {}];
+  var role=S.user?S.user.role:'';
+  var fn,args;
+  if(role==='Officer'){
+    fn='serverGetOfficerTasks';args=[S.token];
+  } else if(role==='HOD'){
+    fn='serverGetHODTasks';args=[S.token];
+  } else {
+    fn='serverGetTasks';args=[S.token,{}];
+  }
   showLoader('Loading tasks...');
-  gasCall.apply(null, [fn].concat(args)).then(function(r){
+  gasCall.apply(null,[fn].concat(args)).then(function(r){
     hideLoader();
     if(!r||!r.success){
       var tb=id('tBody');
@@ -2937,6 +3066,8 @@ function loadTasks(){
     var chkAll=id('chkAll');if(chkAll){chkAll.checked=false;chkAll.indeterminate=false;}
     if(S.drillFilter)applyDrillFilter();
     else{renderTable(S.filtered);renderKanban(S.filtered);updateTaskCount();}
+    // Populate officer filter if panel is open
+    if(advFilterOpen)populateOfficerFilter();
   });
 }
 function normalizeTaskList(data){
@@ -2952,32 +3083,83 @@ function toggleAdvFilter(){
   advFilterOpen=!advFilterOpen;
   var panel=id('advFilterPanel');if(panel)panel.classList.toggle('dn',!advFilterOpen);
   var btn=id('advFilterBtn');if(btn){btn.style.background=advFilterOpen?'var(--c-blue)':'';btn.style.color=advFilterOpen?'#fff':'';}
+  // Populate officer filter from current tasks
+  if(advFilterOpen) populateOfficerFilter();
+}
+function populateOfficerFilter(){
+  var sel=id('fOfficer');if(!sel)return;
+  var current=sel.value;
+  sel.innerHTML='<option value="">All Officers</option>';
+  var seen={};
+  for(var i=0;i<S.tasks.length;i++){
+    var n=S.tasks[i].officerName;
+    if(n&&!seen[n]){seen[n]=1;var o=document.createElement('option');o.value=n;o.textContent=n;sel.appendChild(o);}
+  }
+  sel.value=current;
 }
 function filterTasks(){
-  var search=V('fSearch').toLowerCase(),zone=V('fZone'),dept=V('fDept'),status=V('fStatus'),priority=V('fPri'),type=V('fType'),source=V('fSource'),dueFrom=V('fDueFrom'),dueTo=V('fDueTo'),createdFrom=V('fCreatedFrom');
+  var search=V('fSearch').toLowerCase();
+  var zone=V('fZone'),dept=V('fDept'),officer=V('fOfficer');
+  var status=V('fStatus'),priority=V('fPri'),source=V('fSource');
+  var dueFrom=V('fDueFrom'),dueTo=V('fDueTo');
   S.filtered=[];
   for(var i=0;i<S.tasks.length;i++){
     var t=S.tasks[i];
-    if(zone&&t.zone!==zone)continue;if(dept&&t.department!==dept)continue;if(status&&t.status!==status)continue;if(priority&&t.priority!==priority)continue;if(type&&t.taskType!==type)continue;if(source&&t.source!==source)continue;if(dueFrom&&t.dueDate&&t.dueDate<dueFrom)continue;if(dueTo&&t.dueDate&&t.dueDate>dueTo)continue;if(createdFrom&&t.createdAt&&t.createdAt.slice(0,10)<createdFrom)continue;
-    if(search){var hay=(t.taskID+' '+t.description+' '+t.officerName+' '+t.zone+' '+t.department+' '+t.taskType).toLowerCase();if(hay.indexOf(search)===-1)continue;}
+    if(zone&&t.zone!==zone)continue;
+    if(dept&&t.department!==dept)continue;
+    if(officer&&t.officerName!==officer)continue;
+    if(status==='Overdue'){if(!t.isOverdue)continue;}
+    else if(status&&t.status!==status)continue;
+    if(priority&&t.priority!==priority)continue;
+    if(source&&t.source!==source)continue;
+    if(dueFrom&&t.dateAssigned&&t.dateAssigned<dueFrom)continue;
+    if(dueTo&&t.dateAssigned&&t.dateAssigned>dueTo)continue;
+    if(search){
+      var hay=(t.taskID+' '+t.description+' '+t.officerName+' '+t.zone+' '+t.department).toLowerCase();
+      if(hay.indexOf(search)===-1)continue;
+    }
     S.filtered.push(t);
   }
-  updateFilterTags({zone:zone,dept:dept,status:status,priority:priority,type:type,source:source,dueFrom:dueFrom,dueTo:dueTo,search:search});
+  // Show active filter summary
+  var active=[];
+  if(zone)active.push(zone);if(dept)active.push(dept);if(officer)active.push(officer);
+  if(status)active.push(status);if(priority)active.push(priority);if(source)active.push(source);
+  if(dueFrom)active.push('From '+dueFrom);if(dueTo)active.push('To '+dueTo);if(search)active.push('"'+search+'"');
+  var sumEl=id('filterSummary'),tagsEl=id('filterTags');
+  if(sumEl&&tagsEl){
+    if(active.length){
+      sumEl.classList.remove('dn');
+      var html='';for(var i=0;i<active.length;i++)html+='<span style="background:var(--c-blue);color:#fff;padding:2px 9px;border-radius:999px;font-size:11px;font-weight:600">'+active[i]+'</span>';
+      tagsEl.innerHTML=html;
+    } else sumEl.classList.add('dn');
+  }
+  var badge=id('filterCountBadge');
+  if(badge){badge.textContent=active.length+' active';badge.style.display=active.length>0?'':'none';}
   renderTable(S.filtered);renderKanban(S.filtered);updateTaskCount();
 }
 function updateTaskCount(){var tc=id('taskCount');if(tc)tc.textContent=S.filtered.length+' task'+(S.filtered.length!==1?'s':'');}
-function updateFilterTags(f){
-  var tags=[];
-  if(f.zone)tags.push(f.zone);if(f.dept)tags.push(f.dept);if(f.status)tags.push(f.status);if(f.priority)tags.push(f.priority);if(f.type)tags.push(f.type);if(f.source)tags.push('Source:'+f.source);if(f.dueFrom)tags.push('Due\u2265'+f.dueFrom);if(f.dueTo)tags.push('Due\u2264'+f.dueTo);if(f.search)tags.push('"'+f.search+'"');
-  var sumEl=id('filterSummary'),tagsEl=id('filterTags');if(!sumEl||!tagsEl)return;
-  if(tags.length){sumEl.classList.remove('dn');var html='';for(var i=0;i<tags.length;i++)html+='<span style="background:var(--c-blue);color:#fff;padding:2px 9px;border-radius:999px;font-size:11px;font-weight:600">'+tags[i]+'</span>';tagsEl.innerHTML=html;}
-  else sumEl.classList.add('dn');
+function updateFilterTags(){}
+function toggleChip(btn,hiddenId){
+  var group=btn.parentNode;
+  var chips=group.querySelectorAll('.filter-chip');
+  for(var i=0;i<chips.length;i++)chips[i].classList.remove('active');
+  btn.classList.add('active');
+  var hidden=id(hiddenId);if(hidden)hidden.value=btn.dataset.val||'';
+  filterTasks();
 }
 function clearFilters(){
-  var ids=['fSearch','fZone','fDept','fStatus','fPri','fType','fSource','fDueFrom','fDueTo','fCreatedFrom'];
-  for(var i=0;i<ids.length;i++){var e=id(ids[i]);if(e)e.value='';}
-  S.filtered=S.tasks.slice();var s=id('filterSummary');if(s)s.classList.add('dn');
+  var fields=['fZone','fDept','fOfficer','fStatus','fPri','fSource','fDueFrom','fDueTo','fSearch'];
+  for(var i=0;i<fields.length;i++){var el=id(fields[i]);if(el)el.value='';}
+  // Reset all chip groups to "All"
+  var allChips=document.querySelectorAll('.filter-chip');
+  for(var i=0;i<allChips.length;i++){
+    allChips[i].classList.remove('active');
+    if(allChips[i].dataset.val==='')allChips[i].classList.add('active');
+  }
+  S.filtered=S.tasks.slice();
   renderTable(S.filtered);renderKanban(S.filtered);updateTaskCount();
+  var fs=id('filterSummary');if(fs)fs.classList.add('dn');
+  var badge=id('filterCountBadge');if(badge)badge.style.display='none';
 }
 var PRIORITY_ORDER={'High':1,'Medium':2,'Low':3};
 function sortBy(col){
@@ -3730,16 +3912,82 @@ function exportPDF(tasks,context){
     +'<script>window.onload=function(){setTimeout(function(){window.print();},500);};<\/script></body></html>';
   var w=window.open('','_blank');if(w){w.document.write(html);w.document.close();}else toast('Pop-up blocked. Allow pop-ups and try again.','info');
 }
+var CV_DEPT_FILTER=''; // currently selected dept filter in commview
+
+function cvFilterDept(btn){
+  var chips=document.querySelectorAll('#cvDeptTabs .filter-chip');
+  for(var i=0;i<chips.length;i++)chips[i].classList.remove('active');
+  btn.classList.add('active');
+  CV_DEPT_FILTER=btn.dataset.dept||'';
+  renderCommViewForDept(CV_DEPT_FILTER);
+}
+
+function buildCommDeptTabs(tasks){
+  var tabs=id('cvDeptTabs');if(!tabs)return;
+  // Collect unique departments
+  var depts={};
+  for(var i=0;i<tasks.length;i++){var d=tasks[i].department||'';if(d)depts[d]=1;}
+  var dk=Object.keys(depts).sort();
+  var html='<button class="filter-chip '+(CV_DEPT_FILTER===''?'active':'')+'" data-dept="" onclick="cvFilterDept(this)">All Departments</button>';
+  for(var i=0;i<dk.length;i++){
+    html+='<button class="filter-chip '+(CV_DEPT_FILTER===dk[i]?'active':'')+'" data-dept="'+dk[i]+'" onclick="cvFilterDept(this)">'+dk[i]+'</button>';
+  }
+  tabs.innerHTML=html;
+}
+
+function renderCommViewForDept(dept){
+  if(!S._cvAllTasks)return;
+  var tasks=dept?S._cvAllTasks.filter(function(t){return t.department===dept;}):S._cvAllTasks;
+  var title=id('cvOfficerTitle');if(title)title.textContent=(dept?dept+' — ':'')+'Officer Task Summary';
+  var ct=id('cvCriticalTitle');if(ct)ct.textContent=(dept?dept+' — ':'')+'Critical & Delayed Tasks';
+  // Recompute KPIs for filtered tasks
+  var total=tasks.length,completed=0,overdue=0;
+  for(var i=0;i<tasks.length;i++){
+    if(tasks[i].status==='Completed'||tasks[i].status==='Closed')completed++;
+    if(tasks[i].isOverdue)overdue++;
+  }
+  var rate=total>0?Math.round(completed/total*100):0;
+  var kv=id('cv-total');if(kv)kv.textContent=total;
+  var kd=id('cv-done');if(kd)kd.textContent=completed;
+  var ko=id('cv-over');if(ko)ko.textContent=overdue;
+  var kr=id('cv-rate');if(kr)kr.textContent=rate+'%';
+  // Officer summary for filtered tasks
+  var officerStats={};
+  for(var i=0;i<tasks.length;i++){
+    var t=tasks[i];var n=t.officerName||'Unknown';
+    if(!officerStats[n])officerStats[n]={total:0,completed:0,pending:0,overdue:0,dept:t.department||''};
+    officerStats[n].total++;
+    if(t.status==='Completed'||t.status==='Closed')officerStats[n].completed++;
+    else officerStats[n].pending++;
+    if(t.isOverdue)officerStats[n].overdue++;
+  }
+  buildOfficerPerf(officerStats);
+  // Critical tasks
+  var critical=[];
+  for(var i=0;i<tasks.length;i++)if(tasks[i].isOverdue||(tasks[i].priority==='High'&&tasks[i].status!=='Completed'))critical.push(tasks[i]);
+  buildCriticalList(critical.slice(0,10));
+}
+
 function loadCommView(){
   showLoader('Loading...');
-  gasCall('serverGetDashboardStats',S.token).then(function(r){
-    hideLoader();if(!r||!r.success)return;
-    var s=r.stats;
-    var cv={'cv-total':s.total,'cv-done':s.completed,'cv-over':s.overdue,'cv-rate':r.completionRate+'%'};
-    for(var k in cv){var el=id(k);if(el)el.textContent=cv[k];}
-    buildCVZone(r.zoneStats);buildCVDept(r.deptStats);buildOfficerPerf(r.officerStats);
-    if(S.tasks.length)buildCritical();
-    else{gasCall('serverGetTasks',S.token,{}).then(function(tr){if(tr&&tr.success){S.tasks=normalizeTaskList(tr.data||[]);S.filtered=S.tasks.slice();buildCritical();}});}
+  CV_DEPT_FILTER='';
+  // Load both stats and full task list for dept drill-down
+  gasCall('serverGetTasks',S.token,{}).then(function(tr){
+    if(tr&&tr.success){
+      S.tasks=normalizeTaskList(tr.data||[]);
+      S.filtered=S.tasks.slice();
+      S._cvAllTasks=S.tasks.slice();
+      buildCommDeptTabs(S.tasks);
+    }
+    gasCall('serverGetDashboardStats',S.token).then(function(r){
+      hideLoader();if(!r||!r.success)return;
+      var s=r.stats;
+      var cv={'cv-total':s.total,'cv-done':s.completed,'cv-over':s.overdue,'cv-rate':r.completionRate+'%'};
+      for(var k in cv){var el=id(k);if(el)el.textContent=cv[k];}
+      buildCVZone(r.zoneStats);buildCVDept(r.deptStats);
+      buildOfficerPerf(r.officerStats);
+      buildCritical();
+    });
   });
 }
 function buildCVZone(zs){
@@ -4056,13 +4304,19 @@ function plRenderCards(entries){
       var e=mEntries[ei],tc=typeColors[e.type]||typeColors['Site Visit'];
       var photoLinks=e.photos?(e.photos.indexOf('||')>=0?e.photos.split('||').filter(function(p){return p.trim().length>10;}).length:e.photos.split('\n').filter(function(p){return p.trim().length>10;}).length):0;
       var eid='plx_'+mi+'_'+ei;
+      var dayNum=e.date?e.date.split('-').slice(2).join(''):'';
+      var monthName=e.date?months[parseInt((e.date||'0-0').split('-')[1]||1)].slice(0,3):'';
+      // Day of week
+      var dayOfWeek='';
+      if(e.date){try{var dayNames=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];var dp=e.date.split('-');var dt=new Date(parseInt(dp[0]),parseInt(dp[1])-1,parseInt(dp[2]));dayOfWeek=dayNames[dt.getDay()];}catch(ex){}}
       html+='<div class="card mb10" style="cursor:pointer;border-left:4px solid '+tc.border+'" data-eid="'+eid+'" onclick="plToggleCard(this.dataset.eid)">'
         +'<div class="card-bd" style="padding:12px 14px">'
         +'<div style="display:flex;gap:10px;align-items:flex-start">'
-        +'<div style="text-align:center;min-width:44px;flex-shrink:0">'
-        +'<div style="font-size:20px;font-weight:800;color:var(--tx1);line-height:1">'+e.date.split('-').slice(2).join('')+'</div>'
-        +'<div style="font-size:10px;color:var(--tx3)">'+months[parseInt((e.date||'0-0').split('-')[1]||1)].slice(0,3)+'</div>'
-        +(e.time?'<div style="font-size:10px;color:var(--tx3)">'+e.time+'</div>':'')+'</div>'
+        +'<div style="text-align:center;min-width:48px;flex-shrink:0;background:var(--surface2);border-radius:8px;padding:6px 4px;border:1px solid var(--border)">'
+        +'<div style="font-size:11px;font-weight:600;color:'+tc.c+';text-transform:uppercase;letter-spacing:.04em">'+dayOfWeek+'</div>'
+        +'<div style="font-size:22px;font-weight:800;color:var(--tx1);line-height:1.1">'+dayNum+'</div>'
+        +'<div style="font-size:11px;font-weight:600;color:var(--tx3);text-transform:uppercase">'+monthName+'</div>'
+        +'</div>'
         +'<div style="flex:1;min-width:0">'
         +'<div style="display:flex;align-items:center;gap:6px;margin-bottom:5px;flex-wrap:wrap">'
         +'<span style="background:'+tc.bg+';color:'+tc.c+';border:1px solid '+tc.border+';padding:2px 9px;border-radius:999px;font-size:11px;font-weight:700;display:flex;align-items:center;gap:3px"><span class="material-icons-round" style="font-size:12px">'+tc.icon+'</span>'+e.type+'</span>'
@@ -4384,9 +4638,14 @@ function showUserModal(uid){
             // Dropdowns need a tick to render
             setTimeout(function(){
               var md=id('mu-desig');if(md)md.value=String(u.designation||'');
-              var mdp=id('mu-dept');if(mdp)mdp.value=String(u.department||'');
               var mz=id('mu-zone');if(mz)mz.value=String(u.zone||'');
-              var mr=id('mu-role');if(mr)mr.value=String(u.role||'');
+              var mr=id('mu-role');if(mr){mr.value=String(u.role||'');onRoleChange();}
+              // For HOD — populate checkboxes, for others populate dept dropdown
+              if(String(u.role||'')==='HOD'){
+                buildHODDeptCheckboxes(String(u.department||''));
+              } else {
+                var mdp=id('mu-dept');if(mdp)mdp.value=String(u.department||'');
+              }
             },80);
             break;
           }
@@ -4399,7 +4658,11 @@ function showUserModal(uid){
 function editUser(uid){showUserModal(uid);}
 function saveUser(){
   var uid=V('mu-id');
-  var d={userID:uid,employeeID:V('mu-emp'),name:V('mu-name'),designation:V('mu-desig'),department:V('mu-dept'),zone:V('mu-zone'),role:V('mu-role'),mobile:V('mu-mobile'),email:V('mu-email'),username:V('mu-uname'),password:V('mu-pass')};
+  var role=V('mu-role');
+  // For HOD: get departments from checkboxes instead of single dept dropdown
+  var dept=role==='HOD'?getHODSelectedDepts():V('mu-dept');
+  if(role==='HOD'&&!dept){toast('Please select at least one department for the HOD.','error');return;}
+  var d={userID:uid,employeeID:V('mu-emp'),name:V('mu-name'),designation:V('mu-desig'),department:dept,zone:V('mu-zone'),role:role,mobile:V('mu-mobile'),email:V('mu-email'),username:V('mu-uname'),password:V('mu-pass')};
   if(!d.name||!d.username||!d.role){toast('Name, Username and Role are required.','error');return;}
   if(!uid&&!d.password){toast('Password is required for new users.','error');return;}
   if(d.password&&d.password.length>0&&d.password.length<6){toast('Password must be at least 6 characters.','error');return;}
