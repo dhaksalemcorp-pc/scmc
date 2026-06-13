@@ -2300,11 +2300,13 @@ tbody tr:hover { background: var(--surface2); }
       <!-- Profile Photo Section -->
       <div style="background:linear-gradient(135deg,#0b1f45,#1a3a6b);padding:24px;display:flex;align-items:center;gap:20px">
         <div style="position:relative;flex-shrink:0">
-          <div id="mpAvatarWrap" style="width:80px;height:80px;border-radius:50%;overflow:hidden;background:linear-gradient(135deg,var(--c-blue),var(--c-teal));display:flex;align-items:center;justify-content:center;border:3px solid rgba(255,255,255,.25);cursor:pointer" onclick="document.getElementById('mpPhotoInput').click()" title="Click to change photo">
+          <!-- Avatar — click to change only when in edit mode -->
+          <div id="mpAvatarWrap" style="width:80px;height:80px;border-radius:50%;overflow:hidden;background:linear-gradient(135deg,var(--c-blue),var(--c-teal));display:flex;align-items:center;justify-content:center;border:3px solid rgba(255,255,255,.25)" title="Profile photo">
             <img id="mpAvatarImg" src="" alt="" style="width:100%;height:100%;object-fit:cover;display:none">
             <span id="mpAvatarTxt" style="color:#fff;font-size:28px;font-weight:800">A</span>
           </div>
-          <div onclick="document.getElementById('mpPhotoInput').click()" style="position:absolute;bottom:0;right:0;width:26px;height:26px;background:var(--c-blue);border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;border:2px solid rgba(255,255,255,.5)" title="Upload photo">
+          <!-- Camera button — only visible in edit mode -->
+          <div id="mpCameraBtn" onclick="document.getElementById('mpPhotoInput').click()" style="display:none;position:absolute;bottom:0;right:0;width:26px;height:26px;background:var(--c-blue);border-radius:50%;align-items:center;justify-content:center;cursor:pointer;border:2px solid rgba(255,255,255,.5)" title="Change photo">
             <span class="material-icons-round" style="font-size:14px;color:#fff">camera_alt</span>
           </div>
         </div>
@@ -2312,9 +2314,10 @@ tbody tr:hover { background: var(--surface2); }
           <div style="color:#fff;font-size:17px;font-weight:800" id="mpDisplayName">Loading...</div>
           <div style="color:rgba(255,255,255,.6);font-size:12px;margin-top:3px" id="mpDisplayRole"></div>
           <div style="color:rgba(255,255,255,.5);font-size:11px;margin-top:2px" id="mpDisplayDept"></div>
-          <div style="margin-top:10px;display:flex;gap:6px;flex-wrap:wrap">
+          <!-- Photo buttons — only visible in edit mode -->
+          <div id="mpPhotoBtns" style="display:none;margin-top:10px;gap:6px;flex-wrap:wrap">
             <button class="btn btn-ghost btn-sm" onclick="document.getElementById('mpPhotoInput').click()" style="background:rgba(255,255,255,.12);border-color:rgba(255,255,255,.25);color:#fff;font-size:11px">
-              <span class="material-icons-round mi">add_a_photo</span> Photo
+              <span class="material-icons-round mi">add_a_photo</span> Change Photo
             </button>
             <button class="btn btn-ghost btn-sm" onclick="mpRemovePhoto()" style="background:rgba(255,255,255,.07);border-color:rgba(255,255,255,.15);color:rgba(255,255,255,.6);font-size:11px">
               <span class="material-icons-round mi">delete</span> Remove
@@ -2940,7 +2943,7 @@ function normalizeTaskList(data){
   var out=[];
   for(var i=0;i<data.length;i++){
     var t=data[i],due=t.dueDate?String(t.dueDate).slice(0,10):'';
-    out.push({taskID:String(t.taskID||''),taskType:String(t.taskType||''),zone:String(t.zone||''),dateAssigned:String(t.dateAssigned||'').slice(0,10),time:String(t.time||''),priority:String(t.priority||'Medium'),department:String(t.department||''),designation:String(t.designation||''),officerID:String(t.officerID||''),officerName:String(t.officerName||''),description:String(t.description||''),dueDate:due,status:String(t.status||'Pending'),createdBy:String(t.createdBy||''),createdAt:String(t.createdAt||''),officerRemarks:String(t.officerRemarks||''),source:String(t.source||'Manual'),photoLinks:String(t.photoLinks||''),isOverdue:(due&&new Date(due)<new Date()&&t.status!=='Completed'&&t.status!=='Closed')?true:false});
+    out.push({taskID:String(t.taskID||''),taskType:String(t.taskType||''),zone:String(t.zone||''),dateAssigned:String(t.dateAssigned||'').slice(0,10),time:String(t.time||''),priority:String(t.priority||'Medium'),department:String(t.department||''),designation:String(t.designation||''),officerID:String(t.officerID||''),officerName:String(t.officerName||''),description:String(t.description||''),dueDate:due,status:String(t.status||'Pending'),createdBy:String(t.createdBy||''),createdAt:String(t.createdAt||''),updatedAt:String(t.updatedAt||''),updatedBy:String(t.updatedBy||''),officerRemarks:String(t.officerRemarks||''),completedAt:String(t.completedAt||''),source:String(t.source||'Manual'),photoLinks:String(t.photoLinks||''),isOverdue:(due&&new Date(due)<new Date()&&t.status!=='Completed'&&t.status!=='Closed')?true:false});
   }
   return out;
 }
@@ -3980,18 +3983,41 @@ function savePlEntry(){
   if(!date||!type||!zone){toast('Date, Type and Zone are required.','error');return;}
   if(!notes.trim()){toast('Please enter notes / observations.','error');return;}
   var entry={date:date,time:time,type:type,zone:zone,location:loc,notes:notes,photos:''};
+
   if(PL.photos.length===0){doSavePlEntry(entry);return;}
-  showLoader('Uploading photos...');
-  var uploaded=[],idx=0;
-  function uploadNext(){
-    if(idx>=PL.photos.length){entry.photos=uploaded.join('\n');hideLoader();doSavePlEntry(entry);return;}
-    var f=PL.photos[idx];var lm=id('loaderMsg');if(lm)lm.textContent='Uploading photo '+(idx+1)+' of '+PL.photos.length+'...';
+
+  // Resize each photo to max 300x300 JPEG before storing as base64
+  // This keeps each photo under ~20KB — safe for Sheets cell storage
+  showLoader('Processing photos...');
+  var processed=[],idx=0;
+  function processNext(){
+    if(idx>=PL.photos.length){
+      entry.photos=processed.join('||');// use || as separator
+      hideLoader();doSavePlEntry(entry);return;
+    }
+    var f=PL.photos[idx];
+    var lm=id('loaderMsg');if(lm)lm.textContent='Processing photo '+(idx+1)+' of '+PL.photos.length+'...';
     var reader=new FileReader();
-    reader.onload=function(e){var b64=e.target.result.split(',')[1];
-      gasCall('serverUploadPhoto',S.token,'PHOTO_LOG',f.name,f.type,b64).then(function(r){if(r&&r.url)uploaded.push(r.url);idx++;uploadNext();});};
+    reader.onload=function(e){
+      var img=new Image();
+      img.onload=function(){
+        var canvas=document.createElement('canvas');
+        var maxSize=300;
+        var scale=Math.min(maxSize/img.width,maxSize/img.height,1);
+        canvas.width=Math.round(img.width*scale);
+        canvas.height=Math.round(img.height*scale);
+        canvas.getContext('2d').drawImage(img,0,0,canvas.width,canvas.height);
+        var b64=canvas.toDataURL('image/jpeg',0.65);
+        // Only include if under 30KB
+        if(b64.length<40000){processed.push(b64);}
+        idx++;processNext();
+      };
+      img.onerror=function(){idx++;processNext();};
+      img.src=e.target.result;
+    };
     reader.readAsDataURL(f);
   }
-  uploadNext();
+  processNext();
 }
 function doSavePlEntry(entry){
   showLoader('Saving entry...');
@@ -4087,17 +4113,26 @@ function driveToImgUrl(url){
 }
 
 function plPhotoThumbs(photosStr){
-  if(!photosStr)return'';
-  var links=photosStr.split('\n').filter(function(p){return p.trim();});
+  if(!photosStr||!photosStr.trim())return'';
+  // New format: base64 strings separated by ||
+  // Old format: Drive URLs separated by \n
+  var links;
+  if(photosStr.indexOf('||')>=0){
+    links=photosStr.split('||').filter(function(p){return p.trim().length>10;});
+  } else {
+    links=photosStr.split('\n').filter(function(p){return p.trim().length>10;});
+  }
   if(!links.length)return'';
   var html='<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px">';
   for(var i=0;i<links.length;i++){
-    var lnk=links[i].trim();
-    var imgSrc=driveToImgUrl(lnk);
-    html+='<a href="'+lnk+'" target="_blank" style="display:block;width:88px;height:88px;border-radius:8px;overflow:hidden;border:1.5px solid var(--border);flex-shrink:0;background:var(--surface2)">'
-      +'<img src="'+imgSrc+'" alt="Photo '+(i+1)+'" loading="lazy" '
+    var src=links[i].trim();
+    var isBase64=src.indexOf('data:image/')===0;
+    var displaySrc=isBase64?src:driveToImgUrl(src);
+    var href=isBase64?src:src; // for base64, href opens the image itself
+    html+='<a href="'+href+'" target="_blank" style="display:block;width:90px;height:90px;border-radius:8px;overflow:hidden;border:1.5px solid var(--border);flex-shrink:0;background:var(--surface2)">'
+      +'<img src="'+displaySrc+'" alt="Photo '+(i+1)+'" loading="lazy" '
       +'style="width:100%;height:100%;object-fit:cover;display:block" '
-      +'onerror="this.style.display=\'none\';this.parentNode.innerHTML=\'<div style=\\\"width:100%;height:100%;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:4px\\\"><span class=\\\"material-icons-round\\\" style=\\\"font-size:28px;color:var(--c-blue)\\\">photo</span><span style=\\\"font-size:9px;color:var(--tx3)\\\">Photo '+(i+1)+'</span></div>\'">'
+      +'onerror="this.style.display=\'none\'">'
       +'</a>';
   }
   html+='</div>';
@@ -4954,12 +4989,28 @@ function mpEnableEdit(){
   var isOfficer=(u.role==='Officer');
   if(unEl){unEl.value=String(u.username||'');unEl.readOnly=isOfficer;unEl.style.background=isOfficer?'var(--surface2)':'';}
   if(unNote)unNote.textContent=isOfficer?'(read-only for officers)':'';
+  // Show photo controls only in edit mode
+  var cam=id('mpCameraBtn'),btns=id('mpPhotoBtns'),wrap=id('mpAvatarWrap');
+  if(cam)cam.style.display='flex';
+  if(btns)btns.style.display='flex';
+  if(wrap){wrap.style.cursor='pointer';wrap.onclick=function(){document.getElementById('mpPhotoInput').click();};}
   var vm=id('mpViewMode'),em=id('mpEditMode');
   if(vm)vm.style.display='none';
   if(em)em.style.display='block';
 }
 
 function mpCancelEdit(){
+  // Hide photo controls when returning to view mode
+  var cam=id('mpCameraBtn'),btns=id('mpPhotoBtns'),wrap=id('mpAvatarWrap');
+  if(cam)cam.style.display='none';
+  if(btns)btns.style.display='none';
+  if(wrap){wrap.style.cursor='default';wrap.onclick=null;}
+  // Revert any unsaved photo preview
+  if(MP.photo&&MP.photo!=='__remove__'){
+    var saved=LS.get('sc-photo-'+(S.user?S.user.userID:''));
+    mpSetAvatarDisplay(saved||null,S.user?S.user.name:'');
+  }
+  MP.photo=null;
   var vm=id('mpViewMode'),em=id('mpEditMode');
   if(vm)vm.style.display='block';
   if(em)em.style.display='none';
@@ -5275,16 +5326,19 @@ function biImportAll(){
   importNext(0);
 }
 function fDateShort(d){
-  if(!d)return'\u2014';
+  if(!d||d==='\u2014')return'\u2014';
   try{
-    // If it's already a date string like "2026-06-01", parse as local date
-    // to avoid UTC->local timezone shift (which causes date to show as previous day)
-    var s=String(d).slice(0,10);
-    if(/^\d{4}-\d{2}-\d{2}$/.test(s)){
-      var parts=s.split('-');
-      var dt=new Date(parseInt(parts[0]),parseInt(parts[1])-1,parseInt(parts[2]));
+    var s=String(d).trim();
+    // Extract YYYY-MM-DD portion from any format (handles ISO strings too)
+    var m=s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if(m){
+      // Parse as LOCAL date — critical to avoid UTC timezone shift
+      // new Date('2026-06-01') = UTC midnight = May 31 in IST
+      // new Date(2026, 5, 1) = local midnight = June 1 in any timezone
+      var dt=new Date(parseInt(m[1]),parseInt(m[2])-1,parseInt(m[3]));
       return dt.toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'});
     }
+    // Fallback for non-standard formats
     return new Date(d).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'});
   }catch(e){return String(d);}
 }
