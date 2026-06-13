@@ -465,6 +465,8 @@ body {
   border-bottom: 1px solid rgba(255,255,255,.07);
   flex-shrink: 0;
 }
+.sb-user-name { color: #fff; font-size: 13px; font-weight: 600; line-height: 1.3; }
+.sb-user-role { color: rgba(255,255,255,.5); font-size: 11px; margin-top: 1px; }
 .sb-avatar {
   width: 36px; height: 36px; border-radius: 50%; flex-shrink: 0;
   background: linear-gradient(135deg, var(--c-blue), var(--c-teal));
@@ -474,6 +476,7 @@ body {
 .filter-chip{padding:4px 12px;border-radius:999px;font-size:12px;font-weight:500;cursor:pointer;border:1.5px solid var(--border);background:var(--surface2);color:var(--tx2);transition:all .15s;white-space:nowrap}
 .filter-chip.active{background:var(--c-blue);color:#fff;border-color:var(--c-blue)}
 .filter-chip:hover:not(.active){background:var(--border);color:var(--tx1)}
+.tr-hover:hover{background:var(--surface2)!important;transition:background .1s}
 
 /* nav */
 .sb-nav { flex: 1; padding: 10px 10px; overflow-y: auto; scrollbar-width: none; }
@@ -1382,9 +1385,55 @@ tbody tr:hover { background: var(--surface2); }
           </div>
         </div>
       </div>
-    </div>
 
-    <!-- TASK ENTRY -->
+      <!-- HOD Dashboard -->
+      <div id="hodDash" class="dn">
+        <!-- HOD Header -->
+        <div class="card mb14" style="background:linear-gradient(135deg,#065f46,#047857);color:#fff;border:none">
+          <div class="card-bd" style="padding:16px 20px">
+            <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:rgba(255,255,255,.6);margin-bottom:4px">Section HOD</div>
+            <div style="font-size:18px;font-weight:800" id="hodDeptTitle">Department Dashboard</div>
+            <div style="font-size:12px;color:rgba(255,255,255,.7);margin-top:3px" id="hodDeptSubtitle">Tasks overview for your department(s)</div>
+          </div>
+        </div>
+        <!-- Department KPI cards -->
+        <div class="kpi-grid mb14" id="hodKpis">
+          <div class="kpi blue"><div class="kpi-stripe"></div><div class="kpi-icon-wrap"><span class="material-icons-round mi">assignment</span></div><div class="kpi-val" id="hod-total">—</div><div class="kpi-lbl">Total Tasks</div></div>
+          <div class="kpi green"><div class="kpi-stripe"></div><div class="kpi-icon-wrap"><span class="material-icons-round mi">check_circle</span></div><div class="kpi-val" id="hod-done">—</div><div class="kpi-lbl">Completed</div></div>
+          <div class="kpi orange"><div class="kpi-stripe"></div><div class="kpi-icon-wrap"><span class="material-icons-round mi">pending</span></div><div class="kpi-val" id="hod-pending">—</div><div class="kpi-lbl">Pending</div></div>
+          <div class="kpi red"><div class="kpi-stripe"></div><div class="kpi-icon-wrap"><span class="material-icons-round mi">warning</span></div><div class="kpi-val" id="hod-overdue">—</div><div class="kpi-lbl">Overdue</div></div>
+        </div>
+        <!-- My Tasks (assigned to HOD personally) -->
+        <div class="card mb14">
+          <div class="card-hd" style="background:rgba(29,78,216,.06)">
+            <span class="material-icons-round mi" style="color:var(--c-blue)">person</span>
+            <span class="card-title" style="color:var(--c-blue)">My Tasks</span>
+            <span id="hodMyCount" style="background:var(--c-blue);color:#fff;font-size:11px;font-weight:700;padding:2px 9px;border-radius:999px;margin-left:auto"></span>
+          </div>
+          <div class="card-bd-0">
+            <table style="width:100%">
+              <thead><tr style="background:rgba(29,78,216,.06)"><th style="padding:8px 12px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--tx3)">Task ID</th><th style="padding:8px 12px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--tx3)">Description</th><th style="padding:8px 12px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--tx3)">Priority</th><th style="padding:8px 12px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--tx3)">Due</th><th style="padding:8px 12px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--tx3)">Status</th></tr></thead>
+              <tbody id="hodMyTasks"></tbody>
+            </table>
+          </div>
+        </div>
+        <!-- Department Tasks (all officers) -->
+        <div class="card">
+          <div class="card-hd" style="background:rgba(5,150,105,.06)">
+            <span class="material-icons-round mi" style="color:#059669">group</span>
+            <span class="card-title" style="color:#059669">Department Tasks</span>
+            <span id="hodDeptCount" style="background:#059669;color:#fff;font-size:11px;font-weight:700;padding:2px 9px;border-radius:999px;margin-left:auto"></span>
+          </div>
+          <div class="card-bd-0">
+            <table style="width:100%">
+              <thead><tr style="background:rgba(5,150,105,.06)"><th style="padding:8px 12px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--tx3)">Task ID</th><th style="padding:8px 12px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--tx3)">Description</th><th style="padding:8px 12px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--tx3)">Officer</th><th style="padding:8px 12px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--tx3)">Priority</th><th style="padding:8px 12px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--tx3)">Due</th><th style="padding:8px 12px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--tx3)">Status</th><th style="padding:8px 12px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--tx3)">Updated</th></tr></thead>
+              <tbody id="hodDeptTasks"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+    </div>
     <div class="page" id="page-taskEntry">
       <div class="ph"><div class="ph-left"><h1>Task Entry</h1><p>Create and assign tasks to officers</p></div></div>
       <div class="tabs mb16" id="taskTabs">
@@ -2037,17 +2086,17 @@ tbody tr:hover { background: var(--surface2); }
         <div class="f-group"><label class="f-label">Designation</label><select class="f-sel" id="mu-desig"><option value="">Select</option></select></div>
         <div class="f-group"><label class="f-label">Department</label><select class="f-sel" id="mu-dept"><option value="">Select</option></select></div>
       </div>
-      <!-- HOD multi-department field — shown only when role = HOD -->
-      <div id="hodDeptRow" style="display:none" class="f-group">
-        <label class="f-label">HOD Departments <span class="req">*</span><span style="font-size:11px;color:var(--tx3);font-weight:400"> — Select all departments this HOD manages</span></label>
-        <div id="hodDeptCheckboxes" style="display:flex;flex-wrap:wrap;gap:8px;padding:10px;background:var(--surface2);border-radius:8px;border:1px solid var(--border)"></div>
-        <div style="font-size:11.5px;color:var(--tx3);margin-top:4px">Selected departments will be stored comma-separated. HOD can see all tasks from these departments.</div>
-      </div>
       <div class="f-row">
         <div class="f-group"><label class="f-label">Zone</label><select class="f-sel" id="mu-zone"><option value="">Select</option></select></div>
         <div class="f-group"><label class="f-label">Role <span class="req">*</span></label>
           <select class="f-sel" id="mu-role" onchange="onRoleChange()"><option value="">Select Role</option><option>Commissioner</option><option>Admin</option><option>HOD</option><option>Officer</option></select>
         </div>
+      </div>
+      <!-- HOD multi-department field — shown only when role = HOD -->
+      <div id="hodDeptRow" style="display:none" class="f-group">
+        <label class="f-label" style="font-size:12px;font-weight:700;color:var(--c-blue);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px">&#127970; HOD Departments <span class="req">*</span></label>
+        <div style="font-size:12px;color:var(--tx3);margin-bottom:8px">Select all departments this HOD oversees. Tasks from these departments will appear in their dashboard.</div>
+        <div id="hodDeptCheckboxes" style="display:flex;flex-wrap:wrap;gap:8px;padding:12px;background:var(--surface2);border-radius:10px;border:1.5px solid var(--c-blue)"></div>
       </div>
       <div class="f-row">
         <div class="f-group"><label class="f-label">Mobile</label><input type="tel" class="f-ctrl" id="mu-mobile" placeholder="9876543210"></div>
@@ -2705,19 +2754,11 @@ function demoFn(fn,args){
 }
 window.addEventListener('load',function(){
   applyTheme(S.theme);
-  // Hide all pages immediately on load — go() will show the correct one after login
-  var pages=document.querySelectorAll('.page');
-  for(var i=0;i<pages.length;i++){
-    pages[i].style.display='none';
-    pages[i].style.visibility='hidden';
-    pages[i].style.height='0';
-    pages[i].style.overflow='hidden';
-    pages[i].classList.remove('active');
-  }
-  try{var tok=LS.get('sc-tok'),usr=LS.get('sc-usr');if(tok&&usr){gasCall('serverValidateSession',tok).then(function(r){if(r&&r.valid){S.token=tok;S.user=JSON.parse(usr);showApp();}});}}catch(e){}
+  // CSS already hides all .page elements by default — no need for inline styles
   var pe=id('loginPass');if(pe)pe.addEventListener('keydown',function(e){if(e.key==='Enter')doLogin();});
   var mods=document.querySelectorAll('.modal-bg');
   for(var i=0;i<mods.length;i++){(function(bg){bg.addEventListener('click',function(e){if(e.target===bg)bg.classList.remove('open');});})(mods[i]);}
+  try{var tok=LS.get('sc-tok'),usr=LS.get('sc-usr');if(tok&&usr){gasCall('serverValidateSession',tok).then(function(r){if(r&&r.valid){S.token=tok;S.user=JSON.parse(usr);showApp();}});}}catch(e){}
   loadSavedLogo();
 });
 function applyTheme(t){document.documentElement.setAttribute('data-theme',t);var btn=id('themeBtn');if(btn){var ic=btn.querySelector('.mi');if(ic)ic.textContent=t==='dark'?'light_mode':'dark_mode';}}
@@ -2775,56 +2816,52 @@ function applyRoleNav(role){
   var isHOD=(role==='HOD');
   var isOfficer=(role==='Officer');
 
-  show('snav-taskEntry', isAdmin||isHOD);
+  show('snav-taskEntry', isAdmin);
   show('snav-users', isAdmin);
   show('snav-commview', isAdmin);
   show('snav-settings', isAdmin);
   show('snav-chgpw', true);
   show('snav-photolog', isAdmin);
-  show('bnEntry', isAdmin||isHOD);
+  show('bnEntry', isAdmin);
   show('bnCommView', isAdmin);
-  show('newTaskBtn', isAdmin||isHOD);
-  var thChk=id('thChk');if(thChk)thChk.style.display=isAdmin?'':'none';
+  show('newTaskBtn', isAdmin);
+  var thChk=id('thChk');if(thChk)thChk.style.display=(isAdmin||isHOD)?'':'none';
   if(!isAdmin&&!isHOD){var bb=id('bulkBar');if(bb)bb.classList.add('dn');}
 
   if(isOfficer){
     S.allowedPages=['dashboard','tracker','about'];
   } else if(isHOD){
-    S.allowedPages=['dashboard','taskEntry','tracker','about'];
+    S.allowedPages=['dashboard','tracker','about'];
   } else {
     S.allowedPages=['dashboard','taskEntry','tracker','commview','users','settings','photolog','about'];
   }
 
-  var ad=id('adminDash'),od=id('officerDash');
-  if(isOfficer){if(ad)ad.classList.add('dn');if(od)od.classList.remove('dn');}
-  else{if(ad)ad.classList.remove('dn');if(od)od.classList.add('dn');}
+  var ad=id('adminDash'),od=id('officerDash'),hd=id('hodDash');
+  if(isOfficer){
+    if(ad)ad.classList.add('dn');if(od)od.classList.remove('dn');if(hd)hd.classList.add('dn');
+  } else if(isHOD){
+    if(ad)ad.classList.add('dn');if(od)od.classList.add('dn');if(hd)hd.classList.remove('dn');
+  } else {
+    if(ad)ad.classList.remove('dn');if(od)od.classList.add('dn');if(hd)hd.classList.add('dn');
+  }
 }
 var PAGE_META={dashboard:['Dashboard','Overview & Analytics'],taskEntry:['Task Entry','Create and assign tasks'],tracker:['Task Tracker','Monitor all tasks'],commview:['Commissioner View','Executive analytics'],users:['User Management','Manage accounts'],settings:['Settings','System configuration'],photolog:['Photo Log','Field inspection records'],about:['About','Application information']};
 function go(page){
   if(S.allowedPages&&S.allowedPages.length&&S.allowedPages.indexOf(page)===-1){toast('Access restricted.','error');return;}
   S.page=page;
-  // Explicitly hide ALL pages then show only the target
+  // Let CSS classes handle show/hide — never set inline styles on pages
   var pages=document.querySelectorAll('.page');
   for(var i=0;i<pages.length;i++){
     pages[i].classList.remove('active');
-    pages[i].style.display='none';
-    pages[i].style.visibility='hidden';
-    pages[i].style.height='0';
-    pages[i].style.overflow='hidden';
+    // Clear any stale inline styles that could override CSS
+    pages[i].style.cssText='';
   }
   var el=id('page-'+page);
   if(el){
     el.classList.add('active');
-    el.style.display='block';
-    el.style.visibility='visible';
-    el.style.height='auto';
-    el.style.overflow='visible';
   }
-  // Scroll content back to top on every tab switch
-  var content=id('content');
-  if(content) content.scrollTop=0;
+  var content=id('content');if(content)content.scrollTop=0;
   window.scrollTo(0,0);
-
   var sbItems=document.querySelectorAll('.sb-item');for(var i=0;i<sbItems.length;i++)sbItems[i].classList.toggle('active',sbItems[i].dataset&&sbItems[i].dataset.page===page);
   var bnItems=document.querySelectorAll('.bn-item');for(var i=0;i<bnItems.length;i++)bnItems[i].classList.toggle('active',bnItems[i].dataset&&bnItems[i].dataset.page===page);
   var m=PAGE_META[page]||[page,''];var tt=id('topTitle');if(tt)tt.textContent=m[0];var ts=id('topSub');if(ts)ts.textContent=m[1];
@@ -2943,10 +2980,11 @@ function onOfficerChange(){
   }
 }
 function loadDashboard(){
-  var isOfficer=(S.user&&S.user.role==='Officer');
+  var role=S.user?S.user.role:'';
+  if(role==='Officer'){loadOfficerDashboard();return;}
+  if(role==='HOD'){loadHODDashboard();return;}
   var gd=id('greetDate');if(gd)gd.textContent=new Date().toLocaleDateString('en-IN',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
   var gn=id('greetName');if(gn)gn.textContent=S.user?S.user.name.split(' ')[0]:'';
-  if(isOfficer){ loadOfficerDashboard(); return; }
   showLoader('Loading dashboard...');
   gasCall('serverGetDashboardStats',S.token).then(function(r){
     hideLoader();if(!r||!r.success){toast(r?r.message:'Load failed','error');return;}
@@ -2957,6 +2995,89 @@ function loadDashboard(){
     buildStatusChart(s);buildZoneChart(r.zoneStats);buildDeptBreakdown(r.deptStats);loadActivityLog();
   });
 }
+function loadHODDashboard(){
+  var u=S.user;if(!u)return;
+  // Update HOD header
+  var depts=u.hodDepartments||u.department||'';
+  var titleEl=id('hodDeptTitle'),subEl=id('hodDeptSubtitle');
+  if(titleEl)titleEl.textContent=depts||'My Department';
+  if(subEl)subEl.textContent='HOD Dashboard — '+u.designation;
+  var gn=id('greetName');if(gn)gn.textContent=u.name.split(' ')[0];
+  var gr=id('greetRole');if(gr)gr.textContent='Section HOD · '+depts;
+  // Fetch all dept tasks
+  showLoader('Loading department tasks...');
+  gasCall('serverGetHODTasks',S.token).then(function(r){
+    hideLoader();
+    if(!r||!r.success)return;
+    var allTasks=normalizeTaskList(r.data||[]);
+    S.tasks=allTasks;S.filtered=allTasks.slice();
+    // Split: my tasks (assigned to HOD personally) vs dept tasks (others)
+    var myTasks=[],deptTasks=[];
+    for(var i=0;i<allTasks.length;i++){
+      if(allTasks[i].officerID===u.userID||allTasks[i].officerName===u.name){
+        myTasks.push(allTasks[i]);
+      } else {
+        deptTasks.push(allTasks[i]);
+      }
+    }
+    // KPIs for all dept tasks
+    var total=allTasks.length,done=0,pending=0,overdue=0;
+    for(var i=0;i<allTasks.length;i++){
+      var t=allTasks[i];
+      if(t.status==='Completed'||t.status==='Closed')done++;
+      else if(t.status==='Pending')pending++;
+      if(t.isOverdue)overdue++;
+    }
+    var htEl=id('hod-total');if(htEl)htEl.textContent=total;
+    var hdEl=id('hod-done');if(hdEl)hdEl.textContent=done;
+    var hpEl=id('hod-pending');if(hpEl)hpEl.textContent=pending;
+    var hoEl=id('hod-overdue');if(hoEl)hoEl.textContent=overdue;
+    // My tasks count badge
+    var mc=id('hodMyCount');if(mc)mc.textContent=myTasks.length;
+    var dc=id('hodDeptCount');if(dc)dc.textContent=deptTasks.length;
+    // Render my tasks table
+    var myTb=id('hodMyTasks');
+    if(myTb){
+      if(!myTasks.length){myTb.innerHTML='<tr><td colspan="5" style="padding:20px;text-align:center;color:var(--tx3)">No tasks assigned to you directly.</td></tr>';}
+      else{
+        var html='';
+        for(var i=0;i<myTasks.length;i++){
+          var t=myTasks[i];
+          html+='<tr onclick="viewTask(\''+t.taskID+'\')" style="cursor:pointer" class="tr-hover">'
+            +'<td style="padding:8px 12px;font-family:monospace;font-size:12px;color:var(--c-blue)">'+t.taskID+'</td>'
+            +'<td style="padding:8px 12px;font-size:13px;max-width:220px" class="ellipsis">'+t.description+'</td>'
+            +'<td style="padding:8px 12px"><span class="badge badge-'+t.priority.toLowerCase()+'">'+t.priority+'</span></td>'
+            +'<td style="padding:8px 12px;font-size:12px;color:'+(t.isOverdue?'var(--c-red)':'var(--tx2)')+'">'+fDateShort(t.dueDate)+'</td>'
+            +'<td style="padding:8px 12px"><span class="badge badge-'+statusClass(t.status)+'">'+t.status+'</span></td>'
+            +'</tr>';
+        }
+        myTb.innerHTML=html;
+      }
+    }
+    // Render dept tasks table (other officers)
+    var deptTb=id('hodDeptTasks');
+    if(deptTb){
+      if(!deptTasks.length){deptTb.innerHTML='<tr><td colspan="7" style="padding:20px;text-align:center;color:var(--tx3)">No subordinate tasks in your department.</td></tr>';}
+      else{
+        var html='';
+        for(var i=0;i<deptTasks.length;i++){
+          var t=deptTasks[i];
+          html+='<tr onclick="viewTask(\''+t.taskID+'\')" style="cursor:pointer" class="tr-hover">'
+            +'<td style="padding:8px 12px;font-family:monospace;font-size:12px;color:var(--c-blue)">'+t.taskID+'</td>'
+            +'<td style="padding:8px 12px;font-size:13px;max-width:180px" class="ellipsis">'+t.description+'</td>'
+            +'<td style="padding:8px 12px;font-size:12px;font-weight:600">'+t.officerName+'</td>'
+            +'<td style="padding:8px 12px"><span class="badge badge-'+t.priority.toLowerCase()+'">'+t.priority+'</span></td>'
+            +'<td style="padding:8px 12px;font-size:12px;color:'+(t.isOverdue?'var(--c-red)':'var(--tx2)')+'">'+fDateShort(t.dueDate)+'</td>'
+            +'<td style="padding:8px 12px"><span class="badge badge-'+statusClass(t.status)+'">'+t.status+'</span></td>'
+            +'<td style="padding:8px 12px;font-size:11px;color:var(--tx3)">'+(t.updatedAt?fDateShort(t.updatedAt)+(t.updatedBy?' by '+t.updatedBy:''):'\u2014')+'</td>'
+            +'</tr>';
+        }
+        deptTb.innerHTML=html;
+      }
+    }
+  });
+}
+
 function loadOfficerDashboard(){
   showLoader('Loading your dashboard...');
   // Use demo handler for officer dashboard in demo mode; GAS uses serverGetOfficerDashboard
