@@ -2851,7 +2851,7 @@ function closeSidebar(){var s=id('sidebar');if(s)s.classList.remove('open');var 
 function loadLookup(){return gasCall('serverGetLookupData',S.token).then(function(r){if(r&&r.success){S.lookup=r;populateSelects();}});}
 function populateSelects(){
   var ld=S.lookup;if(!ld)return;
-  fillSel('t-zone',ld.zones,'ZoneName','ZoneName','Select Zone');fillSel('fZone',ld.zones,'ZoneName','ZoneName','All Zones');fillSel('mu-zone',ld.zones,'ZoneName','ZoneName','Select');
+  fillSelZone('t-zone',ld.zones,'Select Zone');fillSelZone('fZone',ld.zones,'All Zones');fillSelZone('mu-zone',ld.zones,'Select');
   fillSel('t-dept',ld.departments,'DeptName','DeptName','Select Department');fillSel('fDept',ld.departments,'DeptName','DeptName','All Departments');fillSel('mu-dept',ld.departments,'DeptName','DeptName','Select');fillSel('mapDept',ld.departments,'DeptName','DeptName','Select');
   fillSel('t-desig',ld.designations,'DesigName','DesigName','Select Designation');fillSel('mu-desig',ld.designations,'DesigName','DesigName','Select');
   fillOfficers(null);
@@ -3161,7 +3161,30 @@ function clearFilters(){
   var fs=id('filterSummary');if(fs)fs.classList.add('dn');
   var badge=id('filterCountBadge');if(badge)badge.style.display='none';
 }
-var PRIORITY_ORDER={'High':1,'Medium':2,'Low':3};
+// ── ZONE SORT ORDER ───────────────────────────────────────────
+var ZONE_SEQ=['Main Office','Suramangalam Zone-1','Hasthampatti Zone-2','Ammapet Zone-3','Kondalampatti Zone-4'];
+function zoneRank(name){
+  var n=String(name||'').toLowerCase();
+  if(n.indexOf('main')>=0)return 1;
+  if(n.indexOf('suramangalam')>=0)return 2;
+  if(n.indexOf('hasthampatti')>=0)return 3;
+  if(n.indexOf('ammapet')>=0)return 4;
+  if(n.indexOf('kondalampatti')>=0)return 5;
+  return 99;
+}
+function sortZones(zones){
+  var arr=zones.slice();
+  arr.sort(function(a,b){
+    var na=a.ZoneName||a||'';var nb=b.ZoneName||b||'';
+    return zoneRank(na)-zoneRank(nb);
+  });
+  return arr;
+}
+// Override fillSel for zone selects to always sort by correct order
+function fillSelZone(selId,zones,label){
+  var sorted=sortZones(zones);
+  fillSel(selId,sorted,'ZoneName','ZoneName',label||'All Zones');
+}
 function sortBy(col){
   if(S.sortCol===col){S.sortDir*=-1;}else{S.sortCol=col;S.sortDir=1;}
   // Update sort indicators
@@ -3992,8 +4015,14 @@ function loadCommView(){
 }
 function buildCVZone(zs){
   var ctx=id('cvZone');if(!ctx)return;if(S.charts.cvz)S.charts.cvz.destroy();
-  var zones=Object.keys(zs),rates=[];for(var i=0;i<zones.length;i++){var s=zs[zones[i]];rates.push(s.total>0?Math.round(s.completed/s.total*100):0);}
-  S.charts.cvz=new Chart(ctx,{type:'bar',data:{labels:zones.map(function(z){return z.replace(/ Zone-\d/,'').substring(0,14);}),datasets:[{label:'Completion %',data:rates,backgroundColor:rates.map(function(r){return r>60?'#10b981':r>30?'#f59e0b':'#ef4444';}),borderRadius:5}]},options:{responsive:true,maintainAspectRatio:false,scales:{y:{beginAtZero:true,max:100}},plugins:{legend:{display:false}}}});
+  // Sort zones by canonical order
+  var zones=Object.keys(zs);
+  zones.sort(function(a,b){return zoneRank(a)-zoneRank(b);});
+  var rates=[];
+  for(var i=0;i<zones.length;i++){var s=zs[zones[i]];rates.push(s.total>0?Math.round(s.completed/s.total*100):0);}
+  // Shorten zone labels for display
+  var labels=zones.map(function(z){return z.replace('Suramangalam','Suram.').replace('Hasthampatti','Hasth.').replace('Kondalampatti','Kond.').replace(' Zone-',' Z').replace('Main Office','Main');});
+  S.charts.cvz=new Chart(ctx,{type:'bar',data:{labels:labels,datasets:[{label:'Completion %',data:rates,backgroundColor:rates.map(function(r){return r>60?'#10b981':r>30?'#f59e0b':'#ef4444';}),borderRadius:5}]},options:{responsive:true,maintainAspectRatio:false,scales:{y:{beginAtZero:true,max:100}},plugins:{legend:{display:false}}}});
 }
 function buildCVDept(ds){
   var ctx=id('cvDept');if(!ctx)return;if(S.charts.cvd)S.charts.cvd.destroy();
@@ -4564,13 +4593,21 @@ function exportPlDiaryExcel(entries,from,to){
   for(var i=0;i<entries.length;i++){var e=entries[i];rows.push([e.date,e.time,e.type,e.zone,e.location||'','"'+(e.notes||'').replace(/"/g,'"')+'"',e.photos||'']);}
   dlFile(rows.map(function(r){return r.join(',');}).join('\n'),'PhotoLog_'+from+'_to_'+to+'.csv','text/csv');
 }
-function buildCritical(){
+function buildCritical(tasksArr){
   var el=id('criticalList');if(!el)return;
-  var crit=[];for(var i=0;i<S.tasks.length;i++)if(S.tasks[i].isOverdue||S.tasks[i].priority==='High')crit.push(S.tasks[i]);
+  // If tasksArr passed use it, otherwise derive from S.tasks
+  var crit=[];
+  if(tasksArr){
+    crit=tasksArr;
+  } else {
+    for(var i=0;i<S.tasks.length;i++)if(S.tasks[i].isOverdue||S.tasks[i].priority==='High')crit.push(S.tasks[i]);
+  }
   if(!crit.length){el.innerHTML='<div class="card-bd"><div class="alert alert-ok"><span class="material-icons-round mi">check_circle</span>No critical or overdue tasks. All is well.</div></div>';return;}
-  var rows='';for(var i=0;i<crit.length;i++){var t=crit[i];rows+='<tr style="'+(t.isOverdue?'background:rgba(239,68,68,.04)':'')+'"><td class="mono" style="color:var(--c-blue)">'+t.taskID+'</td><td style="max-width:200px;font-size:12.5px" class="ellipsis">'+t.description+'</td><td>'+t.officerName+'</td><td '+(t.isOverdue?'style="color:var(--c-red);font-weight:700"':'')+'>'+(t.isOverdue?'\u26a0 ':'')+fDateShort(t.dueDate)+'</td><td><span class="badge badge-'+statusClass(t.status)+'">'+t.status+'</span></td></tr>';}
+  var rows='';for(var i=0;i<crit.length&&i<15;i++){var t=crit[i];rows+='<tr style="'+(t.isOverdue?'background:rgba(239,68,68,.04)':'')+'"><td class="mono" style="color:var(--c-blue)">'+t.taskID+'</td><td style="max-width:200px;font-size:12.5px" class="ellipsis">'+t.description+'</td><td>'+t.officerName+'</td><td '+(t.isOverdue?'style="color:var(--c-red);font-weight:700"':'')+'>'+(t.isOverdue?'\u26a0 ':'')+fDateShort(t.dueDate)+'</td><td><span class="badge badge-'+statusClass(t.status)+'">'+t.status+'</span></td></tr>';}
   el.innerHTML='<div class="tbl-wrap"><table><thead><tr><th>Task ID</th><th>Description</th><th>Officer</th><th>Due Date</th><th>Status</th></tr></thead><tbody>'+rows+'</tbody></table></div>';
 }
+// Alias for backward compatibility
+function buildCriticalList(arr){buildCritical(arr);}
 function loadUsers(){
   showLoader('Loading users...');
   gasCall('serverGetUsers',S.token).then(function(r){hideLoader();if(r&&r.success){S.users=r.data||[];renderUsers(S.users);}});
@@ -5045,7 +5082,7 @@ function openCustomReport(){
   // Populate filter dropdowns from lookup
   var ld=S.lookup;
   if(ld){
-    fillSel('cr-zone',ld.zones,'ZoneName','ZoneName','All Zones');
+    fillSelZone('cr-zone',ld.zones,'All Zones');
     fillSel('cr-dept',ld.departments,'DeptName','DeptName','All Departments');
     // Officers dropdown
     var el=id('cr-officer');
