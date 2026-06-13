@@ -3151,26 +3151,42 @@ function taskDetailHTML(t){
 
   // Photos — inline grid with timestamp
   if(t.photoLinks&&t.photoLinks.trim()){
-    var links=t.photoLinks.split('\n').filter(function(p){return p.trim();});
-    if(links.length){
+    var rawPL=t.photoLinks.trim();
+    var photoItems;
+    if(rawPL.indexOf('||')>=0) photoItems=rawPL.split('||');
+    else photoItems=rawPL.split('\n');
+    var validPhotos=[];
+    for(var pi=0;pi<photoItems.length;pi++){
+      var ps=photoItems[pi].trim();
+      if(ps.indexOf('data:image/')===0||ps.indexOf('http')===0) validPhotos.push(ps);
+    }
+    if(validPhotos.length){
       html+='<div style="margin-top:12px">'
         +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">'
-        +'<div style="font-size:10px;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em">&#128247; Officer Photos ('+links.length+')</div>'
-        +(t.updatedAt?'<div style="font-size:10.5px;color:var(--tx3)">Uploaded: '+fDateShort(t.updatedAt)+(t.updatedBy?' by <strong>'+t.updatedBy+'</strong>':'')+'</div>':'')
+        +'<div style="font-size:10px;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em">&#128247; Officer Photos ('+validPhotos.length+')</div>'
+        +(t.updatedAt?'<div style="font-size:10.5px;color:var(--tx3)">Updated: '+fDateShort(t.updatedAt)+(t.updatedBy?' by <strong>'+t.updatedBy+'</strong>':'')+'</div>':'')
         +'</div>'
-        +'<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:8px">';
-      for(var pi=0;pi<links.length;pi++){
-        var lnk=links[pi].trim();
-        var imgSrc=driveToImgUrl(lnk);
-        html+='<a href="'+lnk+'" target="_blank" title="Tap to view full size" '
-          +'style="display:block;border-radius:10px;overflow:hidden;border:2px solid var(--border);background:var(--surface2);aspect-ratio:1">'
-          +'<img src="'+imgSrc+'" alt="Photo '+(pi+1)+'" loading="lazy" '
-          +'style="width:100%;height:100%;object-fit:cover;display:block" '
-          +'onerror="this.style.display=\'none\';this.nextSibling.style.display=\'flex\'">'
-          +'<div style="display:none;width:100%;height:100%;align-items:center;justify-content:center;flex-direction:column;gap:4px;padding:8px">'
-          +'<span class="material-icons-round" style="font-size:28px;color:var(--tx3)">photo_camera</span>'
-          +'<span style="font-size:9px;color:var(--tx3);text-align:center">Photo '+(pi+1)+'<br><span style="font-size:9px">Tap to open</span></span>'
-          +'</div></a>';
+        +'<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:8px">';
+      for(var pi=0;pi<validPhotos.length;pi++){
+        var psrc=validPhotos[pi];
+        var isB64=psrc.indexOf('data:image/')===0;
+        if(isB64){
+          // Base64 — use onclick to open, not href (browsers truncate base64 hrefs)
+          html+='<div onclick="plOpenPhoto(\'tk_img_'+pi+'\')" '
+            +'style="border-radius:10px;overflow:hidden;border:2px solid var(--border);cursor:pointer;background:var(--surface2);aspect-ratio:1;display:block">'
+            +'<img id="tk_img_'+pi+'" src="'+psrc+'" alt="Photo '+(pi+1)+'" '
+            +'style="width:100%;height:100%;object-fit:cover;display:block" '
+            +'onerror="this.style.display=\'none\'">'
+            +'</div>';
+        } else {
+          var vSrc=driveToImgUrl(psrc);
+          html+='<a href="'+psrc+'" target="_blank" rel="noopener" '
+            +'style="display:block;border-radius:10px;overflow:hidden;border:2px solid var(--border);background:var(--surface2);aspect-ratio:1">'
+            +'<img src="'+vSrc+'" alt="Photo '+(pi+1)+'" loading="lazy" '
+            +'style="width:100%;height:100%;object-fit:cover;display:block" '
+            +'onerror="this.style.display=\'none\'">'
+            +'</a>';
+        }
       }
       html+='</div></div>';
     }
@@ -4042,7 +4058,10 @@ function plRenderCards(entries){
     var ic=0,mc=0,sc=0,pc=0;
     for(var i=0;i<entries.length;i++){
       if(entries[i].type==='Inspection')ic++;else if(entries[i].type==='Meeting')mc++;else sc++;
-      if(entries[i].photos&&entries[i].photos.trim()){var ps=entries[i].photos.split('\n').filter(function(p){return p.trim();});pc+=ps.length;}
+      if(entries[i].photos&&entries[i].photos.trim()){
+        var ps=entries[i].photos.indexOf('||')>=0?entries[i].photos.split('||'):entries[i].photos.split('\n');
+        for(var pj=0;pj<ps.length;pj++){if(ps[pj].trim().length>10)pc++;}
+      }
     }
     strip.innerHTML='<div style="background:rgba(29,78,216,.08);border:1px solid rgba(29,78,216,.2);border-radius:8px;padding:8px 14px;font-size:12.5px;color:#1d4ed8;display:flex;gap:4px;align-items:center"><span class="material-icons-round mi" style="font-size:14px">search</span><strong>'+ic+'</strong> Inspections</div>'
       +'<div style="background:rgba(5,150,105,.08);border:1px solid rgba(5,150,105,.2);border-radius:8px;padding:8px 14px;font-size:12.5px;color:#059669;display:flex;gap:4px;align-items:center"><span class="material-icons-round mi" style="font-size:14px">groups</span><strong>'+mc+'</strong> Meetings</div>'
@@ -4063,7 +4082,7 @@ function plRenderCards(entries){
     html+='<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--tx3);padding:10px 0 6px;border-bottom:1px solid var(--border);margin-bottom:10px">'+mLabel+' &middot; '+mEntries.length+' entries</div>';
     for(var ei=0;ei<mEntries.length;ei++){
       var e=mEntries[ei],tc=typeColors[e.type]||typeColors['Site Visit'];
-      var photoLinks=e.photos?e.photos.split('\n').filter(function(p){return p.trim();}).length:0;
+      var photoLinks=e.photos?(e.photos.indexOf('||')>=0?e.photos.split('||').filter(function(p){return p.trim().length>10;}).length:e.photos.split('\n').filter(function(p){return p.trim().length>10;}).length):0;
       var eid='plx_'+mi+'_'+ei;
       html+='<div class="card mb10" style="cursor:pointer;border-left:4px solid '+tc.border+'" data-eid="'+eid+'" onclick="plToggleCard(this.dataset.eid)">'
         +'<div class="card-bd" style="padding:12px 14px">'
@@ -4114,29 +4133,59 @@ function driveToImgUrl(url){
 
 function plPhotoThumbs(photosStr){
   if(!photosStr||!photosStr.trim())return'';
-  // New format: base64 strings separated by ||
-  // Old format: Drive URLs separated by \n
-  var links;
-  if(photosStr.indexOf('||')>=0){
-    links=photosStr.split('||').filter(function(p){return p.trim().length>10;});
+  // Parse photos — new format uses || separator, old uses \n
+  var raw=photosStr.trim();
+  var items;
+  if(raw.indexOf('||')>=0){
+    items=raw.split('||');
   } else {
-    links=photosStr.split('\n').filter(function(p){return p.trim().length>10;});
+    items=raw.split('\n');
   }
-  if(!links.length)return'';
-  var html='<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px">';
-  for(var i=0;i<links.length;i++){
-    var src=links[i].trim();
+  // Filter: valid entries must be base64 data URLs or http URLs
+  var photos=[];
+  for(var i=0;i<items.length;i++){
+    var s=items[i].trim();
+    if(s.indexOf('data:image/')===0||s.indexOf('http')===0){photos.push(s);}
+  }
+  if(!photos.length)return'';
+
+  var html='<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:10px">';
+  for(var i=0;i<photos.length;i++){
+    var src=photos[i];
     var isBase64=src.indexOf('data:image/')===0;
-    var displaySrc=isBase64?src:driveToImgUrl(src);
-    var href=isBase64?src:src; // for base64, href opens the image itself
-    html+='<a href="'+href+'" target="_blank" style="display:block;width:90px;height:90px;border-radius:8px;overflow:hidden;border:1.5px solid var(--border);flex-shrink:0;background:var(--surface2)">'
-      +'<img src="'+displaySrc+'" alt="Photo '+(i+1)+'" loading="lazy" '
-      +'style="width:100%;height:100%;object-fit:cover;display:block" '
-      +'onerror="this.style.display=\'none\'">'
-      +'</a>';
+    // For base64: use onclick to open in new tab (href with full base64 is truncated by browsers)
+    // For Drive URLs: use driveToImgUrl for display, href for full view
+    if(isBase64){
+      html+='<div onclick="plOpenPhoto(\'ph_img_'+i+'\')" '
+        +'style="width:100px;height:100px;border-radius:10px;overflow:hidden;border:2px solid var(--border);cursor:pointer;background:var(--surface2);flex-shrink:0">'
+        +'<img id="ph_img_'+i+'" src="'+src+'" alt="Photo '+(i+1)+'" '
+        +'style="width:100%;height:100%;object-fit:cover;display:block" '
+        +'onerror="this.parentNode.style.display=\'flex\';this.parentNode.style.alignItems=\'center\';this.parentNode.style.justifyContent=\'center\';this.style.display=\'none\'">'
+        +'</div>';
+    } else {
+      var viewSrc=driveToImgUrl(src);
+      html+='<a href="'+src+'" target="_blank" rel="noopener" '
+        +'style="display:block;width:100px;height:100px;border-radius:10px;overflow:hidden;border:2px solid var(--border);background:var(--surface2);flex-shrink:0">'
+        +'<img src="'+viewSrc+'" alt="Photo '+(i+1)+'" loading="lazy" '
+        +'style="width:100%;height:100%;object-fit:cover;display:block" '
+        +'onerror="this.style.display=\'none\'">'
+        +'</a>';
+    }
   }
   html+='</div>';
   return html;
+}
+
+function plOpenPhoto(imgId){
+  var img=document.getElementById(imgId);
+  if(!img||!img.src)return;
+  var w=window.open();
+  if(w){
+    w.document.write('<html><body style="margin:0;background:#000;display:flex;align-items:center;justify-content:center;min-height:100vh">'
+      +'<img src="'+img.src+'" style="max-width:100%;max-height:100vh;object-fit:contain">'
+      +'</body></html>');
+    w.document.close();
+  }
 }
 function plFilter(){
   var type=V('plFType'),zone=V('plFZone'),month=V('plFMonth'),filtered=[];
