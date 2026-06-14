@@ -482,7 +482,10 @@ body {
   display: flex; align-items: center; justify-content: center;
   color: #fff; font-size: 15px; font-weight: 700;
 }
-.filter-chip{padding:4px 12px;border-radius:999px;font-size:12px;font-weight:500;cursor:pointer;border:1.5px solid var(--border);background:var(--surface2);color:var(--tx2);transition:all .15s;white-space:nowrap}
+.pl-zone-chip{display:inline-flex;align-items:center;gap:5px;padding:5px 10px;border-radius:999px;border:1.5px solid var(--border);background:var(--surface);cursor:pointer;font-size:12px;font-weight:500;transition:all .15s;user-select:none}
+.pl-zone-chip:hover{border-color:var(--c-blue);color:var(--c-blue)}
+.pl-zone-chip input{display:none}
+.pl-zone-chip:has(input:checked){background:var(--c-blue);color:#fff;border-color:var(--c-blue)}
 .filter-chip.active{background:var(--c-blue);color:#fff;border-color:var(--c-blue)}
 .filter-chip:hover:not(.active){background:var(--border);color:var(--tx1)}
 .tr-hover:hover{background:var(--surface2)!important;transition:background .1s}
@@ -1400,49 +1403,46 @@ tbody tr:hover { background: var(--surface2); }
         <div>
         <!-- HOD Header -->
         <div class="card mb14" style="background:linear-gradient(135deg,#065f46,#047857);color:#fff;border:none">
-          <div class="card-bd" style="padding:16px 20px">
-            <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:rgba(255,255,255,.6);margin-bottom:4px">Section HOD</div>
-            <div style="font-size:18px;font-weight:800" id="hodDeptTitle">Department Dashboard</div>
-            <div style="font-size:12px;color:rgba(255,255,255,.7);margin-top:3px" id="hodDeptSubtitle">Tasks overview for your department(s)</div>
+          <div class="card-bd" style="padding:18px 20px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
+            <div>
+              <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:rgba(255,255,255,.6);margin-bottom:4px">Section HOD</div>
+              <div style="font-size:20px;font-weight:800" id="hodDeptTitle">Department Dashboard</div>
+              <div style="font-size:12px;color:rgba(255,255,255,.7);margin-top:3px" id="hodDeptSubtitle">Tasks overview for your department(s)</div>
+            </div>
+            <button onclick="go('tracker')" style="background:rgba(255,255,255,.15);border:1.5px solid rgba(255,255,255,.3);color:#fff;padding:8px 16px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px">
+              <span class="material-icons-round" style="font-size:16px">open_in_new</span> Full Task Tracker
+            </button>
           </div>
         </div>
-        <!-- Department KPI cards -->
-        <div class="kpi-grid mb14" id="hodKpis">
-          <div class="kpi blue"><div class="kpi-stripe"></div><div class="kpi-icon-wrap"><span class="material-icons-round mi">assignment</span></div><div class="kpi-val" id="hod-total">—</div><div class="kpi-lbl">Total Tasks</div></div>
-          <div class="kpi green"><div class="kpi-stripe"></div><div class="kpi-icon-wrap"><span class="material-icons-round mi">check_circle</span></div><div class="kpi-val" id="hod-done">—</div><div class="kpi-lbl">Completed</div></div>
-          <div class="kpi orange"><div class="kpi-stripe"></div><div class="kpi-icon-wrap"><span class="material-icons-round mi">pending</span></div><div class="kpi-val" id="hod-pending">—</div><div class="kpi-lbl">Pending</div></div>
-          <div class="kpi red"><div class="kpi-stripe"></div><div class="kpi-icon-wrap"><span class="material-icons-round mi">warning</span></div><div class="kpi-val" id="hod-overdue">—</div><div class="kpi-lbl">Overdue</div></div>
+        <!-- KPI Cards -->
+        <div class="kpi-grid mb14">
+          <div class="kpi blue" onclick="go('tracker')" style="cursor:pointer"><div class="kpi-stripe"></div><div class="kpi-icon-wrap"><span class="material-icons-round mi">assignment</span></div><div class="kpi-val" id="hod-total">&#8212;</div><div class="kpi-lbl">Total Tasks</div></div>
+          <div class="kpi green" onclick="go('tracker')" style="cursor:pointer"><div class="kpi-stripe"></div><div class="kpi-icon-wrap"><span class="material-icons-round mi">check_circle</span></div><div class="kpi-val" id="hod-done">&#8212;</div><div class="kpi-lbl">Completed</div></div>
+          <div class="kpi orange" onclick="go('tracker')" style="cursor:pointer"><div class="kpi-stripe"></div><div class="kpi-icon-wrap"><span class="material-icons-round mi">pending</span></div><div class="kpi-val" id="hod-pending">&#8212;</div><div class="kpi-lbl">Pending</div></div>
+          <div class="kpi red" onclick="go('tracker')" style="cursor:pointer"><div class="kpi-stripe"></div><div class="kpi-icon-wrap"><span class="material-icons-round mi">warning</span></div><div class="kpi-val" id="hod-overdue">&#8212;</div><div class="kpi-lbl">Overdue</div></div>
         </div>
-        <!-- My Tasks (assigned to HOD personally) -->
-        <div class="card mb14">
-          <div class="card-hd" style="background:rgba(29,78,216,.06)">
-            <span class="material-icons-round mi" style="color:var(--c-blue)">person</span>
-            <span class="card-title" style="color:var(--c-blue)">My Tasks</span>
-            <span id="hodMyCount" style="background:var(--c-blue);color:#fff;font-size:11px;font-weight:700;padding:2px 9px;border-radius:999px;margin-left:auto"></span>
+        <!-- Charts row -->
+        <div class="g2 mb14">
+          <div class="card">
+            <div class="card-hd"><span class="card-title">Status Breakdown</span></div>
+            <div class="card-bd" style="height:200px;display:flex;align-items:center;justify-content:center">
+              <canvas id="hodStatusChart"></canvas>
+            </div>
           </div>
-          <div class="card-bd-0">
-            <table style="width:100%">
-              <thead><tr style="background:rgba(29,78,216,.06)"><th style="padding:8px 12px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--tx3)">Task ID</th><th style="padding:8px 12px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--tx3)">Description</th><th style="padding:8px 12px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--tx3)">Priority</th><th style="padding:8px 12px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--tx3)">Due</th><th style="padding:8px 12px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--tx3)">Status</th></tr></thead>
-              <tbody id="hodMyTasks"></tbody>
-            </table>
-          </div>
-        </div>
-        <!-- Department Tasks (all officers) -->
-        <div class="card">
-          <div class="card-hd" style="background:rgba(5,150,105,.06)">
-            <span class="material-icons-round mi" style="color:#059669">group</span>
-            <span class="card-title" style="color:#059669">Department Tasks</span>
-            <span id="hodDeptCount" style="background:#059669;color:#fff;font-size:11px;font-weight:700;padding:2px 9px;border-radius:999px;margin-left:auto"></span>
-          </div>
-          <div class="card-bd-0">
-            <table style="width:100%">
-              <thead><tr style="background:rgba(5,150,105,.06)"><th style="padding:8px 12px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--tx3)">Task ID</th><th style="padding:8px 12px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--tx3)">Description</th><th style="padding:8px 12px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--tx3)">Officer</th><th style="padding:8px 12px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--tx3)">Priority</th><th style="padding:8px 12px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--tx3)">Due</th><th style="padding:8px 12px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--tx3)">Status</th><th style="padding:8px 12px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--tx3)">Updated</th></tr></thead>
-              <tbody id="hodDeptTasks"></tbody>
-            </table>
+          <div class="card">
+            <div class="card-hd"><span class="card-title">Officer Completion</span></div>
+            <div class="card-bd" style="padding:16px;max-height:200px;overflow-y:auto">
+              <div id="hodOfficerBreakdown"><div style="color:var(--tx3);font-size:13px">Loading...</div></div>
+            </div>
           </div>
         </div>
-      </div>
-    </div><!-- /hodDash -->
+        <!-- Overdue alert -->
+        <div class="card" id="hodOverdueCard" style="display:none;border-left:4px solid var(--c-red)">
+          <div class="card-hd"><span class="material-icons-round mi" style="color:var(--c-red)">warning</span><span class="card-title" style="color:var(--c-red)">Overdue Tasks</span><button onclick="go('tracker')" class="btn btn-ghost btn-sm" style="margin-left:auto">View All</button></div>
+          <div class="card-bd-0" id="hodOverdueList"></div>
+        </div>
+        </div>
+      </div><!-- /hodDash -->
   </div><!-- /page-dashboard -->
 
     <div class="page" id="page-taskEntry">
@@ -1712,9 +1712,7 @@ tbody tr:hover { background: var(--surface2); }
                 <th onclick="sortBy('dateAssigned')" style="cursor:pointer;white-space:nowrap">Insp. Date <span id="sort-dateAssigned"></span></th>
                 <th onclick="sortBy('dueDate')" style="cursor:pointer;white-space:nowrap">Due Date <span id="sort-dueDate"></span></th>
                 <th onclick="sortBy('status')" style="cursor:pointer;white-space:nowrap">Status <span id="sort-status"></span></th>
-                <th>Actions</th>
-              </tr></thead>
-              <tbody id="tBody"></tbody>
+                <th id="thActions">Actions</th>
             </table>
           </div>
         </div>
@@ -1883,15 +1881,15 @@ tbody tr:hover { background: var(--surface2); }
                 </select>
               </div>
               <div class="f-group">
-                <label class="f-label">Zone <span class="req">*</span></label>
-                <select class="f-sel" id="pl-zone">
-                  <option value="">Select Zone</option>
-                  <option>Main Office</option>
-                  <option>Suramangalam Zone-1</option>
-                  <option>Hasthampatti Zone-2</option>
-                  <option>Ammapet Zone-3</option>
-                  <option>Kondalampatti Zone-4</option>
-                </select>
+                <label class="f-label">Zone(s) <span class="req">*</span> <span style="font-size:11px;color:var(--tx3);font-weight:400">— select all inspected zones</span></label>
+                <div style="display:flex;flex-wrap:wrap;gap:6px;padding:10px;background:var(--surface2);border-radius:8px;border:1px solid var(--border)" id="plZoneChips">
+                  <label class="pl-zone-chip"><input type="checkbox" value="Main Office" onchange="plUpdateZoneDisplay()"> Main Office</label>
+                  <label class="pl-zone-chip"><input type="checkbox" value="Suramangalam Zone-1" onchange="plUpdateZoneDisplay()"> Suramangalam Zone-1</label>
+                  <label class="pl-zone-chip"><input type="checkbox" value="Hasthampatti Zone-2" onchange="plUpdateZoneDisplay()"> Hasthampatti Zone-2</label>
+                  <label class="pl-zone-chip"><input type="checkbox" value="Ammapet Zone-3" onchange="plUpdateZoneDisplay()"> Ammapet Zone-3</label>
+                  <label class="pl-zone-chip"><input type="checkbox" value="Kondalampatti Zone-4" onchange="plUpdateZoneDisplay()"> Kondalampatti Zone-4</label>
+                </div>
+                <input type="hidden" id="pl-zone">
               </div>
             </div>
             <div class="f-group">
@@ -1903,7 +1901,7 @@ tbody tr:hover { background: var(--surface2); }
               <textarea class="f-ctrl" id="pl-notes" rows="4" placeholder="Enter your observations..."></textarea>
             </div>
             <div class="f-group">
-              <label class="f-label">Photos <span style="font-size:11px;color:var(--tx3)">(up to 5, max 10MB each)</span></label>
+              <label class="f-label">Photos <span style="font-size:11px;color:var(--tx3)">(up to 15, max 5MB each)</span></label>
               <div id="plDropZone" style="border:2px dashed var(--border);border-radius:10px;padding:20px;text-align:center;cursor:pointer;background:var(--surface2)"
                 ondragover="event.preventDefault();this.style.borderColor='var(--c-blue)'"
                 ondragleave="this.style.borderColor='var(--border)'"
@@ -2300,6 +2298,7 @@ tbody tr:hover { background: var(--surface2); }
     </div>
     <div class="modal-ft">
       <button class="btn btn-ghost" onclick="closeModal('mPhotoUpload')">Cancel</button>
+      <button class="btn btn-ghost" id="pu-reassignBtn" style="display:none" onclick="hodReassignFromUpdate()"><span class="material-icons-round mi">swap_horiz</span> Reassign</button>
       <button class="btn btn-primary" id="pu-saveBtn" onclick="submitPhotoUpdate()"><span class="material-icons-round mi">save</span> Save Update</button>
     </div>
   </div>
@@ -2868,6 +2867,7 @@ function applyRoleNav(role){
   show('newTaskBtn', isAdmin);
   var thChk=id('thChk');
   if(thChk)thChk.innerHTML=isAdmin?'<input type="checkbox" id="chkAll" onchange="toggleSelectAll(this)" style="width:16px;height:16px;cursor:pointer" title="Select all">':'';
+  var thAct=id('thActions');if(thAct)thAct.style.display=isOfficer?'none':'';
   if(!isAdmin&&!isHOD){var bb=id('bulkBar');if(bb)bb.classList.add('dn');}
 
   if(isOfficer){
@@ -3040,83 +3040,88 @@ function loadDashboard(){
 }
 function loadHODDashboard(){
   var u=S.user;if(!u)return;
-  // Update HOD header
   var depts=u.hodDepartments||u.department||'';
   var titleEl=id('hodDeptTitle'),subEl=id('hodDeptSubtitle');
   if(titleEl)titleEl.textContent=depts||'My Department';
-  if(subEl)subEl.textContent='HOD Dashboard — '+u.designation;
+  if(subEl)subEl.textContent='HOD Dashboard \u00b7 '+u.designation;
   var gn=id('greetName');if(gn)gn.textContent=u.name.split(' ')[0];
-  var gr=id('greetRole');if(gr)gr.textContent='Section HOD · '+depts;
-  // Fetch all dept tasks
-  showLoader('Loading department tasks...');
+  showLoader('Loading dashboard...');
   gasCall('serverGetHODTasks',S.token).then(function(r){
     hideLoader();
     if(!r||!r.success)return;
     var allTasks=normalizeTaskList(r.data||[]);
     S.tasks=allTasks;S.filtered=allTasks.slice();
-    // Split: my tasks (assigned to HOD personally) vs dept tasks (others)
-    var myTasks=[],deptTasks=[];
-    for(var i=0;i<allTasks.length;i++){
-      if(allTasks[i].officerID===u.userID||allTasks[i].officerName===u.name){
-        myTasks.push(allTasks[i]);
-      } else {
-        deptTasks.push(allTasks[i]);
-      }
-    }
-    // KPIs for all dept tasks
-    var total=allTasks.length,done=0,pending=0,overdue=0;
+    var total=allTasks.length,done=0,pending=0,inProg=0,overdue=0,review=0;
+    var officerMap={};
     for(var i=0;i<allTasks.length;i++){
       var t=allTasks[i];
       if(t.status==='Completed'||t.status==='Closed')done++;
+      else if(t.status==='In Progress')inProg++;
       else if(t.status==='Pending')pending++;
+      else if(t.status==='Review Pending')review++;
       if(t.isOverdue)overdue++;
+      var on=t.officerName||'Unknown';
+      if(!officerMap[on])officerMap[on]={total:0,done:0};
+      officerMap[on].total++;
+      if(t.status==='Completed'||t.status==='Closed')officerMap[on].done++;
     }
-    var htEl=id('hod-total');if(htEl)htEl.textContent=total;
-    var hdEl=id('hod-done');if(hdEl)hdEl.textContent=done;
-    var hpEl=id('hod-pending');if(hpEl)hpEl.textContent=pending;
-    var hoEl=id('hod-overdue');if(hoEl)hoEl.textContent=overdue;
-    // My tasks count badge
-    var mc=id('hodMyCount');if(mc)mc.textContent=myTasks.length;
-    var dc=id('hodDeptCount');if(dc)dc.textContent=deptTasks.length;
-    // Render my tasks table
-    var myTb=id('hodMyTasks');
-    if(myTb){
-      if(!myTasks.length){myTb.innerHTML='<tr><td colspan="5" style="padding:20px;text-align:center;color:var(--tx3)">No tasks assigned to you directly.</td></tr>';}
+    // KPIs
+    var ht=id('hod-total');if(ht)ht.textContent=total;
+    var hd=id('hod-done');if(hd)hd.textContent=done;
+    var hp=id('hod-pending');if(hp)hp.textContent=pending+inProg;
+    var ho=id('hod-overdue');if(ho)ho.textContent=overdue;
+    // Status doughnut chart
+    var ctx=id('hodStatusChart');
+    if(ctx){
+      if(S.charts.hodStatus)S.charts.hodStatus.destroy();
+      S.charts.hodStatus=new Chart(ctx,{
+        type:'doughnut',
+        data:{labels:['Completed','In Progress','Pending','Review','Overdue'],
+          datasets:[{data:[done,inProg,pending,review,overdue],
+            backgroundColor:['#10b981','#0ea5e9','#f59e0b','#8b5cf6','#ef4444'],
+            borderWidth:2,borderColor:'var(--surface)'}]},
+        options:{responsive:true,maintainAspectRatio:true,cutout:'65%',
+          plugins:{legend:{position:'bottom',labels:{font:{size:11},padding:8}}}}
+      });
+    }
+    // Officer breakdown bars
+    var obEl=id('hodOfficerBreakdown');
+    if(obEl){
+      var keys=Object.keys(officerMap);
+      if(!keys.length){obEl.innerHTML='<div style="color:var(--tx3);font-size:13px">No officers found.</div>';}
       else{
         var html='';
-        for(var i=0;i<myTasks.length;i++){
-          var t=myTasks[i];
-          html+='<tr onclick="viewTask(\''+t.taskID+'\')" style="cursor:pointer" class="tr-hover">'
-            +'<td style="padding:8px 12px;font-family:monospace;font-size:12px;color:var(--c-blue)">'+t.taskID+'</td>'
-            +'<td style="padding:8px 12px;font-size:13px;max-width:220px" class="ellipsis">'+t.description+'</td>'
-            +'<td style="padding:8px 12px"><span class="badge badge-'+t.priority.toLowerCase()+'">'+t.priority+'</span></td>'
-            +'<td style="padding:8px 12px;font-size:12px;color:'+(t.isOverdue?'var(--c-red)':'var(--tx2)')+'">'+fDateShort(t.dueDate)+'</td>'
-            +'<td style="padding:8px 12px"><span class="badge badge-'+statusClass(t.status)+'">'+t.status+'</span></td>'
-            +'</tr>';
+        for(var i=0;i<keys.length;i++){
+          var on=keys[i],os=officerMap[on];
+          var rate=os.total>0?Math.round(os.done/os.total*100):0;
+          var col=rate>60?'#10b981':rate>30?'#f59e0b':'#ef4444';
+          html+='<div style="margin-bottom:10px">'
+            +'<div style="display:flex;justify-content:space-between;margin-bottom:3px">'
+            +'<span style="font-size:12.5px;font-weight:600">'+on+'</span>'
+            +'<span style="font-size:12px;color:var(--tx3)">'+os.done+'/'+os.total+' ('+rate+'%)</span></div>'
+            +'<div style="background:var(--surface2);border-radius:999px;height:7px;overflow:hidden">'
+            +'<div style="width:'+rate+'%;height:100%;background:'+col+';border-radius:999px;transition:width .4s"></div>'
+            +'</div></div>';
         }
-        myTb.innerHTML=html;
+        obEl.innerHTML=html;
       }
     }
-    // Render dept tasks table (other officers)
-    var deptTb=id('hodDeptTasks');
-    if(deptTb){
-      if(!deptTasks.length){deptTb.innerHTML='<tr><td colspan="7" style="padding:20px;text-align:center;color:var(--tx3)">No subordinate tasks in your department.</td></tr>';}
-      else{
-        var html='';
-        for(var i=0;i<deptTasks.length;i++){
-          var t=deptTasks[i];
-          html+='<tr onclick="viewTask(\''+t.taskID+'\')" style="cursor:pointer" class="tr-hover">'
-            +'<td style="padding:8px 12px;font-family:monospace;font-size:12px;color:var(--c-blue)">'+t.taskID+'</td>'
-            +'<td style="padding:8px 12px;font-size:13px;max-width:180px" class="ellipsis">'+t.description+'</td>'
-            +'<td style="padding:8px 12px;font-size:12px;font-weight:600">'+t.officerName+'</td>'
-            +'<td style="padding:8px 12px"><span class="badge badge-'+t.priority.toLowerCase()+'">'+t.priority+'</span></td>'
-            +'<td style="padding:8px 12px;font-size:12px;color:'+(t.isOverdue?'var(--c-red)':'var(--tx2)')+'">'+fDateShort(t.dueDate)+'</td>'
-            +'<td style="padding:8px 12px"><span class="badge badge-'+statusClass(t.status)+'">'+t.status+'</span></td>'
-            +'<td style="padding:8px 12px;font-size:11px;color:var(--tx3)">'+(t.updatedAt?fDateShort(t.updatedAt)+(t.updatedBy?' by '+t.updatedBy:''):'\u2014')+'</td>'
-            +'</tr>';
-        }
-        deptTb.innerHTML=html;
+    // Overdue tasks alert
+    var overdueTasks=allTasks.filter(function(t){return t.isOverdue;});
+    var oc=id('hodOverdueCard'),ol=id('hodOverdueList');
+    if(oc)oc.style.display=overdueTasks.length?'block':'none';
+    if(ol&&overdueTasks.length){
+      var html='<table style="width:100%"><tbody>';
+      for(var i=0;i<Math.min(overdueTasks.length,5);i++){
+        var t=overdueTasks[i];
+        html+='<tr onclick="viewTask(\''+t.taskID+'\')" class="tr-hover" style="cursor:pointer">'
+          +'<td style="padding:8px 12px;font-family:monospace;font-size:12px;color:var(--c-red)">'+t.taskID+'</td>'
+          +'<td style="padding:8px 12px;font-size:13px">'+t.description.substring(0,60)+'</td>'
+          +'<td style="padding:8px 12px;font-size:12px;font-weight:600">'+t.officerName+'</td>'
+          +'<td style="padding:8px 12px;font-size:12px;color:var(--c-red)">Due: '+fDateShort(t.dueDate)+'</td>'
+          +'</tr>';
       }
+      ol.innerHTML=html+'</tbody></table>';
     }
   });
 }
@@ -3192,9 +3197,28 @@ function buildStatusChart(s){
 }
 function buildZoneChart(zs){
   var ctx=id('chartZone');if(!ctx)return;if(S.charts.zone)S.charts.zone.destroy();
-  var zones=Object.keys(zs),doneData=[],pendData=[];
-  for(var i=0;i<zones.length;i++){doneData.push(zs[zones[i]].completed);pendData.push(zs[zones[i]].pending);}
-  S.charts.zone=new Chart(ctx,{type:'bar',data:{labels:zones.map(function(z){return z.replace(/ Zone-\d/,'').substring(0,12);}),datasets:[{label:'Done',data:doneData,backgroundColor:'#10b981',borderRadius:4},{label:'Pending',data:pendData,backgroundColor:'#f59e0b',borderRadius:4}]},options:{responsive:true,maintainAspectRatio:false,scales:{x:{stacked:true,grid:{display:false},ticks:{font:{size:10}}},y:{stacked:true,beginAtZero:true,ticks:{font:{size:10}}}},plugins:{legend:{position:'bottom',labels:{font:{size:11},padding:10}}}}});
+  // Sort zones in canonical order
+  var zones=Object.keys(zs);
+  zones.sort(function(a,b){return zoneRank(a)-zoneRank(b);});
+  var doneData=[],pendData=[];
+  for(var i=0;i<zones.length;i++){
+    doneData.push(zs[zones[i]].completed||0);
+    pendData.push(zs[zones[i]].pending||0);
+  }
+  // Shorten labels for display
+  var labels=zones.map(function(z){
+    return z.replace('Suramangalam Zone-1','Suram.Z1')
+             .replace('Hasthampatti Zone-2','Hasth.Z2')
+             .replace('Kondalampatti Zone-4','Kond.Z4')
+             .replace('Ammapet Zone-3','Ammap.Z3')
+             .replace('Main Office','Main Office');
+  });
+  S.charts.zone=new Chart(ctx,{type:'bar',data:{labels:labels,datasets:[
+    {label:'Completed',data:doneData,backgroundColor:'#10b981',borderRadius:4},
+    {label:'Pending',data:pendData,backgroundColor:'#f59e0b',borderRadius:4}
+  ]},options:{responsive:true,maintainAspectRatio:false,
+    scales:{x:{stacked:true,grid:{display:false},ticks:{font:{size:10}}},y:{stacked:true,beginAtZero:true,ticks:{font:{size:10}}}},
+    plugins:{legend:{position:'bottom',labels:{font:{size:11},padding:10}}}}});
 }
 function buildDeptBreakdown(ds){
   var el=id('deptBreakdown');if(!el)return;
@@ -3805,6 +3829,11 @@ function submitAdminUpdate(taskID){
     if(r&&r.success){toast('Task updated!','ok');loadTasks();}else toast((r&&r.message)||'Failed.','error');
   });
 }
+function hodReassignFromUpdate(){
+  var taskID=V('pu-taskid');
+  closeModal('mPhotoUpload');
+  if(taskID)hodReassignTask(taskID);
+}
 function hodReassignTask(taskID){
   // Use mGeneric modal with officer selector
   var t=null;
@@ -3871,12 +3900,12 @@ function doHodReassign(taskID){
 function officerUpdate(taskID){
   var t=null;for(var i=0;i<S.tasks.length;i++)if(S.tasks[i].taskID===taskID){t=S.tasks[i];break;}if(!t)return;
   var isHOD=(S.user&&S.user.role==='HOD');
-  // For HOD updating a dept task, show the full HOD modal with reassign option
-  if(isHOD && (t.officerID!==S.user.userID && t.officerName!==S.user.name)){
+  // HOD clicking a dept task (not their own) — open reassign modal
+  if(isHOD&&t.officerID!==S.user.userID&&t.officerName!==S.user.name){
     hodReassignTask(taskID);return;
   }
   var pu=id('pu-taskid');if(pu)pu.value=taskID;
-  var pd=id('pu-desc');if(pd)pd.textContent=t.description.substring(0,150)+(t.description.length>150?'...':'');
+  var pd=id('pu-desc');if(pd)pd.textContent=t.description.substring(0,150)+(t.description.length>150?'\u2026':'');
   var ps=id('pu-status');if(ps)ps.value=(t.status==='Completed'?'Completed':'In Progress');
   var pp=id('pu-priority');if(pp)pp.value=t.priority||'Medium';
   var pr=id('pu-remarks');if(pr)pr.value=t.officerRemarks||'';
@@ -3884,6 +3913,9 @@ function officerUpdate(taskID){
   var pi=id('photoInput');if(pi)pi.value='';
   var dlr=id('driveLinkRow');if(dlr)dlr.classList.add('dn');
   S.selPhotos=[];S.driveLinks=[];
+  // Show Reassign button for HOD's own tasks
+  var rBtn=id('pu-reassignBtn');
+  if(rBtn)rBtn.style.display=isHOD?'':'none';
   closeModal('mTask');openModal('mPhotoUpload');
 }
 
@@ -4653,12 +4685,18 @@ function plUpdateNotesLabel(){
   var map={Inspection:'Inspection Observations & Findings',Meeting:'Meeting Notes & Decisions','Site Visit':'Site Visit Remarks'};
   lbl.textContent=(map[type]||'Notes');
 }
+function plUpdateZoneDisplay(){
+  // Collect checked zones and join for hidden field
+  var chips=document.querySelectorAll('#plZoneChips input[type=checkbox]:checked');
+  var zones=[];for(var i=0;i<chips.length;i++)zones.push(chips[i].value);
+  var el=id('pl-zone');if(el)el.value=zones.join(', ');
+}
 function handlePlPhotoSelect(files){plAddPhotos(Array.prototype.slice.call(files));}
 function handlePlPhotoDrop(e){e.preventDefault();var el=id('plDropZone');if(el)el.style.borderColor='var(--border)';var files=[];for(var i=0;i<e.dataTransfer.files.length;i++){var f=e.dataTransfer.files[i];if(f.type.indexOf('image/')===0)files.push(f);}plAddPhotos(files);}
 function plAddPhotos(files){
-  var rem=5-PL.photos.length,skipped=0;
-  for(var i=0;i<files.length&&i<rem;i++){if(files[i].size>10*1024*1024){skipped++;continue;}PL.photos.push(files[i]);}
-  if(skipped)toast(skipped+' photo(s) over 10MB skipped.','info');
+  var rem=15-PL.photos.length,skipped=0;
+  for(var i=0;i<files.length&&i<rem;i++){if(files[i].size>5*1024*1024){skipped++;continue;}PL.photos.push(files[i]);}
+  if(skipped)toast(skipped+' photo(s) skipped — max 5MB each.','info');
   plRenderPhotoPreview();
 }
 function plRenderPhotoPreview(){
@@ -4672,7 +4710,7 @@ function plRenderPhotoPreview(){
 }
 function savePlEntry(){
   var date=V('pl-date'),time=V('pl-time'),type=V('pl-type'),zone=V('pl-zone'),loc=V('pl-location'),notes=V('pl-notes');
-  if(!date||!type||!zone){toast('Date, Type and Zone are required.','error');return;}
+  if(!date||!type||!zone){toast('Please fill Date, Type and select at least one Zone.','error');return;}
   if(!notes.trim()){toast('Please enter notes / observations.','error');return;}
   var entry={date:date,time:time,type:type,zone:zone,location:loc,notes:notes,photos:''};
 
@@ -4723,9 +4761,12 @@ function doSavePlEntry(entry){
   });
 }
 function clearPlForm(){
-  var f=['pl-date','pl-time','pl-type','pl-zone','pl-location','pl-notes'];
+  var f=['pl-time','pl-type','pl-zone','pl-location','pl-notes'];
   for(var i=0;i<f.length;i++){var e=id(f[i]);if(e)e.value='';}
   var pd=id('pl-date');if(pd)pd.value=new Date().toISOString().slice(0,10);
+  // Uncheck all zone chips
+  var chips=document.querySelectorAll('#plZoneChips input[type=checkbox]');
+  for(var i=0;i<chips.length;i++)chips[i].checked=false;
   PL.photos=[];plRenderPhotoPreview();
 }
 function plRenderCards(entries){
