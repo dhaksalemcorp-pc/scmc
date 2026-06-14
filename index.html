@@ -106,27 +106,36 @@
     // Favicon
     var f=document.createElement('link');f.rel='icon';f.type='image/png';f.href=dataUrl;document.head.appendChild(f);
 
-    // Manifest (data URI — no blob needed)
+    // Manifest — use Blob URL (Chrome requires non-data: URI for PWA manifest)
     var manifest={
       name:'Salem City Municipal Corporation TMS',
       short_name:'Salem TMS',
       description:'Salem City Municipal Corporation Task Management System',
       start_url:window.location.href,
-      scope:window.location.href,
+      scope:window.location.pathname.replace(/[^\/]*$/,''),
       display:'standalone',
       orientation:'portrait-primary',
       background_color:'#0b1f45',
       theme_color:'#0b1f45',
       icons:[
-        {src:dataUrl,sizes:'192x192',type:'image/png',purpose:'any'},
-        {src:dataUrl,sizes:'192x192',type:'image/png',purpose:'maskable'},
-        {src:dataUrl,sizes:'512x512',type:'image/png',purpose:'any'},
-        {src:dataUrl,sizes:'512x512',type:'image/png',purpose:'maskable'}
+        {src:dataUrl,sizes:'192x192',type:'image/png',purpose:'any maskable'},
+        {src:dataUrl,sizes:'512x512',type:'image/png',purpose:'any maskable'}
       ]
     };
     var ml=document.createElement('link');
     ml.rel='manifest';
-    ml.href='data:application/json;charset=utf-8,'+encodeURIComponent(JSON.stringify(manifest));
+    // Use Blob URL — Chrome on Android will not accept data: URIs for manifests
+    try{
+      var blob=new Blob([JSON.stringify(manifest)],{type:'application/json'});
+      var blobUrl=URL.createObjectURL(blob);
+      // Revoke previous blob URL if any
+      if(window._manifestBlobUrl) try{URL.revokeObjectURL(window._manifestBlobUrl);}catch(e2){}
+      window._manifestBlobUrl=blobUrl;
+      ml.href=blobUrl;
+    } catch(be){
+      // Fallback to data URI if Blob fails
+      ml.href='data:application/json;charset=utf-8,'+encodeURIComponent(JSON.stringify(manifest));
+    }
     document.head.appendChild(ml);
     window._pwaIconUrl=dataUrl;
   }
@@ -1504,11 +1513,6 @@ tbody tr:hover { background: var(--surface2); }
                 </div>
                 <div style="font-size:11.5px;color:var(--tx3);margin-top:5px">Add multiple officers from different departments. Each gets their own task copy.</div>
               </div>
-              <div style="display:flex;gap:10px;margin-top:4px;flex-wrap:wrap">
-                <button class="btn btn-primary" id="singleSaveBtn" onclick="saveTask()"><span class="material-icons-round mi">save</span> Save Task</button>
-                <button class="btn btn-primary" id="multiSaveBtn" style="display:none;background:var(--c-teal)" onclick="saveTaskMultiOfficer()"><span class="material-icons-round mi">group_add</span> <span id="multiSaveBtnTxt">Assign to Officers</span></button>
-              </div>
-              </div>
             <div class="f-group">
               <label class="f-label">Task Description <span class="req">*</span></label>
               <textarea class="f-ctrl" id="t-desc" rows="4" placeholder="Describe the task in detail..."></textarea>
@@ -1516,6 +1520,10 @@ tbody tr:hover { background: var(--surface2); }
             <div class="f-group">
               <label class="f-label">Attachment URL <span style="font-size:10px;color:var(--tx3)">(Optional)</span></label>
               <input type="url" class="f-ctrl" id="t-attach" placeholder="https://drive.google.com/...">
+            </div>
+            <div style="display:flex;gap:10px;margin-top:4px;flex-wrap:wrap">
+              <button class="btn btn-primary" id="singleSaveBtn" onclick="saveTask()"><span class="material-icons-round mi">save</span> Save Task</button>
+              <button class="btn btn-primary" id="multiSaveBtn" style="display:none;background:var(--c-teal)" onclick="saveTaskMultiOfficer()"><span class="material-icons-round mi">group_add</span> <span id="multiSaveBtnTxt">Assign to Officers</span></button>
             </div>
             <div class="flex-c gap8 mt8" style="flex-wrap:wrap">
               <button class="btn btn-ghost" onclick="previewTask()"><span class="material-icons-round mi">visibility</span> Preview</button>
@@ -1563,6 +1571,7 @@ tbody tr:hover { background: var(--surface2); }
           </div>
         </div>
       </div>
+    </div>
 
     <!-- TASK TRACKER -->
     <div class="page" id="page-tracker">
@@ -3406,23 +3415,54 @@ function sortBy(col){
 function renderTable(tasks){
   var tbody=id('tBody');if(!tbody)return;
   var tc=id('taskCount');if(tc)tc.textContent=tasks.length+' task'+(tasks.length!==1?'s':'');
-  if(!tasks.length){tbody.innerHTML='<tr><td colspan="12"><div class="empty"><span class="material-icons-round mi">task_alt</span><h3>No tasks found</h3><p>Try adjusting your filters</p></div></td></tr>';return;}
   var isAdmin=(S.user&&(S.user.role==='Admin'||S.user.role==='Commissioner'));
   var isHOD=(S.user&&S.user.role==='HOD');
-  // Reset select-all checkbox
+
+  // HOD: split into My Tasks and Dept Tasks with section headers
+  if(isHOD){
+    var myTasks=[], deptTasks=[];
+    for(var i=0;i<tasks.length;i++){
+      if(tasks[i].officerID===S.user.userID||tasks[i].officerName===S.user.name) myTasks.push(tasks[i]);
+      else deptTasks.push(tasks[i]);
+    }
+    var html='';
+    // My Tasks section
+    html+='<tr><td colspan="12" style="padding:10px 12px 4px;background:rgba(29,78,216,.04);border-top:2px solid var(--c-blue)">'
+      +'<div style="display:flex;align-items:center;gap:8px">'
+      +'<span class="material-icons-round" style="font-size:16px;color:var(--c-blue)">person</span>'
+      +'<span style="font-size:12px;font-weight:700;color:var(--c-blue);text-transform:uppercase;letter-spacing:.05em">My Tasks ('+myTasks.length+')</span>'
+      +'</div></td></tr>';
+    if(!myTasks.length){
+      html+='<tr><td colspan="12" style="padding:14px;text-align:center;color:var(--tx3);font-size:13px">No tasks assigned to you directly.</td></tr>';
+    } else {
+      html+=buildHODRows(myTasks, isHOD, false);
+    }
+    // Dept Tasks section
+    html+='<tr><td colspan="12" style="padding:10px 12px 4px;background:rgba(5,150,105,.04);border-top:2px solid #059669">'
+      +'<div style="display:flex;align-items:center;gap:8px">'
+      +'<span class="material-icons-round" style="font-size:16px;color:#059669">group</span>'
+      +'<span style="font-size:12px;font-weight:700;color:#059669;text-transform:uppercase;letter-spacing:.05em">Department Tasks ('+deptTasks.length+')</span>'
+      +'<span style="font-size:11px;color:var(--tx3);margin-left:4px">— tap ⇄ to reassign</span>'
+      +'</div></td></tr>';
+    if(!deptTasks.length){
+      html+='<tr><td colspan="12" style="padding:14px;text-align:center;color:var(--tx3);font-size:13px">No department tasks found.</td></tr>';
+    } else {
+      html+=buildHODRows(deptTasks, isHOD, true);
+    }
+    tbody.innerHTML=html;
+    return;
+  }
+
+  if(!tasks.length){tbody.innerHTML='<tr><td colspan="12"><div class="empty"><span class="material-icons-round mi">task_alt</span><h3>No tasks found</h3><p>Try adjusting your filters</p></div></td></tr>';return;}
   var chkAll=id('chkAll');if(chkAll)chkAll.checked=false;
   var html='';
   for(var i=0;i<tasks.length;i++){
     var t=tasks[i];
     var adminBtns=isAdmin
-      ?'<button class="btn btn-ghost btn-sm btn-icon" onclick="adminUpdate(\''+t.taskID+'\')" title="Update Status"><span class="material-icons-round mi">update</span></button><button class="btn btn-ghost btn-sm btn-icon" onclick="editTask(\''+t.taskID+'\')" title="Edit All Fields"><span class="material-icons-round mi">edit</span></button><button class="btn btn-danger btn-sm btn-icon" onclick="delTask(\''+t.taskID+'\')" title="Delete"><span class="material-icons-round mi">delete</span></button>'
-      :isHOD
-        ?'<button class="btn btn-ghost btn-sm btn-icon" onclick="hodReassignTask(\''+t.taskID+'\')" title="Reassign to Subordinate"><span class="material-icons-round mi">swap_horiz</span></button><button class="btn btn-primary btn-sm btn-icon" onclick="officerUpdate(\''+t.taskID+'\')" title="Update"><span class="material-icons-round mi">update</span></button>'
-        :'<button class="btn btn-primary btn-sm btn-icon" onclick="officerUpdate(\''+t.taskID+'\')" title="Update"><span class="material-icons-round mi">update</span></button>';
-    var photoIcon=t.photoLinks?'<span class="material-icons-round mi" style="font-size:13px;color:var(--c-teal);margin-left:3px" title="Has attachments">attach_file</span>':'';
-    var chkCell=isAdmin
-      ?'<td style="width:36px;text-align:center"><input type="checkbox" class="task-chk" data-id="'+t.taskID+'" onchange="onTaskCheckChange()" style="width:16px;height:16px;cursor:pointer"></td>'
-      :'<td style="width:36px"></td>';
+      ?'<button class="btn btn-ghost btn-sm btn-icon" onclick="adminUpdate(\''+t.taskID+'\')" title="Update"><span class="material-icons-round mi">update</span></button><button class="btn btn-ghost btn-sm btn-icon" onclick="editTask(\''+t.taskID+'\')" title="Edit"><span class="material-icons-round mi">edit</span></button><button class="btn btn-danger btn-sm btn-icon" onclick="delTask(\''+t.taskID+'\')" title="Delete"><span class="material-icons-round mi">delete</span></button>'
+      :'<button class="btn btn-primary btn-sm btn-icon" onclick="officerUpdate(\''+t.taskID+'\')" title="Update"><span class="material-icons-round mi">update</span></button>';
+    var photoIcon=t.photoLinks?'<span class="material-icons-round mi" style="font-size:13px;color:var(--c-teal);margin-left:3px">attach_file</span>':'';
+    var chkCell=isAdmin?'<td style="width:36px;text-align:center"><input type="checkbox" class="task-chk" data-id="'+t.taskID+'" onchange="onTaskCheckChange()" style="width:16px;height:16px;cursor:pointer"></td>':'';
     html+='<tr id="row-'+t.taskID+'">'
       +chkCell
       +'<td><span class="mono" style="color:var(--c-blue)">'+t.taskID+'</span></td>'
@@ -3441,6 +3481,33 @@ function renderTable(tasks){
   tbody.innerHTML=html;
   updateBulkBar();
 }
+function buildHODRows(tasks, isHOD, canReassign){
+  var html='';
+  for(var i=0;i<tasks.length;i++){
+    var t=tasks[i];
+    var photoIcon=t.photoLinks?'<span class="material-icons-round mi" style="font-size:13px;color:var(--c-teal);margin-left:3px">attach_file</span>':'';
+    var btns='<button class="btn btn-ghost btn-sm btn-icon" onclick="viewTask(\''+t.taskID+'\')" title="View"><span class="material-icons-round mi">visibility</span></button>'
+      +'<button class="btn btn-primary btn-sm btn-icon" onclick="officerUpdate(\''+t.taskID+'\')" title="Update"><span class="material-icons-round mi">update</span></button>';
+    if(canReassign){
+      btns+='<button class="btn btn-ghost btn-sm btn-icon" onclick="hodReassignTask(\''+t.taskID+'\')" title="Reassign" style="color:#059669;border-color:#059669"><span class="material-icons-round mi">swap_horiz</span></button>';
+    }
+    html+='<tr id="row-'+t.taskID+'" style="'+(canReassign?'background:rgba(5,150,105,.02)':'')+(t.isOverdue?'background:rgba(239,68,68,.04)':'')+'">'
+      +'<td></td>'
+      +'<td><span class="mono" style="color:var(--c-blue)">'+t.taskID+'</span></td>'
+      +'<td>'+t.taskType+'</td>'
+      +'<td style="max-width:180px" class="ellipsis">'+t.description+photoIcon+'</td>'
+      +'<td class="nowrap">'+t.zone+'</td>'
+      +'<td class="nowrap">'+t.department+'</td>'
+      +'<td class="nowrap">'+t.officerName+'</td>'
+      +'<td><span class="badge badge-'+t.priority.toLowerCase()+'">'+t.priority+'</span></td>'
+      +'<td class="nowrap">'+fDateShort(t.dateAssigned)+'</td>'
+      +'<td class="nowrap'+(t.isOverdue?' text-red':'')+'">'+fDateShort(t.dueDate)+'</td>'
+      +'<td><span class="badge badge-'+statusClass(t.status)+'">'+t.status+'</span></td>'
+      +'<td><div class="flex-c" style="gap:4px">'+btns+'</div></td>'
+      +'</tr>';
+  }
+  return html;
+}
 function renderKanban(tasks){
   var board=id('kanban');if(!board)return;
   var cols={Pending:[],'In Progress':[],Completed:[],'Review Pending':[],Overdue:[],Closed:[]};
@@ -3457,24 +3524,29 @@ function renderKanban(tasks){
 function switchView(v,btn){var tabs=document.querySelectorAll('#trackerTabs .tab');for(var i=0;i<tabs.length;i++)tabs[i].classList.remove('active');btn.classList.add('active');var tv=id('viewTable'),kv=id('viewKanban');if(tv)tv.classList.toggle('dn',v!=='table');if(kv)kv.classList.toggle('dn',v!=='kanban');}
 function switchTaskTab(tab,btn){var tabs=document.querySelectorAll('#taskTabs .tab');for(var i=0;i<tabs.length;i++)tabs[i].classList.remove('active');btn.classList.add('active');var tm=id('tab-manual'),ta=id('tab-ai');if(tm)tm.classList.toggle('dn',tab!=='manual');if(ta)ta.classList.toggle('dn',tab!=='ai');}
 function getTaskForm(){
-  var offEl=id('t-officer');
+  // Officer comes from the MO multi-officer list (first officer for single-save)
   var officerID='', officerName='', designation='';
-  if(offEl&&offEl.value){
-    officerID=offEl.value;
-    var sel=offEl.selectedOptions&&offEl.selectedOptions[0];
-    if(sel){
-      officerName=sel.dataset.name||sel.textContent.split(' \u2014 ')[0];
-      designation=sel.dataset.designation||'';
-    }
+  if(MO.officers.length>0){
+    officerID=MO.officers[0].officerID||'';
+    officerName=MO.officers[0].officerName||'';
+    designation=MO.officers[0].designation||'';
   }
+  // For t-add-dept single dept scenario
+  var department=MO.officers.length>0 ? MO.officers[0].department : (V('t-add-dept')||'');
   return{
-    taskType:V('t-type'),zone:V('t-zone'),dateAssigned:V('t-date'),time:V('t-time'),
+    taskType:V('t-type'),
+    zone:V('t-zone'),
+    dateAssigned:V('t-date'),
+    time:V('t-time'),
     priority:V('t-priority'),
-    department: MO.officers.length>0 ? MO.officers[0].department : (V('t-add-dept')||''),
+    department:department,
     designation:designation,
-    officerID:officerID,officerName:officerName,
-    description:V('t-desc'),dueDate:V('t-due'),
-    attachmentURL:V('t-attach'),source:'Manual'
+    officerID:officerID,
+    officerName:officerName,
+    description:V('t-desc'),
+    dueDate:V('t-due'),
+    attachmentURL:V('t-attach'),
+    source:'Manual'
   };
 }
 function validateTask(d){
@@ -3798,6 +3870,11 @@ function doHodReassign(taskID){
 }
 function officerUpdate(taskID){
   var t=null;for(var i=0;i<S.tasks.length;i++)if(S.tasks[i].taskID===taskID){t=S.tasks[i];break;}if(!t)return;
+  var isHOD=(S.user&&S.user.role==='HOD');
+  // For HOD updating a dept task, show the full HOD modal with reassign option
+  if(isHOD && (t.officerID!==S.user.userID && t.officerName!==S.user.name)){
+    hodReassignTask(taskID);return;
+  }
   var pu=id('pu-taskid');if(pu)pu.value=taskID;
   var pd=id('pu-desc');if(pd)pd.textContent=t.description.substring(0,150)+(t.description.length>150?'...':'');
   var ps=id('pu-status');if(ps)ps.value=(t.status==='Completed'?'Completed':'In Progress');
@@ -4723,16 +4800,72 @@ function plToggleCard(eid){
   if(preview)preview.style.display=isOpen?'':'none';
 }
 function plDeleteEntry(logID){
-  if(!confirm('Delete this Photo Log entry? This cannot be undone.'))return;
+  if(!confirm('Delete this entry? This cannot be undone.'))return;
   showLoader('Deleting...');
   gasCall('serverDeletePhotoLog',S.token,logID).then(function(r){
     hideLoader();
     if(r&&r.success){
       toast('Entry deleted.','ok');
-      // Remove from local cache and re-render
       PL.entries=PL.entries.filter(function(e){return e.logID!==logID;});
       plRenderCards(PL.entries);
     } else toast((r&&r.message)||'Delete failed.','error');
+  });
+}
+function plEditEntry(logID){
+  var e=null;
+  for(var i=0;i<PL.entries.length;i++){if(PL.entries[i].logID===logID){e=PL.entries[i];break;}}
+  if(!e)return;
+  var html='<div style="padding:4px">'
+    +'<div class="f-row">'
+    +'<div class="f-group"><label class="f-label">Date</label><input type="date" class="f-ctrl" id="plEdit-date" value="'+e.date+'"></div>'
+    +'<div class="f-group"><label class="f-label">Time</label><input type="time" class="f-ctrl" id="plEdit-time" value="'+(e.time||'')+'"></div>'
+    +'</div>'
+    +'<div class="f-row">'
+    +'<div class="f-group"><label class="f-label">Type</label><select class="f-sel" id="plEdit-type"><option>Inspection</option><option>Meeting</option><option>Site Visit</option></select></div>'
+    +'<div class="f-group"><label class="f-label">Zone</label><select class="f-sel" id="plEdit-zone"><option>Main Office</option><option>Suramangalam Zone-1</option><option>Hasthampatti Zone-2</option><option>Ammapet Zone-3</option><option>Kondalampatti Zone-4</option></select></div>'
+    +'</div>'
+    +'<div class="f-group"><label class="f-label">Location</label><input type="text" class="f-ctrl" id="plEdit-loc" value="'+(e.location||'')+'" placeholder="Ward / Venue"></div>'
+    +'<div class="f-group"><label class="f-label">Notes <span class="req">*</span></label><textarea class="f-ctrl" id="plEdit-notes" rows="5">'+e.notes+'</textarea></div>'
+    +'<div style="display:flex;gap:8px;margin-top:12px">'
+    +'<button class="btn btn-primary" onclick="plSaveEdit(\''+logID+'\')"><span class="material-icons-round mi">save</span> Save Changes</button>'
+    +'<button class="btn btn-ghost" onclick="closeModal(\'mGeneric\')">Cancel</button>'
+    +'</div></div>';
+  var gb=id('mGenericBody');if(gb)gb.innerHTML=html;
+  var gt=id('mGenericTitle');if(gt)gt.textContent='Edit Entry';
+  openModal('mGeneric');
+  // Set dropdown values after render
+  setTimeout(function(){
+    var st=id('plEdit-type');if(st)st.value=e.type||'Inspection';
+    var sz=id('plEdit-zone');if(sz)sz.value=e.zone||'Main Office';
+  },50);
+}
+function plSaveEdit(logID){
+  var updated={
+    logID:logID,
+    date:V('plEdit-date'),
+    time:V('plEdit-time'),
+    type:V('plEdit-type'),
+    zone:V('plEdit-zone'),
+    location:V('plEdit-loc'),
+    notes:id('plEdit-notes')?id('plEdit-notes').value:''
+  };
+  if(!updated.notes.trim()){toast('Notes cannot be empty.','error');return;}
+  showLoader('Saving...');
+  gasCall('serverUpdatePhotoLog',S.token,updated).then(function(r){
+    hideLoader();closeModal('mGeneric');
+    if(r&&r.success){
+      toast('Entry updated!','ok');
+      // Update local cache
+      for(var i=0;i<PL.entries.length;i++){
+        if(PL.entries[i].logID===logID){
+          PL.entries[i].date=updated.date;PL.entries[i].time=updated.time;
+          PL.entries[i].type=updated.type;PL.entries[i].zone=updated.zone;
+          PL.entries[i].location=updated.location;PL.entries[i].notes=updated.notes;
+          break;
+        }
+      }
+      plRenderCards(PL.entries);
+    } else toast((r&&r.message)||'Update failed.','error');
   });
 }
 function driveToImgUrl(url){
