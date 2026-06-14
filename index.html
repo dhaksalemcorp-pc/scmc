@@ -1433,8 +1433,9 @@ tbody tr:hover { background: var(--surface2); }
           </div>
         </div>
       </div>
+    </div><!-- /hodDash -->
+  </div><!-- /page-dashboard -->
 
-    </div>
     <div class="page" id="page-taskEntry">
       <div class="ph"><div class="ph-left"><h1>Task Entry</h1><p>Create and assign tasks to officers</p></div></div>
       <div class="tabs mb16" id="taskTabs">
@@ -1564,7 +1565,6 @@ tbody tr:hover { background: var(--surface2); }
           </div>
         </div>
       </div>
-    </div>
 
     <!-- TASK TRACKER -->
     <div class="page" id="page-tracker">
@@ -1611,7 +1611,7 @@ tbody tr:hover { background: var(--surface2); }
               </div>
               <div class="f-group mb0">
                 <label class="f-label" style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--tx3)">Department</label>
-                <select class="f-sel" id="fDept" onchange="filterTasks()" style="font-size:13px"></select>
+                <select class="f-sel" id="fDept" onchange="populateOfficerFilter();filterTasks()" style="font-size:13px"></select>
               </div>
               <div class="f-group mb0">
                 <label class="f-label" style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--tx3)">Officer</label>
@@ -1761,14 +1761,20 @@ tbody tr:hover { background: var(--surface2); }
           <button class="btn btn-primary" onclick="showUserModal()"><span class="material-icons-round mi">person_add</span> Add User</button>
         </div>
       </div>
-      <div class="card card-bd-0">
-        <div class="card-hd">
-          <div class="search-wrap" style="width:240px">
-            <span class="material-icons-round mi-prefix">search</span>
-            <input type="text" class="f-ctrl" id="userSearch" placeholder="Search users..." oninput="filterUsers()">
-          </div>
-          <span class="c-muted" id="userCount">&#8212;</span>
+      <!-- Role filter tabs -->
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;align-items:center">
+        <button class="filter-chip active" data-role="" onclick="setUserRoleFilter(this)">All Users</button>
+        <button class="filter-chip" data-role="Commissioner" onclick="setUserRoleFilter(this)">&#128081; Commissioner</button>
+        <button class="filter-chip" data-role="Admin" onclick="setUserRoleFilter(this)">&#128736; Admin</button>
+        <button class="filter-chip" data-role="HOD" onclick="setUserRoleFilter(this)">&#128188; HOD</button>
+        <button class="filter-chip" data-role="Officer" onclick="setUserRoleFilter(this)">&#128100; Officer</button>
+        <div class="search-wrap" style="margin-left:auto;width:220px">
+          <span class="material-icons-round mi-prefix">search</span>
+          <input type="text" class="f-ctrl" id="userSearch" placeholder="Search..." oninput="filterUsers()" style="font-size:13px">
         </div>
+        <span class="c-muted" id="userCount" style="font-size:12px;white-space:nowrap">—</span>
+      </div>
+      <div class="card card-bd-0">
         <div class="tbl-wrap">
           <table>
             <thead><tr><th>Emp ID</th><th>Name</th><th>Designation</th><th>Dept</th><th>Zone</th><th>Role</th><th>Status</th><th>Actions</th></tr></thead>
@@ -1909,20 +1915,36 @@ tbody tr:hover { background: var(--surface2); }
 
       <!-- ENTRY LIST (View B) -->
       <div id="plListView" style="display:none">
-        <!-- Filter bar -->
-        <div class="card mb12">
-          <div class="card-bd" style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
-            <select class="f-sel" id="plFType" onchange="plFilter()" style="min-width:120px"><option value="">All Types</option><option>Inspection</option><option>Meeting</option><option>Site Visit</option></select>
-            <select class="f-sel" id="plFZone" onchange="plFilter()" style="min-width:140px"><option value="">All Zones</option><option>Main Office</option><option>Suramangalam Zone-1</option><option>Hasthampatti Zone-2</option><option>Ammapet Zone-3</option><option>Kondalampatti Zone-4</option></select>
-            <select class="f-sel" id="plFMonth" onchange="plFilter()" style="min-width:130px">
-              <option value="">All Months</option>
-              <option value="01">January</option><option value="02">February</option><option value="03">March</option>
-              <option value="04">April</option><option value="05">May</option><option value="06">June</option>
-              <option value="07">July</option><option value="08">August</option><option value="09">September</option>
-              <option value="10">October</option><option value="11">November</option><option value="12">December</option>
-            </select>
-            <button class="btn btn-ghost btn-sm" onclick="plClearFilter()">Clear</button>
-            <span id="plCount" style="font-size:12px;color:var(--tx3);margin-left:auto"></span>
+        <!-- Improved Filter bar -->
+        <div class="card mb12" style="border:1.5px solid var(--border)">
+          <div class="card-bd" style="padding:12px 14px">
+            <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--tx3);margin-bottom:8px">Filter Entries</div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+              <div style="display:flex;align-items:center;gap:6px;background:var(--surface2);border-radius:8px;padding:5px 10px;border:1px solid var(--border)">
+                <span class="material-icons-round" style="font-size:14px;color:var(--tx3)">category</span>
+                <select class="f-sel" id="plFType" onchange="plFilter()" style="border:none;background:transparent;padding:0;min-width:100px;font-size:13px">
+                  <option value="">All Types</option><option>Inspection</option><option>Meeting</option><option>Site Visit</option>
+                </select>
+              </div>
+              <div style="display:flex;align-items:center;gap:6px;background:var(--surface2);border-radius:8px;padding:5px 10px;border:1px solid var(--border)">
+                <span class="material-icons-round" style="font-size:14px;color:var(--tx3)">location_on</span>
+                <select class="f-sel" id="plFZone" onchange="plFilter()" style="border:none;background:transparent;padding:0;min-width:130px;font-size:13px">
+                  <option value="">All Zones</option><option>Main Office</option><option>Suramangalam Zone-1</option><option>Hasthampatti Zone-2</option><option>Ammapet Zone-3</option><option>Kondalampatti Zone-4</option>
+                </select>
+              </div>
+              <div style="display:flex;align-items:center;gap:6px;background:var(--surface2);border-radius:8px;padding:5px 10px;border:1px solid var(--border)">
+                <span class="material-icons-round" style="font-size:14px;color:var(--tx3)">calendar_month</span>
+                <select class="f-sel" id="plFMonth" onchange="plFilter()" style="border:none;background:transparent;padding:0;min-width:110px;font-size:13px">
+                  <option value="">All Months</option>
+                  <option value="01">January</option><option value="02">February</option><option value="03">March</option>
+                  <option value="04">April</option><option value="05">May</option><option value="06">June</option>
+                  <option value="07">July</option><option value="08">August</option><option value="09">September</option>
+                  <option value="10">October</option><option value="11">November</option><option value="12">December</option>
+                </select>
+              </div>
+              <button class="btn btn-ghost btn-sm" onclick="plClearFilter()"><span class="material-icons-round mi">filter_alt_off</span> Clear</button>
+              <span id="plCount" style="font-size:12px;color:var(--tx3);margin-left:auto;font-weight:600"></span>
+            </div>
           </div>
         </div>
         <div id="plCards"></div>
@@ -2865,6 +2887,7 @@ function go(page){
   var m=PAGE_META[page]||[page,''];var tt=id('topTitle');if(tt)tt.textContent=m[0];var ts=id('topSub');if(ts)ts.textContent=m[1];
   closeSidebar();
   if(page==='dashboard')loadDashboard();
+  else if(page==='taskEntry'){if(S.lookup)populateSelects();else loadLookup();}
   else if(page==='tracker')loadTasks();
   else if(page==='commview')loadCommView();
   else if(page==='users')loadUsers();
@@ -3159,11 +3182,21 @@ function buildDeptBreakdown(ds){
   el.innerHTML=html;
 }
 function loadActivityLog(){
-  gasCall('serverGetActivityLogs',S.token,8).then(function(r){
-    var el=id('recentAct');if(!el)return;
-    if(!r||!r.success||!r.data||!r.data.length){el.innerHTML='<div class="empty"><span class="material-icons-round mi">history</span><p>No activity</p></div>';return;}
+  var el=id('recentAct');if(!el)return;
+  gasCall('serverGetActivityLogs',S.token,10).then(function(r){
+    if(!r||!r.success||!r.data||!r.data.length){
+      el.innerHTML='<div class="empty" style="padding:16px"><span class="material-icons-round mi" style="font-size:28px">history</span><p style="font-size:12px;margin-top:4px">No recent activity</p></div>';return;
+    }
     var html='';
-    for(var i=0;i<r.data.length;i++){var l=r.data[i];html+='<div style="display:flex;gap:9px;padding:8px 0;border-bottom:1px solid var(--border)"><div style="width:7px;height:7px;border-radius:50%;background:var(--c-blue);margin-top:6px;flex-shrink:0"></div><div><div style="font-size:12.5px;font-weight:600">'+l.details+'</div><div class="c-muted">'+l.username+' \u00b7 '+fDate(l.timestamp)+'</div></div></div>';}
+    for(var i=0;i<r.data.length;i++){
+      var l=r.data[i];
+      var actionColors={'LOGIN':'var(--c-teal)','CREATE_TASK':'var(--c-blue)','UPDATE_TASK':'var(--c-blue)','DELETE_TASK':'var(--c-red)'};
+      var dot=actionColors[l.action]||'var(--c-blue)';
+      html+='<div style="display:flex;gap:9px;padding:8px 0;border-bottom:1px solid var(--border)">'
+        +'<div style="width:7px;height:7px;border-radius:50%;background:'+dot+';margin-top:6px;flex-shrink:0"></div>'
+        +'<div><div style="font-size:12.5px;font-weight:600">'+l.details+'</div>'
+        +'<div class="c-muted">'+l.username+' \u00b7 '+fDateShort(l.timestamp)+'</div></div></div>';
+    }
     el.innerHTML=html;
   });
 }
@@ -3230,15 +3263,27 @@ function toggleAdvFilter(){
   if(advFilterOpen) populateOfficerFilter();
 }
 function populateOfficerFilter(){
+  var dept=V('fDept');
   var sel=id('fOfficer');if(!sel)return;
   var current=sel.value;
   sel.innerHTML='<option value="">All Officers</option>';
   var seen={};
   for(var i=0;i<S.tasks.length;i++){
-    var n=S.tasks[i].officerName;
-    if(n&&!seen[n]){seen[n]=1;var o=document.createElement('option');o.value=n;o.textContent=n;sel.appendChild(o);}
+    var t=S.tasks[i];
+    var n=t.officerName;
+    if(!n)continue;
+    // Filter by dept if selected
+    if(dept&&t.department!==dept)continue;
+    if(!seen[n]){
+      seen[n]=1;
+      var o=document.createElement('option');
+      o.value=n;o.textContent=n;
+      sel.appendChild(o);
+    }
   }
-  sel.value=current;
+  // Restore selection if still valid
+  if(current&&seen[current])sel.value=current;
+  else sel.value='';
 }
 function filterTasks(){
   var search=V('fSearch').toLowerCase();
@@ -3350,6 +3395,7 @@ function renderTable(tasks){
   var tc=id('taskCount');if(tc)tc.textContent=tasks.length+' task'+(tasks.length!==1?'s':'');
   if(!tasks.length){tbody.innerHTML='<tr><td colspan="12"><div class="empty"><span class="material-icons-round mi">task_alt</span><h3>No tasks found</h3><p>Try adjusting your filters</p></div></td></tr>';return;}
   var isAdmin=(S.user&&(S.user.role==='Admin'||S.user.role==='Commissioner'));
+  var isHOD=(S.user&&S.user.role==='HOD');
   // Reset select-all checkbox
   var chkAll=id('chkAll');if(chkAll)chkAll.checked=false;
   var html='';
@@ -3357,7 +3403,9 @@ function renderTable(tasks){
     var t=tasks[i];
     var adminBtns=isAdmin
       ?'<button class="btn btn-ghost btn-sm btn-icon" onclick="adminUpdate(\''+t.taskID+'\')" title="Update Status"><span class="material-icons-round mi">update</span></button><button class="btn btn-ghost btn-sm btn-icon" onclick="editTask(\''+t.taskID+'\')" title="Edit All Fields"><span class="material-icons-round mi">edit</span></button><button class="btn btn-danger btn-sm btn-icon" onclick="delTask(\''+t.taskID+'\')" title="Delete"><span class="material-icons-round mi">delete</span></button>'
-      :'<button class="btn btn-primary btn-sm btn-icon" onclick="officerUpdate(\''+t.taskID+'\')" title="Update"><span class="material-icons-round mi">update</span></button>';
+      :isHOD
+        ?'<button class="btn btn-ghost btn-sm btn-icon" onclick="hodReassignTask(\''+t.taskID+'\')" title="Reassign to Subordinate"><span class="material-icons-round mi">swap_horiz</span></button><button class="btn btn-primary btn-sm btn-icon" onclick="officerUpdate(\''+t.taskID+'\')" title="Update"><span class="material-icons-round mi">update</span></button>'
+        :'<button class="btn btn-primary btn-sm btn-icon" onclick="officerUpdate(\''+t.taskID+'\')" title="Update"><span class="material-icons-round mi">update</span></button>';
     var photoIcon=t.photoLinks?'<span class="material-icons-round mi" style="font-size:13px;color:var(--c-teal);margin-left:3px" title="Has attachments">attach_file</span>':'';
     var chkCell=isAdmin
       ?'<td style="width:36px;text-align:center"><input type="checkbox" class="task-chk" data-id="'+t.taskID+'" onchange="onTaskCheckChange()" style="width:16px;height:16px;cursor:pointer"></td>'
@@ -3672,6 +3720,52 @@ function submitAdminUpdate(taskID){
     if(r&&r.success){toast('Task updated!','ok');loadTasks();}else toast((r&&r.message)||'Failed.','error');
   });
 }
+function hodReassignTask(taskID){
+  var t=null;
+  for(var i=0;i<S.tasks.length;i++){if(S.tasks[i].taskID===taskID){t=S.tasks[i];break;}}
+  if(!t)return;
+  // Build officer options from HOD's department(s)
+  var depts=(S.user.hodDepartments||S.user.department||'').split(',').map(function(d){return d.trim().toLowerCase();});
+  var officers=S.lookup&&S.lookup.officers?S.lookup.officers:[];
+  var opts='<option value="">Select Officer</option>';
+  for(var i=0;i<officers.length;i++){
+    var o=officers[i];
+    var oDept=(o.department||o.dept||'').toLowerCase().trim();
+    var matches=false;
+    for(var j=0;j<depts.length;j++){if(oDept===depts[j])matches=true;}
+    if(matches){opts+='<option value="'+o.userID+'|'+o.name+'">'+o.name+(o.designation?' — '+o.designation:'')+'</option>';}
+  }
+  var html='<div style="padding:4px">'
+    +'<div style="font-size:13px;color:var(--tx3);margin-bottom:12px">Reassigning: <strong>'+t.taskID+'</strong> — '+t.description.substring(0,60)+'</div>'
+    +'<div class="f-group"><label class="f-label">Assign to Officer <span class="req">*</span></label>'
+    +'<select class="f-sel" id="reassignOfficerSel">'+opts+'</select></div>'
+    +'<div class="f-group"><label class="f-label">Remarks (reason for reassignment)</label>'
+    +'<textarea class="f-ctrl" id="reassignRemarks" rows="2" placeholder="e.g. Officer on leave, redistributing workload..."></textarea></div>'
+    +'<div style="display:flex;gap:8px;margin-top:12px">'
+    +'<button class="btn btn-primary" onclick="confirmReassign(\''+taskID+'\')"><span class="material-icons-round mi">swap_horiz</span> Reassign</button>'
+    +'<button class="btn btn-ghost" onclick="closeModal(\'mGeneric\')">Cancel</button>'
+    +'</div></div>';
+  var gb=id('mGenericBody');if(gb)gb.innerHTML=html;
+  var gt=id('mGenericTitle');if(gt)gt.textContent='Reassign Task';
+  openModal('mGeneric');
+}
+function confirmReassign(taskID){
+  var sel=id('reassignOfficerSel');
+  if(!sel||!sel.value){toast('Please select an officer.','error');return;}
+  var parts=sel.value.split('|');
+  var newOfficerID=parts[0],newOfficerName=parts[1]||'';
+  var remarks=V('reassignRemarks').trim();
+  showLoader('Reassigning...');
+  var t=null;for(var i=0;i<S.tasks.length;i++){if(S.tasks[i].taskID===taskID){t=S.tasks[i];break;}}
+  var updateData={taskID:taskID,officerID:newOfficerID,officerName:newOfficerName,
+    remarks:remarks?'Reassigned by HOD ('+S.user.name+'): '+remarks:'Reassigned by HOD ('+S.user.name+')',
+    reassignedBy:S.user.name,reassignedAt:new Date().toISOString()};
+  gasCall('serverReassignTask',S.token,updateData).then(function(r){
+    hideLoader();closeModal('mGeneric');
+    if(r&&r.success){toast('Task reassigned to '+newOfficerName+'!','ok');loadTasks();}
+    else toast((r&&r.message)||'Reassign failed.','error');
+  });
+}
 function officerUpdate(taskID){
   var t=null;for(var i=0;i<S.tasks.length;i++)if(S.tasks[i].taskID===taskID){t=S.tasks[i];break;}if(!t)return;
   var pu=id('pu-taskid');if(pu)pu.value=taskID;
@@ -3684,6 +3778,68 @@ function officerUpdate(taskID){
   var dlr=id('driveLinkRow');if(dlr)dlr.classList.add('dn');
   S.selPhotos=[];S.driveLinks=[];
   closeModal('mTask');openModal('mPhotoUpload');
+}
+
+// HOD: reassign a task to a subordinate in their department
+function hodReassign(taskID){
+  var t=null;for(var i=0;i<S.tasks.length;i++)if(S.tasks[i].taskID===taskID){t=S.tasks[i];break;}if(!t)return;
+  var ra=id('ra-taskid');if(ra)ra.value=taskID;
+  var rd=id('ra-desc');if(rd)rd.textContent=t.description.substring(0,120)+(t.description.length>120?'...':'');
+  var rc=id('ra-current');if(rc)rc.textContent=t.officerName||'\u2014';
+  var rnote=id('ra-note');if(rnote)rnote.value='';
+  // Populate officer dropdown from HOD's departments
+  var sel=id('ra-officer');
+  if(sel){
+    sel.innerHTML='<option value="">Select Officer to Reassign</option>';
+    var hodDepts=(S.user&&S.user.hodDepartments)?S.user.hodDepartments:'';
+    var deptArr=hodDepts.split(',').map(function(d){return d.trim().toLowerCase();});
+    var officers=(S.lookup&&S.lookup.officers)||[];
+    for(var i=0;i<officers.length;i++){
+      var o=officers[i];
+      var oDept=String(o.department||o.dept||'').toLowerCase();
+      var inDept=false;
+      for(var j=0;j<deptArr.length;j++){if(oDept===deptArr[j]){inDept=true;break;}}
+      if(inDept){
+        var opt=document.createElement('option');
+        opt.value=JSON.stringify({id:o.userID,name:o.name,desig:o.designation||''});
+        opt.textContent=o.name+(o.designation?' \u2014 '+o.designation:'');
+        sel.appendChild(opt);
+      }
+    }
+  }
+  closeModal('mTask');
+  openModal('mReassign');
+}
+
+function submitReassign(){
+  var taskID=V('ra-taskid');
+  var officerRaw=V('ra-officer');
+  var note=V('ra-note').trim();
+  if(!taskID||!officerRaw){toast('Please select an officer.','error');return;}
+  var oData;
+  try{oData=JSON.parse(officerRaw);}catch(e){toast('Invalid officer selection.','error');return;}
+  var now=new Date();
+  var ts=now.toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'})
+    +' '+now.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',hour12:true});
+  // Build history note appended to remarks
+  var historyLine='[Reassigned to '+oData.name+(oData.desig?' ('+oData.desig+')':'')+' by '+(S.user?S.user.name:'HOD')+' on '+ts+']'+(note?' — '+note:'');
+  showLoader('Reassigning task...');
+  gasCall('serverUpdateTask',S.token,taskID,{
+    officerID:   oData.id,
+    officerName: oData.name,
+    designation: oData.desig,
+    status:      'Pending',
+    officerRemarks: historyLine,
+    updatedBy:   S.user?S.user.name:'HOD',
+    updatedAt:   now.toISOString()
+  }).then(function(r){
+    hideLoader();
+    if(r&&r.success){
+      toast('Task reassigned to '+oData.name+'!','ok');
+      closeModal('mReassign');
+      loadTasks();
+    } else toast((r&&r.message)||'Reassign failed.','error');
+  });
 }
 function handlePhotoSelect(files){addPhotos(Array.prototype.slice.call(files));}
 function handlePhotoDrop(e){e.preventDefault();var dz=id('photoDropZone');if(dz)dz.style.borderColor='var(--border)';var files=[];for(var i=0;i<e.dataTransfer.files.length;i++){var f=e.dataTransfer.files[i];if(f.type.indexOf('image/')===0||f.type==='application/pdf')files.push(f);}addPhotos(files);}
@@ -4498,6 +4654,9 @@ function plRenderCards(entries){
         +'<div id="pl-full-'+eid+'" style="display:none;margin-top:10px">'
         +'<div style="font-size:13px;color:var(--tx2);line-height:1.65;white-space:pre-wrap;padding:10px;background:var(--surface2);border-radius:8px;margin-bottom:8px">'+e.notes+'</div>'
         +(photoLinks>0?buildPhotoGrid(e.photos,'pl'+mi+'_'+ei):'')
+        +'<div style="display:flex;gap:8px;margin-top:10px;padding-top:8px;border-top:1px solid var(--border)">'
+        +'<button onclick="plDeleteEntry(\''+e.logID+'\')" class="btn btn-ghost btn-sm" style="color:var(--c-red);border-color:var(--c-red)"><span class="material-icons-round mi">delete</span> Delete</button>'
+        +'</div>'
         +'</div></div></div></div></div>';
     }
   }
@@ -4508,6 +4667,19 @@ function plToggleCard(eid){
   var isOpen=full.style.display!=='none';
   full.style.display=isOpen?'none':'block';
   if(preview)preview.style.display=isOpen?'':'none';
+}
+function plDeleteEntry(logID){
+  if(!confirm('Delete this Photo Log entry? This cannot be undone.'))return;
+  showLoader('Deleting...');
+  gasCall('serverDeletePhotoLog',S.token,logID).then(function(r){
+    hideLoader();
+    if(r&&r.success){
+      toast('Entry deleted.','ok');
+      // Remove from local cache and re-render
+      PL.entries=PL.entries.filter(function(e){return e.logID!==logID;});
+      plRenderCards(PL.entries);
+    } else toast((r&&r.message)||'Delete failed.','error');
+  });
 }
 function driveToImgUrl(url){
   // Convert any Drive URL to uc?export=view which works without Google login
@@ -4755,9 +4927,24 @@ function loadUsers(){
   showLoader('Loading users...');
   gasCall('serverGetUsers',S.token).then(function(r){hideLoader();if(r&&r.success){S.users=r.data||[];renderUsers(S.users);}});
 }
+var USER_ROLE_FILTER='';
+function setUserRoleFilter(btn){
+  var chips=document.querySelectorAll('[data-role]');
+  for(var i=0;i<chips.length;i++)chips[i].classList.remove('active');
+  btn.classList.add('active');
+  USER_ROLE_FILTER=btn.dataset.role||'';
+  filterUsers();
+}
 function filterUsers(){
-  var s=V('userSearch').toLowerCase(),filtered=[];
-  for(var i=0;i<S.users.length;i++){var u=S.users[i];if((u.name+u.username+u.designation+u.department+u.employeeID).toLowerCase().indexOf(s)!==-1)filtered.push(u);}
+  var q=V('userSearch').toLowerCase();
+  var role=USER_ROLE_FILTER;
+  var filtered=[];
+  for(var i=0;i<S.users.length;i++){
+    var u=S.users[i];
+    if(role&&u.role!==role)continue;
+    if(q){var h=(u.name+u.username+u.designation+u.department+String(u.employeeID||'')).toLowerCase();if(h.indexOf(q)===-1)continue;}
+    filtered.push(u);
+  }
   renderUsers(filtered);
 }
 function renderUsers(users){
