@@ -1297,7 +1297,7 @@ tbody tr:hover { background: var(--surface2); }
       <div class="sb-item" data-page="users" id="snav-users" onclick="go('users')"><span class="material-icons-round sb-i">manage_accounts</span> User Management</div>
       <div class="sb-item" data-page="settings" id="snav-settings" onclick="go('settings')"><span class="material-icons-round sb-i">settings</span> Settings</div>
       <div class="sb-item" id="snav-chgpw" onclick="showMyProfile()"><span class="material-icons-round sb-i">manage_accounts</span> My Profile</div>
-      <div class="sb-item" id="snav-photolog" data-page="photolog" onclick="go('photolog')"><span class="material-icons-round sb-i">photo_library</span> Photo Log</div>
+      <div class="sb-item" id="snav-photolog" data-page="photolog" onclick="go('photolog')"><span class="material-icons-round sb-i">photo_library</span> Notes</div>
       <div class="sb-item" data-page="about" onclick="go('about')"><span class="material-icons-round sb-i">info</span> About</div>
     </div>
     <div class="sb-footer">
@@ -1479,11 +1479,9 @@ tbody tr:hover { background: var(--surface2); }
                 <label class="f-label">Priority <span class="req">*</span></label>
                 <select class="f-sel" id="t-priority"><option value="">Select</option><option>High</option><option>Medium</option><option>Low</option></select>
               </div>
-              <div class="f-group">
-                <label class="f-label">Designation</label>
-                <select class="f-sel" id="t-desig"></select>
-              </div>
             </div>
+            <!-- Hidden designation field - auto-filled from officer selection -->
+            <input type="hidden" id="t-desig">
             <div class="f-group">
                 <label class="f-label">Assign Officer <span class="req">*</span></label>
                 <!-- Multi-officer assignment list -->
@@ -1694,7 +1692,7 @@ tbody tr:hover { background: var(--surface2); }
           <div class="tbl-wrap">
             <table>
               <thead><tr>
-                <th id="thChk" style="width:36px;display:none"><input type="checkbox" id="chkAll" onchange="toggleSelectAll(this)" style="width:16px;height:16px;cursor:pointer" title="Select all"></th>
+                <th id="thChk" style="width:36px"></th>
                 <th onclick="sortBy('taskID')" style="cursor:pointer;white-space:nowrap">Task ID <span id="sort-taskID"></span></th>
                 <th onclick="sortBy('taskType')" style="cursor:pointer;white-space:nowrap">Type <span id="sort-taskType"></span></th>
                 <th>Description</th>
@@ -1839,11 +1837,14 @@ tbody tr:hover { background: var(--surface2); }
     <!-- PHOTO LOG PAGE -->
     <div class="page" id="page-photolog">
       <div class="ph">
-        <div class="ph-left"><h1>&#128247; Photo Log</h1><p>Commissioner inspection &amp; meeting records</p></div>
-        <div class="ph-actions">
-          <button class="btn btn-ghost btn-sm" onclick="plToggleView('form')"><span class="material-icons-round mi">add_circle</span> New</button>
+        <div class="ph-left"><h1>&#128247; Inspection / Meeting Notes</h1><p>Inspection records &amp; meeting notes for all staff</p></div>
+        <div class="ph-actions" id="plAdminActions">
+          <button class="btn btn-ghost btn-sm" onclick="plToggleView('form')"><span class="material-icons-round mi">add_circle</span> New Entry</button>
           <button class="btn btn-ghost btn-sm" onclick="plToggleView('list')"><span class="material-icons-round mi">view_module</span> All Entries</button>
           <button class="btn btn-primary btn-sm" onclick="showPlDiaryModal()"><span class="material-icons-round mi">auto_stories</span> AI Diary</button>
+        </div>
+        <div class="ph-actions" id="plViewActions" style="display:none">
+          <button class="btn btn-ghost btn-sm" onclick="plToggleView('list')"><span class="material-icons-round mi">view_module</span> View All Notes</button>
         </div>
       </div>
 
@@ -2091,6 +2092,17 @@ tbody tr:hover { background: var(--surface2); }
 </div><!-- #app -->
 
 <!-- ═══ MODALS ═══════════════════════════════════════════════ -->
+
+<!-- Generic Modal (used for HOD reassign, confirmations, etc.) -->
+<div class="modal-bg" id="mGeneric">
+  <div class="modal-box" style="max-width:480px">
+    <div class="modal-hd">
+      <span class="modal-title" id="mGenericTitle">Action</span>
+      <button class="modal-close" onclick="closeModal('mGeneric')"><span class="material-icons-round">close</span></button>
+    </div>
+    <div class="modal-body" id="mGenericBody"></div>
+  </div>
+</div>
 
 <!-- User Modal -->
 <div class="modal-bg" id="mUser">
@@ -2841,17 +2853,18 @@ function applyRoleNav(role){
   show('snav-commview', isAdmin);
   show('snav-settings', isAdmin);
   show('snav-chgpw', true);
-  show('snav-photolog', isAdmin);
+  show('snav-photolog', true); // All roles can view Notes/Photo Log
   show('bnEntry', isAdmin);
   show('bnCommView', isAdmin);
   show('newTaskBtn', isAdmin);
-  var thChk=id('thChk');if(thChk)thChk.style.display=(isAdmin||isHOD)?'':'none';
+  var thChk=id('thChk');
+  if(thChk)thChk.innerHTML=isAdmin?'<input type="checkbox" id="chkAll" onchange="toggleSelectAll(this)" style="width:16px;height:16px;cursor:pointer" title="Select all">':'';
   if(!isAdmin&&!isHOD){var bb=id('bulkBar');if(bb)bb.classList.add('dn');}
 
   if(isOfficer){
-    S.allowedPages=['dashboard','tracker','about'];
+    S.allowedPages=['dashboard','tracker','photolog','about'];
   } else if(isHOD){
-    S.allowedPages=['dashboard','tracker','about'];
+    S.allowedPages=['dashboard','tracker','photolog','about'];
   } else {
     S.allowedPages=['dashboard','taskEntry','tracker','commview','users','settings','photolog','about'];
   }
@@ -2865,7 +2878,7 @@ function applyRoleNav(role){
     if(ad)ad.classList.remove('dn');if(od)od.classList.add('dn');if(hd)hd.classList.add('dn');
   }
 }
-var PAGE_META={dashboard:['Dashboard','Overview & Analytics'],taskEntry:['Task Entry','Create and assign tasks'],tracker:['Task Tracker','Monitor all tasks'],commview:['Commissioner View','Executive analytics'],users:['User Management','Manage accounts'],settings:['Settings','System configuration'],photolog:['Photo Log','Field inspection records'],about:['About','Application information']};
+var PAGE_META={dashboard:['Dashboard','Overview & Analytics'],taskEntry:['Task Entry','Create and assign tasks'],tracker:['Task Tracker','Monitor all tasks'],commview:['Commissioner View','Executive analytics'],users:['User Management','Manage accounts'],settings:['Settings','System configuration'],photolog:['Notes','Inspection & Meeting Records'],about:['About','Application information']};
 function go(page){
   if(S.allowedPages&&S.allowedPages.length&&S.allowedPages.indexOf(page)===-1){toast('Access restricted.','error');return;}
   S.page=page;
@@ -2916,7 +2929,7 @@ function populateSelects(){
   var ld=S.lookup;if(!ld)return;
   fillSelZone('t-zone',ld.zones,'Select Zone');fillSelZone('fZone',ld.zones,'All Zones');fillSelZone('mu-zone',ld.zones,'Select');
   fillSel('t-dept',ld.departments,'DeptName','DeptName','Select Department');fillSel('fDept',ld.departments,'DeptName','DeptName','All Departments');fillSel('mu-dept',ld.departments,'DeptName','DeptName','Select');fillSel('mapDept',ld.departments,'DeptName','DeptName','Select');
-  fillSel('t-desig',ld.designations,'DesigName','DesigName','Select Designation');fillSel('mu-desig',ld.designations,'DesigName','DesigName','Select');
+  fillSel('mu-desig',ld.designations,'DesigName','DesigName','Select');
   fillOfficers(null);
   initAddOfficerDepts();
 }
@@ -3409,7 +3422,7 @@ function renderTable(tasks){
     var photoIcon=t.photoLinks?'<span class="material-icons-round mi" style="font-size:13px;color:var(--c-teal);margin-left:3px" title="Has attachments">attach_file</span>':'';
     var chkCell=isAdmin
       ?'<td style="width:36px;text-align:center"><input type="checkbox" class="task-chk" data-id="'+t.taskID+'" onchange="onTaskCheckChange()" style="width:16px;height:16px;cursor:pointer"></td>'
-      :'';
+      :'<td style="width:36px"></td>';
     html+='<tr id="row-'+t.taskID+'">'
       +chkCell
       +'<td><span class="mono" style="color:var(--c-blue)">'+t.taskID+'</span></td>'
@@ -3721,48 +3734,65 @@ function submitAdminUpdate(taskID){
   });
 }
 function hodReassignTask(taskID){
+  // Use mGeneric modal with officer selector
   var t=null;
   for(var i=0;i<S.tasks.length;i++){if(S.tasks[i].taskID===taskID){t=S.tasks[i];break;}}
   if(!t)return;
-  // Build officer options from HOD's department(s)
-  var depts=(S.user.hodDepartments||S.user.department||'').split(',').map(function(d){return d.trim().toLowerCase();});
+  var hodDeptStr=S.user.hodDepartments||S.user.department||'';
+  var hodDepts=hodDeptStr.split(',').map(function(d){return d.trim().toLowerCase();});
   var officers=S.lookup&&S.lookup.officers?S.lookup.officers:[];
-  var opts='<option value="">Select Officer</option>';
+  var opts='<option value="">— Select Officer —</option>';
+  var found=false;
   for(var i=0;i<officers.length;i++){
     var o=officers[i];
-    var oDept=(o.department||o.dept||'').toLowerCase().trim();
+    var oDepts=(o.department||'').split(',').map(function(d){return d.trim().toLowerCase();});
     var matches=false;
-    for(var j=0;j<depts.length;j++){if(oDept===depts[j])matches=true;}
-    if(matches){opts+='<option value="'+o.userID+'|'+o.name+'">'+o.name+(o.designation?' — '+o.designation:'')+'</option>';}
+    for(var j=0;j<oDepts.length;j++){
+      for(var k=0;k<hodDepts.length;k++){if(oDepts[j]&&oDepts[j]===hodDepts[k]){matches=true;break;}}
+      if(matches)break;
+    }
+    if(matches&&String(o.userID)!==String(S.user.userID)){
+      opts+='<option value="'+o.userID+'|'+o.name+'|'+(o.designation||'')+'">'+o.name+(o.designation?' — '+o.designation:'')+'</option>';
+      found=true;
+    }
   }
+  if(!found)opts='<option value="">No subordinates found for your department(s)</option>';
   var html='<div style="padding:4px">'
-    +'<div style="font-size:13px;color:var(--tx3);margin-bottom:12px">Reassigning: <strong>'+t.taskID+'</strong> — '+t.description.substring(0,60)+'</div>'
+    +'<div style="background:var(--surface2);border-radius:8px;padding:10px 12px;margin-bottom:12px;border-left:3px solid var(--c-blue)">'
+    +'<div style="font-size:11px;font-weight:700;color:var(--tx3);text-transform:uppercase">Task being reassigned</div>'
+    +'<div style="font-size:13px;font-weight:600;margin-top:2px">'+t.taskID+'</div>'
+    +'<div style="font-size:12.5px;color:var(--tx2)">'+t.description.substring(0,100)+'</div>'
+    +'<div style="font-size:12px;color:var(--tx3);margin-top:4px">Current officer: <strong>'+t.officerName+'</strong></div>'
+    +'</div>'
     +'<div class="f-group"><label class="f-label">Assign to Officer <span class="req">*</span></label>'
-    +'<select class="f-sel" id="reassignOfficerSel">'+opts+'</select></div>'
-    +'<div class="f-group"><label class="f-label">Remarks (reason for reassignment)</label>'
-    +'<textarea class="f-ctrl" id="reassignRemarks" rows="2" placeholder="e.g. Officer on leave, redistributing workload..."></textarea></div>'
+    +'<select class="f-sel" id="raSel">'+opts+'</select></div>'
+    +'<div class="f-group"><label class="f-label">Reason (optional)</label>'
+    +'<textarea class="f-ctrl" id="raNote" rows="2" placeholder="e.g. Redistributing workload..."></textarea></div>'
     +'<div style="display:flex;gap:8px;margin-top:12px">'
-    +'<button class="btn btn-primary" onclick="confirmReassign(\''+taskID+'\')"><span class="material-icons-round mi">swap_horiz</span> Reassign</button>'
+    +'<button class="btn btn-primary" onclick="doHodReassign(\''+taskID+'\')"><span class="material-icons-round mi">swap_horiz</span> Confirm Reassign</button>'
     +'<button class="btn btn-ghost" onclick="closeModal(\'mGeneric\')">Cancel</button>'
     +'</div></div>';
   var gb=id('mGenericBody');if(gb)gb.innerHTML=html;
   var gt=id('mGenericTitle');if(gt)gt.textContent='Reassign Task';
   openModal('mGeneric');
 }
-function confirmReassign(taskID){
-  var sel=id('reassignOfficerSel');
-  if(!sel||!sel.value){toast('Please select an officer.','error');return;}
+function doHodReassign(taskID){
+  var sel=id('raSel');if(!sel||!sel.value){toast('Please select an officer.','error');return;}
   var parts=sel.value.split('|');
-  var newOfficerID=parts[0],newOfficerName=parts[1]||'';
-  var remarks=V('reassignRemarks').trim();
+  var oID=parts[0],oName=parts[1]||'',oDesig=parts[2]||'';
+  var note=id('raNote')?id('raNote').value.trim():'';
+  var now=new Date();
+  var ts=now.toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'})+' '+now.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',hour12:true});
+  var histLine='[Reassigned to '+oName+(oDesig?' ('+oDesig+')':'')+' by '+S.user.name+' on '+ts+']'+(note?' — '+note:'');
   showLoader('Reassigning...');
-  var t=null;for(var i=0;i<S.tasks.length;i++){if(S.tasks[i].taskID===taskID){t=S.tasks[i];break;}}
-  var updateData={taskID:taskID,officerID:newOfficerID,officerName:newOfficerName,
-    remarks:remarks?'Reassigned by HOD ('+S.user.name+'): '+remarks:'Reassigned by HOD ('+S.user.name+')',
-    reassignedBy:S.user.name,reassignedAt:new Date().toISOString()};
-  gasCall('serverReassignTask',S.token,updateData).then(function(r){
+  gasCall('serverUpdateTask',S.token,taskID,{
+    officerID:oID,officerName:oName,designation:oDesig,
+    status:'Pending',
+    officerRemarks:histLine,
+    updatedBy:S.user.name,updatedAt:now.toISOString()
+  }).then(function(r){
     hideLoader();closeModal('mGeneric');
-    if(r&&r.success){toast('Task reassigned to '+newOfficerName+'!','ok');loadTasks();}
+    if(r&&r.success){toast('Task reassigned to '+oName+'!','ok');loadTasks();}
     else toast((r&&r.message)||'Reassign failed.','error');
   });
 }
@@ -4185,9 +4215,18 @@ function exportPDF(tasks,context){
   function priColor(p){return p==='High'?'#be123c':p==='Medium'?'#b45309':'#15803d';}
   function pct(c,t){return t>0?Math.round(c/t*100):0;}
   function progBar(r){var bc=r>=70?'#22c55e':r>=40?'#f59e0b':'#ef4444';return'<div style="display:flex;align-items:center;gap:4px"><div style="width:60px;background:#e2e8f0;border-radius:999px;height:6px;overflow:hidden"><div style="height:100%;border-radius:999px;background:'+bc+';width:'+r+'%"></div></div><span style="font-size:9px;font-weight:700;color:'+bc+'">'+r+'%</span></div>';}
-  var ZONE_ORDER={'Main Office':1,'Main office':1,'Suramangalam Zone-1':2,'Suramangalam':2,'Hasthampatti Zone-2':3,'Hasthampatti':3,'Ammapet Zone-3':4,'Ammapet':4,'Kondalampatti Zone-4':5,'Kondalampatti':5};
+  var ZONE_PDF_ORDER={'MAIN OFFICE':1,'MAIN':1,'SURAMANGALAM':2,'HASTHAMPATTI':3,'AMMAPET':4,'KONDALAMPATTI':5};
+  function zonePdfRank(z){
+    var u=String(z||'').toUpperCase().trim();
+    if(u.indexOf('MAIN')>=0)return 1;
+    if(u.indexOf('SURAM')>=0)return 2;
+    if(u.indexOf('HASTH')>=0)return 3;
+    if(u.indexOf('AMMAP')>=0)return 4;
+    if(u.indexOf('KONDAL')>=0)return 5;
+    return 99;
+  }
   var zoneRows='',zk=Object.keys(zoneMap);
-  zk.sort(function(a,b){return (ZONE_ORDER[a]||99)-(ZONE_ORDER[b]||99);});
+  zk.sort(function(a,b){return zonePdfRank(a)-zonePdfRank(b);});
   for(var i=0;i<zk.length;i++){var z=zk[i],s=zoneMap[z],r2=pct(s.completed,s.total);zoneRows+='<tr><td style="padding:7px 9px;font-weight:600">'+z+'</td><td style="padding:7px 9px;text-align:center;font-weight:700">'+s.total+'</td><td style="padding:7px 9px;text-align:center;color:#15803d;font-weight:700">'+s.completed+'</td><td style="padding:7px 9px;text-align:center;color:#b45309">'+s.notCompleted+'</td><td style="padding:7px 9px;text-align:center;color:'+(s.overdue>0?'#be123c':'#64748b')+';font-weight:'+(s.overdue>0?'700':'400')+'">'+s.overdue+'</td><td style="padding:7px 9px">'+progBar(r2)+'</td></tr>';}
   var deptRows='',dk=Object.keys(deptMap);
   for(var i=0;i<dk.length;i++){var d=dk[i],s=deptMap[d],r2=pct(s.completed,s.total);deptRows+='<tr><td style="padding:7px 9px;font-weight:600">'+d+'</td><td style="padding:7px 9px;text-align:center;font-weight:700">'+s.total+'</td><td style="padding:7px 9px;text-align:center;color:#15803d;font-weight:700">'+s.completed+'</td><td style="padding:7px 9px;text-align:center;color:#b45309">'+s.notCompleted+'</td><td style="padding:7px 9px;text-align:center;color:'+(s.overdue>0?'#be123c':'#64748b')+';font-weight:'+(s.overdue>0?'700':'400')+'">'+s.overdue+'</td><td style="padding:7px 9px">'+progBar(r2)+'</td></tr>';}
@@ -4419,6 +4458,11 @@ function addOfficerToList(){
     designation: sel.dataset.desig||'',
     department:  deptEl.value
   });
+  // Auto-fill hidden designation field from first officer's designation
+  if(MO.officers.length===1){
+    var dEl=id('t-desig');
+    if(dEl)dEl.value=sel.dataset.desig||'';
+  }
   // Reset add-row selects
   deptEl.value='';
   offEl.innerHTML='<option value="">Select Officer</option>';
@@ -4489,17 +4533,24 @@ function clearMultiOfficerList(){
 // ── PHOTO LOG ────────────────────────────────────────────────
 var PL={photos:[],entries:[]};
 function loadPhotoLog(){
+  var isAdmin=(S.user&&(S.user.role==='Admin'||S.user.role==='Commissioner'));
+  PL.isAdmin=isAdmin;
+  // Show admin actions only for admin/commissioner
+  var adminAct=id('plAdminActions'),viewAct=id('plViewActions');
+  if(adminAct)adminAct.style.display=isAdmin?'':'none';
+  if(viewAct)viewAct.style.display=isAdmin?'none':'';
   // Set form defaults
   var pd=id('pl-date');if(pd&&!pd.value)pd.value=new Date().toISOString().slice(0,10);
   var pt=id('pl-time');if(pt&&!pt.value){var now=new Date();pt.value=zeroPad(now.getHours(),2)+':'+zeroPad(now.getMinutes(),2);}
-  // Show form view by default
-  plToggleView('form');
-  // Load entries silently in background
+  // Officers/HOD go to list; admins go to form
+  plToggleView(isAdmin?'form':'list');
+  // Load entries in background
   gasCall('serverGetPhotoLogs',S.token).then(function(r){
     if(r&&r.success){
       PL.entries=r.data||[];
       var pc=id('plCount');
-      if(pc)pc.textContent=PL.entries.length+' entr'+(PL.entries.length===1?'y':'ies')+' saved';
+      if(pc)pc.textContent=PL.entries.length+' entr'+(PL.entries.length===1?'y':'ies');
+      if(!isAdmin)plRenderCards(PL.entries);
     }
   });
 }
@@ -4618,7 +4669,7 @@ function plRenderCards(entries){
   }
   var el=id('plCards');if(!el)return;
   var pc2=id('plCount');if(pc2)pc2.textContent=entries.length+' entr'+(entries.length===1?'y':'ies');
-  if(!entries.length){el.innerHTML='<div class="empty"><span class="material-icons-round mi">photo_library</span><h3>No entries yet</h3><p>Tap New above to add your first Photo Log entry.</p></div>';return;}
+  if(!entries.length){el.innerHTML='<div class="empty"><span class="material-icons-round mi">photo_library</span><h3>No entries yet</h3><p>Tap New to add the first inspection or meeting note.</p></div>';return;}
   var months=['','January','February','March','April','May','June','July','August','September','October','November','December'];
   var typeColors={Inspection:{bg:'rgba(29,78,216,.08)',c:'#1d4ed8',border:'rgba(29,78,216,.2)',icon:'search'},Meeting:{bg:'rgba(5,150,105,.08)',c:'#059669',border:'rgba(5,150,105,.2)',icon:'groups'},'Site Visit':{bg:'rgba(245,158,11,.08)',c:'#d97706',border:'rgba(245,158,11,.2)',icon:'location_on'}};
   var monthGroups={},monthOrder=[];
@@ -4654,9 +4705,12 @@ function plRenderCards(entries){
         +'<div id="pl-full-'+eid+'" style="display:none;margin-top:10px">'
         +'<div style="font-size:13px;color:var(--tx2);line-height:1.65;white-space:pre-wrap;padding:10px;background:var(--surface2);border-radius:8px;margin-bottom:8px">'+e.notes+'</div>'
         +(photoLinks>0?buildPhotoGrid(e.photos,'pl'+mi+'_'+ei):'')
-        +'<div style="display:flex;gap:8px;margin-top:10px;padding-top:8px;border-top:1px solid var(--border)">'
-        +'<button onclick="plDeleteEntry(\''+e.logID+'\')" class="btn btn-ghost btn-sm" style="color:var(--c-red);border-color:var(--c-red)"><span class="material-icons-round mi">delete</span> Delete</button>'
-        +'</div>'
+        +(PL.isAdmin
+          ?'<div style="display:flex;gap:8px;margin-top:10px;padding-top:8px;border-top:1px solid var(--border)">'
+            +'<button onclick="event.stopPropagation();plEditEntry(\''+e.logID+'\')" class="btn btn-ghost btn-sm"><span class="material-icons-round mi">edit</span> Edit</button>'
+            +'<button onclick="event.stopPropagation();plDeleteEntry(\''+e.logID+'\')" class="btn btn-ghost btn-sm" style="color:var(--c-red);border-color:var(--c-red)"><span class="material-icons-round mi">delete</span> Delete</button>'
+            +'</div>'
+          :'')
         +'</div></div></div></div></div>';
     }
   }
@@ -4904,7 +4958,7 @@ function exportPlDiaryPDF(entries,aiText,style,from,to){
   else toast('Allow pop-ups to generate PDF.','info');
 }
 function exportPlDiaryExcel(entries,from,to){
-  var rows=[['Salem City Municipal Corporation - Photo Log Export'],['Period: '+from+' to '+to],[],['Date','Time','Type','Zone','Location','Notes','Photos']];
+  var rows=[['Salem City Municipal Corporation - Notes Export'],['Period: '+from+' to '+to],[],['Date','Time','Type','Zone','Location','Notes','Photos']];
   for(var i=0;i<entries.length;i++){var e=entries[i];rows.push([e.date,e.time,e.type,e.zone,e.location||'','"'+(e.notes||'').replace(/"/g,'"')+'"',e.photos||'']);}
   dlFile(rows.map(function(r){return r.join(',');}).join('\n'),'PhotoLog_'+from+'_to_'+to+'.csv','text/csv');
 }
