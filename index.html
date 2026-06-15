@@ -495,6 +495,9 @@ body {
 .pl-zone-chip:has(input:checked){background:var(--c-blue);color:#fff;border-color:var(--c-blue)}
 .filter-chip.active{background:var(--c-blue);color:#fff;border-color:var(--c-blue)}
 .filter-chip:hover:not(.active){background:var(--border);color:var(--tx1)}
+.cv-dept-btn{display:inline-flex;align-items:center;padding:7px 14px;border-radius:8px;font-size:12.5px;font-weight:500;cursor:pointer;border:1.5px solid var(--border);background:var(--surface2);color:var(--tx2);transition:all .15s;white-space:nowrap}
+.cv-dept-btn.active{background:var(--c-blue);color:#fff;border-color:var(--c-blue);box-shadow:0 2px 8px rgba(29,78,216,.2)}
+.cv-dept-btn:hover:not(.active){border-color:var(--c-blue);color:var(--c-blue)}
 .tr-hover:hover{background:var(--surface2)!important;transition:background .1s}
 
 /* nav */
@@ -1746,14 +1749,16 @@ tbody tr:hover { background: var(--surface2); }
           <button class="btn btn-success btn-sm" onclick="showExportChoice('commissioner')"><span class="material-icons-round mi">ios_share</span> Export Report</button>
         </div>
       </div>
-      <!-- Department drill-down filter -->
-      <div class="card mb14">
-        <div class="card-bd" style="padding:10px 14px">
-          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-            <span style="font-size:12px;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:.04em;white-space:nowrap">View by Dept:</span>
-            <div id="cvDeptTabs" style="display:flex;gap:6px;flex-wrap:wrap">
-              <button class="filter-chip active" data-dept="" onclick="cvFilterDept(this)">All Departments</button>
-            </div>
+      <!-- Department drill-down filter — improved UI -->
+      <div class="card mb14" style="border:1.5px solid var(--border)">
+        <div class="card-bd" style="padding:12px 16px">
+          <div style="font-size:11px;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;display:flex;align-items:center;gap:6px">
+            <span class="material-icons-round" style="font-size:14px">business</span> Department Filter
+          </div>
+          <div id="cvDeptTabs" style="display:flex;gap:6px;flex-wrap:wrap;overflow-x:auto;padding-bottom:2px">
+            <button class="cv-dept-btn active" data-dept="" onclick="cvFilterDept(this)">
+              <span class="material-icons-round" style="font-size:13px;vertical-align:middle;margin-right:3px">layers</span>All Departments
+            </button>
           </div>
         </div>
       </div>
@@ -3554,7 +3559,7 @@ function renderTable(tasks){
       +'<td class="nowrap">'+t.zone+'</td>'
       +'<td class="nowrap">'+t.department+'</td>'
       +'<td class="nowrap">'+t.officerName+'</td>'
-      +'<td><span class="badge badge-'+t.priority.toLowerCase()+'">'+t.priority+'</span></td>'
+      +'<td><span class="badge badge-'+((t.priority||'medium').toLowerCase())+'">'+t.priority+'</span></td>'
       +'<td class="nowrap">'+fDateShort(t.dateAssigned)+'</td>'
       +'<td class="nowrap'+(t.isOverdue?' text-red':'')+'">'+fDateShort(t.dueDate)+'</td>'
       +'<td><span class="badge badge-'+statusClass(t.status)+'">'+t.status+'</span></td>'
@@ -3570,10 +3575,9 @@ function buildHODRows(tasks, isHOD, canReassign){
     var t=tasks[i];
     var photoIcon=t.photoLinks?'<span class="material-icons-round mi" style="font-size:13px;color:var(--c-teal);margin-left:3px">attach_file</span>':'';
     var btns='<button class="btn btn-ghost btn-sm btn-icon" onclick="viewTask(\''+t.taskID+'\')" title="View"><span class="material-icons-round mi">visibility</span></button>'
-      +'<button class="btn btn-primary btn-sm btn-icon" onclick="officerUpdate(\''+t.taskID+'\')" title="Update"><span class="material-icons-round mi">update</span></button>';
-    if(canReassign){
-      btns+='<button class="btn btn-ghost btn-sm btn-icon" onclick="hodReassignTask(\''+t.taskID+'\')" title="Reassign" style="color:#059669;border-color:#059669"><span class="material-icons-round mi">swap_horiz</span></button>';
-    }
+      +'<button class="btn btn-primary btn-sm btn-icon" onclick="officerUpdate(\''+t.taskID+'\')" title="Update"><span class="material-icons-round mi">update</span></button>'
+      // HOD can reassign ANY task (own or dept) to subordinate
+      +'<button class="btn btn-ghost btn-sm btn-icon" onclick="hodReassignTask(\''+t.taskID+'\')" title="Reassign to Subordinate" style="color:#059669;border-color:#059669"><span class="material-icons-round mi">swap_horiz</span></button>';
     html+='<tr id="row-'+t.taskID+'" style="'+(canReassign?'background:rgba(5,150,105,.02)':'')+(t.isOverdue?'background:rgba(239,68,68,.04)':'')+'">'
       +'<td></td>'
       +'<td><span class="mono" style="color:var(--c-blue)">'+t.taskID+'</span></td>'
@@ -3582,15 +3586,7 @@ function buildHODRows(tasks, isHOD, canReassign){
       +'<td class="nowrap">'+t.zone+'</td>'
       +'<td class="nowrap">'+t.department+'</td>'
       +'<td class="nowrap">'+t.officerName+'</td>'
-      +'<td><span class="badge badge-'+t.priority.toLowerCase()+'">'+t.priority+'</span></td>'
-      +'<td class="nowrap">'+fDateShort(t.dateAssigned)+'</td>'
-      +'<td class="nowrap'+(t.isOverdue?' text-red':'')+'">'+fDateShort(t.dueDate)+'</td>'
-      +'<td><span class="badge badge-'+statusClass(t.status)+'">'+t.status+'</span></td>'
-      +'<td><div class="flex-c" style="gap:4px">'+btns+'</div></td>'
-      +'</tr>';
-  }
-  return html;
-}
+      +'<td><span class="badge badge-'+((t.priority||'medium').toLowerCase())+'">'+t.priority+'</span></td>'
 function renderKanban(tasks){
   var board=id('kanban');if(!board)return;
   var cols={Pending:[],'In Progress':[],Completed:[],'Review Pending':[],Overdue:[],Closed:[]};
@@ -4444,7 +4440,7 @@ function exportPDF(tasks,context){
 var CV_DEPT_FILTER=''; // currently selected dept filter in commview
 
 function cvFilterDept(btn){
-  var chips=document.querySelectorAll('#cvDeptTabs .filter-chip');
+  var chips=document.querySelectorAll('#cvDeptTabs .cv-dept-btn');
   for(var i=0;i<chips.length;i++)chips[i].classList.remove('active');
   btn.classList.add('active');
   CV_DEPT_FILTER=btn.dataset.dept||'';
@@ -4453,13 +4449,14 @@ function cvFilterDept(btn){
 
 function buildCommDeptTabs(tasks){
   var tabs=id('cvDeptTabs');if(!tabs)return;
-  // Collect unique departments
   var depts={};
   for(var i=0;i<tasks.length;i++){var d=tasks[i].department||'';if(d)depts[d]=1;}
   var dk=Object.keys(depts).sort();
-  var html='<button class="filter-chip '+(CV_DEPT_FILTER===''?'active':'')+'" data-dept="" onclick="cvFilterDept(this)">All Departments</button>';
+  var html='<button class="cv-dept-btn '+(CV_DEPT_FILTER===''?'active':'')+'" data-dept="" onclick="cvFilterDept(this)">'
+    +'<span class="material-icons-round" style="font-size:14px">layers</span>All Departments</button>';
   for(var i=0;i<dk.length;i++){
-    html+='<button class="filter-chip '+(CV_DEPT_FILTER===dk[i]?'active':'')+'" data-dept="'+dk[i]+'" onclick="cvFilterDept(this)">'+dk[i]+'</button>';
+    html+='<button class="cv-dept-btn '+(CV_DEPT_FILTER===dk[i]?'active':'')+'" data-dept="'+dk[i]+'" onclick="cvFilterDept(this)">'
+      +'<span class="material-icons-round" style="font-size:14px">business</span>'+dk[i]+'</button>';
   }
   tabs.innerHTML=html;
 }
@@ -4699,7 +4696,10 @@ function clearMultiOfficerList(){
 }
 
 // ── PHOTO LOG ────────────────────────────────────────────────
-var PL={photos:[],entries:[]};
+var PL={photos:[],entries:[],editPhotos:[],isAdmin:false};
+function plCheckAdmin(){
+  return S.user&&(S.user.role==='Admin'||S.user.role==='Commissioner');
+}
 function loadPhotoLog(){
   var isAdmin=(S.user&&(S.user.role==='Admin'||S.user.role==='Commissioner'));
   PL.isAdmin=isAdmin;
@@ -4809,14 +4809,39 @@ function savePlEntry(){
   processNext();
 }
 function doSavePlEntry(entry){
+  var allPhotos=entry.photos||'';
+  // Save entry first without photos (small payload = always succeeds)
+  var entryFirst={date:entry.date,time:entry.time,type:entry.type,zone:entry.zone,
+    location:entry.location,notes:entry.notes,photos:''};
   showLoader('Saving entry...');
-  gasCall('serverSavePhotoLog',S.token,entry).then(function(r){
-    hideLoader();
-    if(r&&r.success){
-      toast('Entry saved!','ok');
-      entry.logID=r.logID||('LOG'+Date.now());entry.createdBy=S.user?S.user.name:'';entry.createdAt=new Date().toISOString();
+  gasCall('serverSavePhotoLog',S.token,entryFirst).then(function(r){
+    if(!r||!r.success){hideLoader();toast((r&&r.message)||'Save failed.','error');return;}
+    var logID=r.logID||('LOG'+Date.now());
+    entry.logID=logID;entry.createdBy=S.user?S.user.name:'';entry.createdAt=new Date().toISOString();
+    // No photos? Done
+    if(!allPhotos){
+      hideLoader();toast('Entry saved!','ok');
       PL.entries.unshift(entry);clearPlForm();plToggleView('list');
-    } else toast((r&&r.message)||'Save failed.','error');
+      return;
+    }
+    // Upload photos one at a time to avoid large payload / network errors
+    var photoArr=(allPhotos.indexOf('||')>=0?allPhotos.split('||'):allPhotos.split('\n')).filter(function(p){return p.trim().length>10;});
+    var combined='';var idx=0;
+    function nextPhoto(){
+      if(idx>=photoArr.length){
+        entry.photos=combined;
+        hideLoader();
+        toast('Saved with '+idx+' photo'+(idx!==1?'s':'')+'!','ok');
+        PL.entries.unshift(entry);clearPlForm();plToggleView('list');
+        return;
+      }
+      var lm=id('loaderMsg');if(lm)lm.textContent='Uploading photo '+(idx+1)+' of '+photoArr.length+'...';
+      combined=combined?(combined+'||'+photoArr[idx]):photoArr[idx];
+      gasCall('serverUpdatePhotoLog',S.token,{logID:logID,date:entry.date,time:entry.time,
+        type:entry.type,zone:entry.zone,location:entry.location,notes:entry.notes,photos:combined}
+      ).then(function(){idx++;nextPhoto();});
+    }
+    nextPhoto();
   });
 }
 function clearPlForm(){
@@ -4882,7 +4907,7 @@ function plRenderCards(entries){
         +'<div id="pl-full-'+eid+'" style="display:none;margin-top:10px">'
         +'<div style="font-size:13px;color:var(--tx2);line-height:1.65;white-space:pre-wrap;padding:10px;background:var(--surface2);border-radius:8px;margin-bottom:8px">'+e.notes+'</div>'
         +(photoLinks>0?buildPhotoGrid(e.photos,'pl'+mi+'_'+ei):'')
-        +(PL.isAdmin
+        +(plCheckAdmin()
           ?'<div style="display:flex;gap:8px;margin-top:10px;padding-top:8px;border-top:1px solid var(--border)">'
             +'<button onclick="event.stopPropagation();plEditEntry(\''+e.logID+'\')" class="btn btn-ghost btn-sm"><span class="material-icons-round mi">edit</span> Edit</button>'
             +'<button onclick="event.stopPropagation();plDeleteEntry(\''+e.logID+'\')" class="btn btn-ghost btn-sm" style="color:var(--c-red);border-color:var(--c-red)"><span class="material-icons-round mi">delete</span> Delete</button>'
@@ -5756,6 +5781,8 @@ function refreshSettingsLists(){
   renderDesigListUI();
 }
 
+
+}}
 </script>
 </body>
 </html>
