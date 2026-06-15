@@ -3526,84 +3526,98 @@ function renderTable(tasks){
       else deptTasks.push(tasks[i]);
     }
     var html='';
-    // My Tasks section
     html+='<tr><td colspan="12" style="padding:10px 12px 4px;background:rgba(29,78,216,.04);border-top:2px solid var(--c-blue)">'
       +'<div style="display:flex;align-items:center;gap:8px">'
       +'<span class="material-icons-round" style="font-size:16px;color:var(--c-blue)">person</span>'
       +'<span style="font-size:12px;font-weight:700;color:var(--c-blue);text-transform:uppercase;letter-spacing:.05em">My Tasks ('+myTasks.length+')</span>'
       +'</div></td></tr>';
-    if(!myTasks.length){
-      html+='<tr><td colspan="12" style="padding:14px;text-align:center;color:var(--tx3);font-size:13px">No tasks assigned to you directly.</td></tr>';
-    } else {
-      html+=buildHODRows(myTasks, isHOD, false);
-    }
-    // Dept Tasks section
+    if(!myTasks.length) html+='<tr><td colspan="12" style="padding:14px;text-align:center;color:var(--tx3);font-size:13px">No tasks assigned to you directly.</td></tr>';
+    else html+=buildHODRows(myTasks, false);
     html+='<tr><td colspan="12" style="padding:10px 12px 4px;background:rgba(5,150,105,.04);border-top:2px solid #059669">'
       +'<div style="display:flex;align-items:center;gap:8px">'
       +'<span class="material-icons-round" style="font-size:16px;color:#059669">group</span>'
       +'<span style="font-size:12px;font-weight:700;color:#059669;text-transform:uppercase;letter-spacing:.05em">Department Tasks ('+deptTasks.length+')</span>'
-      +'<span style="font-size:11px;color:var(--tx3);margin-left:4px">— tap ⇄ to reassign</span>'
+      +'<span style="font-size:11px;color:var(--tx3);margin-left:4px">&#8212; tap &#8644; to reassign</span>'
       +'</div></td></tr>';
-    if(!deptTasks.length){
-      html+='<tr><td colspan="12" style="padding:14px;text-align:center;color:var(--tx3);font-size:13px">No department tasks found.</td></tr>';
-    } else {
-      html+=buildHODRows(deptTasks, isHOD, true);
-    }
+    if(!deptTasks.length) html+='<tr><td colspan="12" style="padding:14px;text-align:center;color:var(--tx3);font-size:13px">No department tasks found.</td></tr>';
+    else html+=buildHODRows(deptTasks, true);
     tbody.innerHTML=html;
     return;
   }
 
-  if(!tasks.length){tbody.innerHTML='<tr><td colspan="12"><div class="empty"><span class="material-icons-round mi">task_alt</span><h3>No tasks found</h3><p>Try adjusting your filters</p></div></td></tr>';return;}
-  var chkAll=id('chkAll');if(chkAll)chkAll.checked=false;
-  var html='';
-  for(var i=0;i<tasks.length;i++){
-    var t=tasks[i];
-    var adminBtns=isAdmin
-      ?'<button class="btn btn-ghost btn-sm btn-icon" onclick="adminUpdate(\''+t.taskID+'\')" title="Update"><span class="material-icons-round mi">update</span></button><button class="btn btn-ghost btn-sm btn-icon" onclick="editTask(\''+t.taskID+'\')" title="Edit"><span class="material-icons-round mi">edit</span></button><button class="btn btn-danger btn-sm btn-icon" onclick="delTask(\''+t.taskID+'\')" title="Delete"><span class="material-icons-round mi">delete</span></button>'
-      :'<button class="btn btn-primary btn-sm btn-icon" onclick="officerUpdate(\''+t.taskID+'\')" title="Update"><span class="material-icons-round mi">update</span></button>';
-    var photoIcon=t.photoLinks?'<span class="material-icons-round mi" style="font-size:13px;color:var(--c-teal);margin-left:3px">attach_file</span>':'';
-    var chkCell=isAdmin?'<td style="width:36px;text-align:center"><input type="checkbox" class="task-chk" data-id="'+t.taskID+'" onchange="onTaskCheckChange()" style="width:16px;height:16px;cursor:pointer"></td>':'';
-    html+='<tr id="row-'+t.taskID+'">'
-      +chkCell
-      +'<td><span class="mono" style="color:var(--c-blue)">'+t.taskID+'</span></td>'
-      +'<td>'+t.taskType+'</td>'
-      +'<td style="max-width:180px" class="ellipsis" title="'+htmlEsc(t.description)+'">'+htmlEsc(t.description)+photoIcon+'</td>'
-      +'<td class="nowrap">'+t.zone+'</td>'
-      +'<td class="nowrap">'+t.department+'</td>'
-      +'<td class="nowrap">'+t.officerName+'</td>'
-      +'<td><span class="badge badge-'+((t.priority||'medium').toLowerCase())+'">'+t.priority+'</span></td>'
-      +'<td class="nowrap">'+fDateShort(t.dateAssigned)+'</td>'
-      +'<td class="nowrap'+(t.isOverdue?' text-red':'')+'">'+fDateShort(t.dueDate)+'</td>'
-      +'<td><span class="badge badge-'+statusClass(t.status)+'">'+t.status+'</span></td>'
-      +'<td><div class="flex-c" style="gap:4px"><button class="btn btn-ghost btn-sm btn-icon" onclick="viewTask(\''+t.taskID+'\')" title="View"><span class="material-icons-round mi">visibility</span></button>'+adminBtns+'</div></td>'
-      +'</tr>';
+  if(!tasks.length){
+    tbody.innerHTML='<tr><td colspan="12"><div class="empty"><span class="material-icons-round mi">task_alt</span><h3>No tasks found</h3><p>Try adjusting your filters</p></div></td></tr>';
+    return;
   }
-  tbody.innerHTML=html;
+
+  var chkAll=id('chkAll');if(chkAll)chkAll.checked=false;
+  var rows=[];
+  for(var i=0;i<tasks.length;i++){
+    try{
+      var t=tasks[i];
+      var pri=(t.priority||'medium').toLowerCase();
+      var desc=htmlEsc(t.description||'');
+      var zone=htmlEsc(t.zone||'');
+      var dept=htmlEsc(t.department||'');
+      var officer=htmlEsc(t.officerName||'');
+      var taskID=htmlEsc(t.taskID||'');
+      var photoIcon=t.photoLinks?'<span class="material-icons-round mi" style="font-size:13px;color:var(--c-teal);margin-left:3px">attach_file</span>':'';
+      var statusBadge='<span class="badge badge-'+statusClass(t.status||'Pending')+'">'+(t.status||'Pending')+'</span>';
+      var priBadge='<span class="badge badge-'+pri+'">'+htmlEsc(t.priority||'Medium')+'</span>';
+      var adminBtns=isAdmin
+        ?'<button class="btn btn-ghost btn-sm btn-icon" onclick="adminUpdate(\''+taskID+'\')" title="Update"><span class="material-icons-round mi">update</span></button>'
+         +'<button class="btn btn-ghost btn-sm btn-icon" onclick="editTask(\''+taskID+'\')" title="Edit"><span class="material-icons-round mi">edit</span></button>'
+         +'<button class="btn btn-danger btn-sm btn-icon" onclick="delTask(\''+taskID+'\')" title="Delete"><span class="material-icons-round mi">delete</span></button>'
+        :'<button class="btn btn-primary btn-sm btn-icon" onclick="officerUpdate(\''+taskID+'\')" title="Update"><span class="material-icons-round mi">update</span></button>';
+      var chkCell=isAdmin
+        ?'<td style="width:36px;text-align:center"><input type="checkbox" class="task-chk" data-id="'+taskID+'" onchange="onTaskCheckChange()" style="width:16px;height:16px;cursor:pointer"></td>'
+        :'<td style="width:36px"></td>';
+      rows.push('<tr id="row-'+taskID+'">'
+        +chkCell
+        +'<td><span class="mono" style="color:var(--c-blue)">'+taskID+'</span></td>'
+        +'<td>'+htmlEsc(t.taskType||'')+'</td>'
+        +'<td style="max-width:180px" class="ellipsis" title="'+desc+'">'+desc+photoIcon+'</td>'
+        +'<td class="nowrap">'+zone+'</td>'
+        +'<td class="nowrap">'+dept+'</td>'
+        +'<td class="nowrap">'+officer+'</td>'
+        +'<td>'+priBadge+'</td>'
+        +'<td class="nowrap">'+fDateShort(t.dateAssigned)+'</td>'
+        +'<td class="nowrap'+(t.isOverdue?' text-red':'')+'">'+fDateShort(t.dueDate)+'</td>'
+        +'<td>'+statusBadge+'</td>'
+        +'<td><div class="flex-c" style="gap:4px"><button class="btn btn-ghost btn-sm btn-icon" onclick="viewTask(\''+taskID+'\')" title="View"><span class="material-icons-round mi">visibility</span></button>'+adminBtns+'</div></td>'
+        +'</tr>');
+    }catch(rowErr){
+      console.error('renderTable row error at index '+i+':', rowErr, tasks[i]);
+    }
+  }
+  tbody.innerHTML=rows.join('');
   updateBulkBar();
 }
-function buildHODRows(tasks, isHOD, canReassign){
+function buildHODRows(tasks, canReassign){
   var html='';
   for(var i=0;i<tasks.length;i++){
-    var t=tasks[i];
-    var photoIcon=t.photoLinks?'<span class="material-icons-round mi" style="font-size:13px;color:var(--c-teal);margin-left:3px">attach_file</span>':'';
-    var btns='<button class="btn btn-ghost btn-sm btn-icon" onclick="viewTask(\''+t.taskID+'\')" title="View"><span class="material-icons-round mi">visibility</span></button>'
-      +'<button class="btn btn-primary btn-sm btn-icon" onclick="officerUpdate(\''+t.taskID+'\')" title="Update"><span class="material-icons-round mi">update</span></button>'
-      // HOD can reassign ANY task (own or dept) to subordinate
-      +'<button class="btn btn-ghost btn-sm btn-icon" onclick="hodReassignTask(\''+t.taskID+'\')" title="Reassign to Subordinate" style="color:#059669;border-color:#059669"><span class="material-icons-round mi">swap_horiz</span></button>';
-    html+='<tr id="row-'+t.taskID+'" style="'+(canReassign?'background:rgba(5,150,105,.02)':'')+(t.isOverdue?'background:rgba(239,68,68,.04)':'')+'">'
-      +'<td></td>'
-      +'<td><span class="mono" style="color:var(--c-blue)">'+t.taskID+'</span></td>'
-      +'<td>'+t.taskType+'</td>'
-      +'<td style="max-width:180px" class="ellipsis">'+htmlEsc(t.description)+photoIcon+'</td>'
-      +'<td class="nowrap">'+t.zone+'</td>'
-      +'<td class="nowrap">'+t.department+'</td>'
-      +'<td class="nowrap">'+t.officerName+'</td>'
-      +'<td><span class="badge badge-'+((t.priority||'medium').toLowerCase())+'">'+t.priority+'</span></td>'
-      +'<td class="nowrap">'+fDateShort(t.dateAssigned)+'</td>'
-      +'<td class="nowrap'+(t.isOverdue?' text-red':'')+'">'+fDateShort(t.dueDate)+'</td>'
-      +'<td><span class="badge badge-'+statusClass(t.status)+'">'+t.status+'</span></td>'
-      +'<td><div class="flex-c" style="gap:4px">'+btns+'</div></td>'
-      +'</tr>';
+    try{
+      var t=tasks[i];
+      var taskID=htmlEsc(t.taskID||'');
+      var photoIcon=t.photoLinks?'<span class="material-icons-round mi" style="font-size:13px;color:var(--c-teal);margin-left:3px">attach_file</span>':'';
+      var btns='<button class="btn btn-ghost btn-sm btn-icon" onclick="viewTask(\''+taskID+'\')" title="View"><span class="material-icons-round mi">visibility</span></button>'
+        +'<button class="btn btn-primary btn-sm btn-icon" onclick="officerUpdate(\''+taskID+'\')" title="Update"><span class="material-icons-round mi">update</span></button>'
+        +'<button class="btn btn-ghost btn-sm btn-icon" onclick="hodReassignTask(\''+taskID+'\')" title="Reassign" style="color:#059669;border-color:#059669"><span class="material-icons-round mi">swap_horiz</span></button>';
+      html+='<tr id="row-'+taskID+'" style="'+(canReassign?'background:rgba(5,150,105,.015)':'')+(t.isOverdue?';background:rgba(239,68,68,.04)':'')+'">'
+        +'<td></td>'
+        +'<td><span class="mono" style="color:var(--c-blue)">'+taskID+'</span></td>'
+        +'<td>'+htmlEsc(t.taskType||'')+'</td>'
+        +'<td style="max-width:180px" class="ellipsis">'+htmlEsc(t.description||'')+photoIcon+'</td>'
+        +'<td class="nowrap">'+htmlEsc(t.zone||'')+'</td>'
+        +'<td class="nowrap">'+htmlEsc(t.department||'')+'</td>'
+        +'<td class="nowrap">'+htmlEsc(t.officerName||'')+'</td>'
+        +'<td><span class="badge badge-'+((t.priority||'medium').toLowerCase())+'">'+htmlEsc(t.priority||'Medium')+'</span></td>'
+        +'<td class="nowrap">'+fDateShort(t.dateAssigned)+'</td>'
+        +'<td class="nowrap'+(t.isOverdue?' text-red':'')+'">'+fDateShort(t.dueDate)+'</td>'
+        +'<td><span class="badge badge-'+statusClass(t.status||'Pending')+'">'+(t.status||'Pending')+'</span></td>'
+        +'<td><div class="flex-c" style="gap:4px">'+btns+'</div></td>'
+        +'</tr>';
+    }catch(rowErr){console.error('buildHODRows error at '+i,rowErr);}
   }
   return html;
 }
