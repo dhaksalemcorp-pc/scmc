@@ -1895,24 +1895,31 @@ tbody tr:hover { background: var(--surface2); }
             <div class="f-row">
               <div class="f-group">
                 <label class="f-label">Type <span class="req">*</span></label>
-                <select class="f-sel" id="pl-type" onchange="plUpdateNotesLabel()">
+                <select class="f-sel" id="pl-type" onchange="plOnTypeChange()">
                   <option value="">Select Type</option>
                   <option>Inspection</option>
                   <option>Meeting</option>
                   <option>Site Visit</option>
                 </select>
               </div>
-              <div class="f-group">
-                <label class="f-label">Zone(s) <span class="req">*</span> <span style="font-size:11px;color:var(--tx3);font-weight:400">— select all inspected zones</span></label>
-                <div style="display:flex;flex-wrap:wrap;gap:6px;padding:10px;background:var(--surface2);border-radius:8px;border:1px solid var(--border)" id="plZoneChips">
-                  <label class="pl-zone-chip"><input type="checkbox" value="Main Office" onchange="plUpdateZoneDisplay()"> Main Office</label>
-                  <label class="pl-zone-chip"><input type="checkbox" value="Suramangalam Zone-1" onchange="plUpdateZoneDisplay()"> Suramangalam Zone-1</label>
-                  <label class="pl-zone-chip"><input type="checkbox" value="Hasthampatti Zone-2" onchange="plUpdateZoneDisplay()"> Hasthampatti Zone-2</label>
-                  <label class="pl-zone-chip"><input type="checkbox" value="Ammapet Zone-3" onchange="plUpdateZoneDisplay()"> Ammapet Zone-3</label>
-                  <label class="pl-zone-chip"><input type="checkbox" value="Kondalampatti Zone-4" onchange="plUpdateZoneDisplay()"> Kondalampatti Zone-4</label>
-                </div>
-                <input type="hidden" id="pl-zone">
+            </div>
+            <!-- Zone chips — shown for Inspection and Site Visit -->
+            <div class="f-group" id="plZoneRow" style="display:none">
+              <label class="f-label">Zone(s) <span class="req">*</span> <span style="font-size:11px;color:var(--tx3);font-weight:400">— select all inspected zones</span></label>
+              <div style="display:flex;flex-wrap:wrap;gap:6px;padding:10px;background:var(--surface2);border-radius:8px;border:1px solid var(--border)" id="plZoneChips">
+                <label class="pl-zone-chip"><input type="checkbox" value="Main Office" onchange="plUpdateZoneDisplay()"> Main Office</label>
+                <label class="pl-zone-chip"><input type="checkbox" value="Suramangalam Zone-1" onchange="plUpdateZoneDisplay()"> Suramangalam Zone-1</label>
+                <label class="pl-zone-chip"><input type="checkbox" value="Hasthampatti Zone-2" onchange="plUpdateZoneDisplay()"> Hasthampatti Zone-2</label>
+                <label class="pl-zone-chip"><input type="checkbox" value="Ammapet Zone-3" onchange="plUpdateZoneDisplay()"> Ammapet Zone-3</label>
+                <label class="pl-zone-chip"><input type="checkbox" value="Kondalampatti Zone-4" onchange="plUpdateZoneDisplay()"> Kondalampatti Zone-4</label>
               </div>
+              <input type="hidden" id="pl-zone">
+            </div>
+            <!-- Department chips — shown for Meeting -->
+            <div class="f-group" id="plDeptRow" style="display:none">
+              <label class="f-label">Department <span class="req">*</span> <span style="font-size:11px;color:var(--tx3);font-weight:400">— select department(s) for this meeting</span></label>
+              <div style="display:flex;flex-wrap:wrap;gap:6px;padding:10px;background:var(--surface2);border-radius:8px;border:1px solid var(--border)" id="plDeptChips"></div>
+              <input type="hidden" id="pl-dept-hidden">
             </div>
             <div class="f-group">
               <label class="f-label">Location / Ward</label>
@@ -3587,6 +3594,14 @@ function buildHODRows(tasks, isHOD, canReassign){
       +'<td class="nowrap">'+t.department+'</td>'
       +'<td class="nowrap">'+t.officerName+'</td>'
       +'<td><span class="badge badge-'+((t.priority||'medium').toLowerCase())+'">'+t.priority+'</span></td>'
+      +'<td class="nowrap">'+fDateShort(t.dateAssigned)+'</td>'
+      +'<td class="nowrap'+(t.isOverdue?' text-red':'')+'">'+fDateShort(t.dueDate)+'</td>'
+      +'<td><span class="badge badge-'+statusClass(t.status)+'">'+t.status+'</span></td>'
+      +'<td><div class="flex-c" style="gap:4px">'+btns+'</div></td>'
+      +'</tr>';
+  }
+  return html;
+}
 function renderKanban(tasks){
   var board=id('kanban');if(!board)return;
   var cols={Pending:[],'In Progress':[],Completed:[],'Review Pending':[],Overdue:[],Closed:[]};
@@ -4739,10 +4754,42 @@ function plToggleView(view){
     });
   }
 }
-function plUpdateNotesLabel(){
-  var type=V('pl-type'),lbl=id('pl-notes-label');if(!lbl)return;
-  var map={Inspection:'Inspection Observations & Findings',Meeting:'Meeting Notes & Decisions','Site Visit':'Site Visit Remarks'};
-  lbl.textContent=(map[type]||'Notes');
+function plOnTypeChange(){
+  var type=V('pl-type');
+  var zoneRow=id('plZoneRow'), deptRow=id('plDeptRow'), lbl=id('pl-notes-label');
+  if(type==='Meeting'){
+    if(zoneRow)zoneRow.style.display='none';
+    if(deptRow)deptRow.style.display='block';
+    plBuildDeptChips();
+  } else if(type==='Inspection'||type==='Site Visit'){
+    if(zoneRow)zoneRow.style.display='block';
+    if(deptRow)deptRow.style.display='none';
+  } else {
+    if(zoneRow)zoneRow.style.display='none';
+    if(deptRow)deptRow.style.display='none';
+  }
+  if(lbl){
+    var map={Inspection:'Inspection Observations & Findings',Meeting:'Meeting Notes & Decisions','Site Visit':'Site Visit Remarks'};
+    lbl.textContent=map[type]||'Notes';
+  }
+}
+function plUpdateNotesLabel(){plOnTypeChange();}
+function plBuildDeptChips(){
+  var wrap=id('plDeptChips');if(!wrap)return;
+  var depts=(S.lookup&&S.lookup.departments)||[];
+  if(!depts.length){wrap.innerHTML='<span style="color:var(--tx3);font-size:13px">No departments loaded.</span>';return;}
+  var html='';
+  for(var i=0;i<depts.length;i++){
+    var d=depts[i].DeptName||String(depts[i]);
+    html+='<label class="pl-zone-chip"><input type="checkbox" value="'+d+'" onchange="plUpdateDeptDisplay()"> '+d+'</label>';
+  }
+  wrap.innerHTML=html;
+}
+function plUpdateDeptDisplay(){
+  var checks=document.querySelectorAll('#plDeptChips input[type=checkbox]:checked');
+  var vals=[];for(var i=0;i<checks.length;i++)vals.push(checks[i].value);
+  // Store selected depts in pl-zone field (used as "context" for the entry)
+  var el=id('pl-zone');if(el)el.value=vals.join(', ');
 }
 function plUpdateZoneDisplay(){
   // Collect checked zones and join for hidden field
@@ -4769,7 +4816,14 @@ function plRenderPhotoPreview(){
 }
 function savePlEntry(){
   var date=V('pl-date'),time=V('pl-time'),type=V('pl-type'),zone=V('pl-zone'),loc=V('pl-location'),notes=V('pl-notes');
-  if(!date||!type||!zone){toast('Please fill Date, Type and select at least one Zone.','error');return;}
+  if(!date||!type){toast('Please fill Date and select a Type.','error');return;}
+  // Validate context field based on type
+  if((type==='Inspection'||type==='Site Visit')&&!zone){
+    toast('Please select at least one Zone for '+type+'.','error');return;
+  }
+  if(type==='Meeting'&&!zone){
+    toast('Please select at least one Department for the Meeting.','error');return;
+  }
   if(!notes.trim()){toast('Please enter notes / observations.','error');return;}
   var entry={date:date,time:time,type:type,zone:zone,location:loc,notes:notes,photos:''};
 
@@ -4848,9 +4902,12 @@ function clearPlForm(){
   var f=['pl-time','pl-type','pl-zone','pl-location','pl-notes'];
   for(var i=0;i<f.length;i++){var e=id(f[i]);if(e)e.value='';}
   var pd=id('pl-date');if(pd)pd.value=new Date().toISOString().slice(0,10);
-  // Uncheck all zone chips
-  var chips=document.querySelectorAll('#plZoneChips input[type=checkbox]');
+  // Uncheck all zone and dept chips
+  var chips=document.querySelectorAll('#plZoneChips input[type=checkbox],#plDeptChips input[type=checkbox]');
   for(var i=0;i<chips.length;i++)chips[i].checked=false;
+  // Hide both conditional rows
+  var zr=id('plZoneRow');if(zr)zr.style.display='none';
+  var dr=id('plDeptRow');if(dr)dr.style.display='none';
   PL.photos=[];plRenderPhotoPreview();
 }
 function plRenderCards(entries){
@@ -5782,7 +5839,6 @@ function refreshSettingsLists(){
 }
 
 
-}}
 </script>
 </body>
 </html>
