@@ -495,6 +495,18 @@ body {
 .pl-zone-chip:has(input:checked){background:var(--c-blue);color:#fff;border-color:var(--c-blue)}
 .filter-chip.active{background:var(--c-blue);color:#fff;border-color:var(--c-blue)}
 .filter-chip:hover:not(.active){background:var(--border);color:var(--tx1)}
+.filt-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--tx3);margin-bottom:5px}
+.filt-btn{padding:5px 13px;border-radius:7px;font-size:12.5px;font-weight:500;cursor:pointer;border:1.5px solid var(--border);background:var(--surface2);color:var(--tx2);transition:all .15s;white-space:nowrap;line-height:1.4}
+.filt-btn.active{background:var(--c-blue);color:#fff;border-color:var(--c-blue);box-shadow:0 2px 6px rgba(29,78,216,.3)}
+.filt-btn:hover:not(.active){border-color:var(--c-blue);color:var(--c-blue)}
+.filt-btn-danger{border-color:rgba(239,68,68,.35);color:var(--c-red)}
+.filt-btn-danger.active{background:var(--c-red);color:#fff;border-color:var(--c-red)}
+.filt-btn-high{border-color:rgba(190,18,60,.35);color:#be123c}
+.filt-btn-high.active{background:#be123c;color:#fff;border-color:#be123c}
+.filt-btn-med{border-color:rgba(180,83,9,.35);color:#b45309}
+.filt-btn-med.active{background:#b45309;color:#fff;border-color:#b45309}
+.filt-btn-low{border-color:rgba(21,128,61,.35);color:#15803d}
+.filt-btn-low.active{background:#15803d;color:#fff;border-color:#15803d}
 .cv-dept-btn{display:inline-flex;align-items:center;padding:7px 14px;border-radius:8px;font-size:12.5px;font-weight:500;cursor:pointer;border:1.5px solid var(--border);background:var(--surface2);color:var(--tx2);transition:all .15s;white-space:nowrap}
 .cv-dept-btn.active{background:var(--c-blue);color:#fff;border-color:var(--c-blue);box-shadow:0 2px 8px rgba(29,78,216,.2)}
 .cv-dept-btn:hover:not(.active){border-color:var(--c-blue);color:var(--c-blue)}
@@ -1619,92 +1631,95 @@ tbody tr:hover { background: var(--surface2); }
       </div>
       <!-- Advanced Filter Panel - redesigned -->
       <div id="advFilterPanel" class="dn">
-        <div class="card mb12" style="border:1.5px solid var(--c-blue);border-radius:12px">
-          <div class="card-hd" style="background:rgba(29,78,216,.04)">
-            <span class="material-icons-round mi" style="color:var(--c-blue)">tune</span>
-            <span class="card-title" style="color:var(--c-blue)">Advanced Filters</span>
-            <div style="margin-left:auto;display:flex;gap:8px;align-items:center">
-              <span id="filterCountBadge" style="display:none;background:var(--c-blue);color:#fff;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px"></span>
-              <button class="btn btn-ghost btn-sm" onclick="clearFilters()" style="font-size:12px"><span class="material-icons-round mi">filter_alt_off</span> Clear All</button>
-              <button class="btn btn-ghost btn-sm" onclick="toggleAdvFilter()" style="font-size:12px"><span class="material-icons-round mi">close</span></button>
+        <div class="card mb12" style="border:2px solid var(--c-blue);border-radius:14px;overflow:hidden">
+          <!-- Filter Header -->
+          <div style="background:var(--c-blue);padding:10px 16px;display:flex;align-items:center;gap:8px">
+            <span class="material-icons-round" style="color:#fff;font-size:18px">tune</span>
+            <span style="color:#fff;font-size:13px;font-weight:700;letter-spacing:.02em">Advanced Filters</span>
+            <span id="filterCountBadge" style="display:none;background:rgba(255,255,255,.25);color:#fff;font-size:11px;font-weight:700;padding:2px 9px;border-radius:999px"></span>
+            <div style="margin-left:auto;display:flex;gap:6px">
+              <button onclick="clearFilters()" style="background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);color:#fff;padding:4px 12px;border-radius:7px;font-size:12px;cursor:pointer;display:flex;align-items:center;gap:4px">
+                <span class="material-icons-round" style="font-size:14px">filter_alt_off</span>Clear
+              </button>
+              <button onclick="toggleAdvFilter()" style="background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);color:#fff;width:30px;height:30px;border-radius:7px;font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center">
+                <span class="material-icons-round" style="font-size:16px">close</span>
+              </button>
             </div>
           </div>
-          <div class="card-bd" style="padding:14px 16px">
-            <!-- Row 1: Zone, Dept, Officer -->
-            <div class="f-row" style="margin-bottom:10px">
-              <div class="f-group mb0">
-                <label class="f-label" style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--tx3)">Zone</label>
-                <select class="f-sel" id="fZone" onchange="filterTasks()" style="font-size:13px"></select>
+          <div style="padding:14px 16px;display:flex;flex-direction:column;gap:14px">
+            <!-- Row 1: Dropdowns -->
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
+              <div>
+                <div class="filt-label">Zone</div>
+                <select class="f-sel filt-sel" id="fZone" onchange="filterTasks()"></select>
               </div>
-              <div class="f-group mb0">
-                <label class="f-label" style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--tx3)">Department</label>
-                <select class="f-sel" id="fDept" onchange="populateOfficerFilter();filterTasks()" style="font-size:13px"></select>
+              <div>
+                <div class="filt-label">Department</div>
+                <select class="f-sel filt-sel" id="fDept" onchange="populateOfficerFilter();filterTasks()"></select>
               </div>
-              <div class="f-group mb0">
-                <label class="f-label" style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--tx3)">Officer</label>
-                <select class="f-sel" id="fOfficer" onchange="filterTasks()" style="font-size:13px"><option value="">All Officers</option></select>
+              <div>
+                <div class="filt-label">Officer</div>
+                <select class="f-sel filt-sel" id="fOfficer" onchange="filterTasks()"><option value="">All Officers</option></select>
               </div>
             </div>
-            <!-- Row 2: Status chips -->
-            <div style="margin-bottom:10px">
-              <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--tx3);margin-bottom:6px">Status</div>
-              <div style="display:flex;flex-wrap:wrap;gap:6px" id="statusChips">
-                <button onclick="toggleChip(this,'fStatus')" data-val="" class="filter-chip active">All</button>
-                <button onclick="toggleChip(this,'fStatus')" data-val="Pending" class="filter-chip">Pending</button>
-                <button onclick="toggleChip(this,'fStatus')" data-val="In Progress" class="filter-chip">In Progress</button>
-                <button onclick="toggleChip(this,'fStatus')" data-val="Completed" class="filter-chip">Completed</button>
-                <button onclick="toggleChip(this,'fStatus')" data-val="Review Pending" class="filter-chip">Review Pending</button>
-                <button onclick="toggleChip(this,'fStatus')" data-val="Closed" class="filter-chip">Closed</button>
-                <button onclick="toggleChip(this,'fStatus')" data-val="Overdue" class="filter-chip" style="color:var(--c-red)">&#9888; Overdue</button>
+            <!-- Row 2: Status toggle buttons -->
+            <div>
+              <div class="filt-label">Status</div>
+              <div style="display:flex;flex-wrap:wrap;gap:5px" id="statusChips">
+                <button onclick="toggleChip(this,'fStatus')" data-val="" class="filt-btn active">All</button>
+                <button onclick="toggleChip(this,'fStatus')" data-val="Pending" class="filt-btn">⏳ Pending</button>
+                <button onclick="toggleChip(this,'fStatus')" data-val="In Progress" class="filt-btn">🔄 In Progress</button>
+                <button onclick="toggleChip(this,'fStatus')" data-val="Completed" class="filt-btn">✅ Completed</button>
+                <button onclick="toggleChip(this,'fStatus')" data-val="Review Pending" class="filt-btn">🔍 Review</button>
+                <button onclick="toggleChip(this,'fStatus')" data-val="Closed" class="filt-btn">🔒 Closed</button>
+                <button onclick="toggleChip(this,'fStatus')" data-val="Overdue" class="filt-btn filt-btn-danger">⚠ Overdue</button>
               </div>
               <input type="hidden" id="fStatus" value="">
             </div>
-            <!-- Row 3: Priority + Type + Source chips -->
-            <div class="f-row" style="margin-bottom:10px;gap:20px;flex-wrap:wrap">
-              <div style="flex:1;min-width:180px">
-                <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--tx3);margin-bottom:6px">Priority</div>
-                <div style="display:flex;gap:6px;flex-wrap:wrap" id="priorityChips">
-                  <button onclick="toggleChip(this,'fPri')" data-val="" class="filter-chip active">All</button>
-                  <button onclick="toggleChip(this,'fPri')" data-val="High" class="filter-chip" style="color:#be123c">&#9679; High</button>
-                  <button onclick="toggleChip(this,'fPri')" data-val="Medium" class="filter-chip" style="color:#b45309">&#9679; Medium</button>
-                  <button onclick="toggleChip(this,'fPri')" data-val="Low" class="filter-chip" style="color:#15803d">&#9679; Low</button>
+            <!-- Row 3: Priority + Source -->
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+              <div>
+                <div class="filt-label">Priority</div>
+                <div style="display:flex;gap:5px;flex-wrap:wrap" id="priorityChips">
+                  <button onclick="toggleChip(this,'fPri')" data-val="" class="filt-btn active">All</button>
+                  <button onclick="toggleChip(this,'fPri')" data-val="High" class="filt-btn filt-btn-high">● High</button>
+                  <button onclick="toggleChip(this,'fPri')" data-val="Medium" class="filt-btn filt-btn-med">● Medium</button>
+                  <button onclick="toggleChip(this,'fPri')" data-val="Low" class="filt-btn filt-btn-low">● Low</button>
                 </div>
                 <input type="hidden" id="fPri" value="">
               </div>
-              <div style="flex:1;min-width:180px">
-                <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--tx3);margin-bottom:6px">Source</div>
-                <div style="display:flex;gap:6px;flex-wrap:wrap" id="sourceChips">
-                  <button onclick="toggleChip(this,'fSource')" data-val="" class="filter-chip active">All</button>
-                  <button onclick="toggleChip(this,'fSource')" data-val="Manual" class="filter-chip">Manual</button>
-                  <button onclick="toggleChip(this,'fSource')" data-val="AI" class="filter-chip">&#129302; AI</button>
+              <div>
+                <div class="filt-label">Source</div>
+                <div style="display:flex;gap:5px;flex-wrap:wrap" id="sourceChips">
+                  <button onclick="toggleChip(this,'fSource')" data-val="" class="filt-btn active">All</button>
+                  <button onclick="toggleChip(this,'fSource')" data-val="Manual" class="filt-btn">✏ Manual</button>
+                  <button onclick="toggleChip(this,'fSource')" data-val="AI" class="filt-btn">🤖 AI</button>
                 </div>
                 <input type="hidden" id="fSource" value="">
               </div>
             </div>
             <!-- Row 4: Date range + Search -->
-            <div class="f-row" style="margin-bottom:10px;align-items:flex-end">
-              <div class="f-group mb0">
-                <label class="f-label" style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--tx3)">Inspection Date From</label>
+            <div style="display:grid;grid-template-columns:1fr 1fr 2fr;gap:10px;align-items:end">
+              <div>
+                <div class="filt-label">Date From</div>
                 <input type="date" class="f-ctrl" id="fDueFrom" onchange="filterTasks()" style="font-size:13px">
               </div>
-              <div class="f-group mb0">
-                <label class="f-label" style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--tx3)">Inspection Date To</label>
+              <div>
+                <div class="filt-label">Date To</div>
                 <input type="date" class="f-ctrl" id="fDueTo" onchange="filterTasks()" style="font-size:13px">
               </div>
-              <div class="f-group mb0" style="flex:2">
-                <label class="f-label" style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--tx3)">Search</label>
+              <div>
+                <div class="filt-label">Search</div>
                 <div class="search-wrap">
                   <span class="material-icons-round mi-prefix">search</span>
-                  <input type="text" class="f-ctrl" id="fSearch" placeholder="Task ID, description, officer name..." oninput="filterTasks()" style="font-size:13px">
+                  <input type="text" class="f-ctrl" id="fSearch" placeholder="Task ID, description, officer..." oninput="filterTasks()" style="font-size:13px">
                 </div>
               </div>
             </div>
-            <!-- Active filter summary -->
-            <div id="filterSummary" class="dn" style="margin-top:4px">
-              <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:8px 10px;background:var(--surface2);border-radius:8px">
-                <span style="font-size:12px;font-weight:600;color:var(--tx2)">Active:</span>
-                <div id="filterTags" style="display:flex;gap:6px;flex-wrap:wrap"></div>
-              </div>
+            <!-- Active filter tags -->
+            <div id="filterSummary" class="dn" style="padding:8px 10px;background:rgba(29,78,216,.06);border-radius:8px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+              <span style="font-size:12px;font-weight:600;color:var(--c-blue)">Active:</span>
+              <div id="filterTags" style="display:flex;gap:5px;flex-wrap:wrap"></div>
             </div>
           </div>
         </div>
@@ -3446,7 +3461,7 @@ function updateTaskCount(){var tc=id('taskCount');if(tc)tc.textContent=S.filtere
 function updateFilterTags(){}
 function toggleChip(btn,hiddenId){
   var group=btn.parentNode;
-  var chips=group.querySelectorAll('.filter-chip');
+  var chips=group.querySelectorAll('.filter-chip,.filt-btn');
   for(var i=0;i<chips.length;i++)chips[i].classList.remove('active');
   btn.classList.add('active');
   var hidden=id(hiddenId);if(hidden)hidden.value=btn.dataset.val||'';
@@ -3456,7 +3471,7 @@ function clearFilters(){
   var fields=['fZone','fDept','fOfficer','fStatus','fPri','fSource','fDueFrom','fDueTo','fSearch'];
   for(var i=0;i<fields.length;i++){var el=id(fields[i]);if(el)el.value='';}
   // Reset all chip groups to "All"
-  var allChips=document.querySelectorAll('.filter-chip');
+  var allChips=document.querySelectorAll('.filter-chip,.filt-btn');
   for(var i=0;i<allChips.length;i++){
     allChips[i].classList.remove('active');
     if(allChips[i].dataset.val==='')allChips[i].classList.add('active');
