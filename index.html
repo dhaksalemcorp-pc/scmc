@@ -3507,6 +3507,11 @@ function sortBy(col){
   });
   renderTable(S.filtered);renderKanban(S.filtered);
 }
+// ── HTML ESCAPE — must be used whenever inserting user data into HTML attributes or content
+function htmlEsc(s){
+  return String(s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/'/g,'&#39;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
 function renderTable(tasks){
   var tbody=id('tBody');if(!tbody)return;
   var tc=id('taskCount');if(tc)tc.textContent=tasks.length+' task'+(tasks.length!==1?'s':'');
@@ -3562,7 +3567,7 @@ function renderTable(tasks){
       +chkCell
       +'<td><span class="mono" style="color:var(--c-blue)">'+t.taskID+'</span></td>'
       +'<td>'+t.taskType+'</td>'
-      +'<td style="max-width:180px" class="ellipsis" title="'+t.description+'">'+t.description+photoIcon+'</td>'
+      +'<td style="max-width:180px" class="ellipsis" title="'+htmlEsc(t.description)+'">'+htmlEsc(t.description)+photoIcon+'</td>'
       +'<td class="nowrap">'+t.zone+'</td>'
       +'<td class="nowrap">'+t.department+'</td>'
       +'<td class="nowrap">'+t.officerName+'</td>'
@@ -3589,7 +3594,7 @@ function buildHODRows(tasks, isHOD, canReassign){
       +'<td></td>'
       +'<td><span class="mono" style="color:var(--c-blue)">'+t.taskID+'</span></td>'
       +'<td>'+t.taskType+'</td>'
-      +'<td style="max-width:180px" class="ellipsis">'+t.description+photoIcon+'</td>'
+      +'<td style="max-width:180px" class="ellipsis">'+htmlEsc(t.description)+photoIcon+'</td>'
       +'<td class="nowrap">'+t.zone+'</td>'
       +'<td class="nowrap">'+t.department+'</td>'
       +'<td class="nowrap">'+t.officerName+'</td>'
@@ -3610,7 +3615,7 @@ function renderKanban(tasks){
   var html='',colKeys=Object.keys(cols);
   for(var ci=0;ci<colKeys.length;ci++){
     var status=colKeys[ci],colTasks=cols[status],cards='';
-    for(var ti=0;ti<colTasks.length;ti++){var t=colTasks[ti];cards+='<div class="k-card '+(t.priority||'').toLowerCase()+'" onclick="viewTask(\''+t.taskID+'\')"><div class="k-card-id">'+t.taskID+(t.source==='AI'?' \u00b7 AI':'')+'</div><div class="k-card-desc">'+t.description.substring(0,70)+(t.description.length>70?'...':'')+'</div><div class="k-card-ft"><span>'+t.department+'</span><span class="'+(t.isOverdue?'k-overdue':'')+'">'+fDateShort(t.dueDate)+'</span></div></div>';}
+    for(var ti=0;ti<colTasks.length;ti++){var t=colTasks[ti];cards+='<div class="k-card '+(t.priority||'').toLowerCase()+'" onclick="viewTask(\''+t.taskID+'\')"><div class="k-card-id">'+t.taskID+(t.source==='AI'?' \u00b7 AI':'')+'</div><div class="k-card-desc">'+htmlEsc(t.description.substring(0,70))+(t.description.length>70?'...':'')+'</div><div class="k-card-ft"><span>'+htmlEsc(t.department)+'</span><span class="'+(t.isOverdue?'k-overdue':'')+'">'+fDateShort(t.dueDate)+'</span></div></div>';}
     html+='<div class="k-col"><div class="k-col-hd"><span class="k-col-title" style="color:'+clrs[status]+'">'+status+'</span><span class="k-count">'+colTasks.length+'</span></div>'+cards+(colTasks.length===0?'<div style="padding:16px;text-align:center;font-size:12px;color:var(--tx3)">No tasks</div>':'')+'</div>';
   }
   board.innerHTML=html;
@@ -4845,14 +4850,14 @@ function savePlEntry(){
       var img=new Image();
       img.onload=function(){
         var canvas=document.createElement('canvas');
-        var maxSize=300;
+        var maxSize=200;  // Smaller = faster upload, still clear enough for reference
         var scale=Math.min(maxSize/img.width,maxSize/img.height,1);
         canvas.width=Math.round(img.width*scale);
         canvas.height=Math.round(img.height*scale);
         canvas.getContext('2d').drawImage(img,0,0,canvas.width,canvas.height);
-        var b64=canvas.toDataURL('image/jpeg',0.65);
-        // Only include if under 30KB
-        if(b64.length<40000){processed.push(b64);}
+        var b64=canvas.toDataURL('image/jpeg',0.50);  // 0.5 quality keeps each photo <10KB
+        // Only include if under 20KB base64
+        if(b64.length<28000){processed.push(b64);}
         idx++;processNext();
       };
       img.onerror=function(){idx++;processNext();};
@@ -4864,7 +4869,7 @@ function savePlEntry(){
 }
 function doSavePlEntry(entry){
   var allPhotos=entry.photos||'';
-  // Save entry first without photos (small payload = always succeeds)
+  // Save entry first WITHOUT photos (tiny payload — always succeeds)
   var entryFirst={date:entry.date,time:entry.time,type:entry.type,zone:entry.zone,
     location:entry.location,notes:entry.notes,photos:''};
   showLoader('Saving entry...');
@@ -4872,28 +4877,33 @@ function doSavePlEntry(entry){
     if(!r||!r.success){hideLoader();toast((r&&r.message)||'Save failed.','error');return;}
     var logID=r.logID||('LOG'+Date.now());
     entry.logID=logID;entry.createdBy=S.user?S.user.name:'';entry.createdAt=new Date().toISOString();
-    // No photos? Done
+    // No photos — done immediately
     if(!allPhotos){
       hideLoader();toast('Entry saved!','ok');
       PL.entries.unshift(entry);clearPlForm();plToggleView('list');
       return;
     }
-    // Upload photos one at a time to avoid large payload / network errors
-    var photoArr=(allPhotos.indexOf('||')>=0?allPhotos.split('||'):allPhotos.split('\n')).filter(function(p){return p.trim().length>10;});
-    var combined='';var idx=0;
+    // Split photos array
+    var photoArr=(allPhotos.indexOf('||')>=0?allPhotos.split('||'):allPhotos.split('\n'))
+      .filter(function(p){return p.trim().length>10;});
+    var idx=0;
+    // Upload each photo in a SEPARATE call — never combine them
+    // Each call updates only the NEW single photo, server appends it
     function nextPhoto(){
       if(idx>=photoArr.length){
-        entry.photos=combined;
+        entry.photos=photoArr.join('||');
         hideLoader();
         toast('Saved with '+idx+' photo'+(idx!==1?'s':'')+'!','ok');
         PL.entries.unshift(entry);clearPlForm();plToggleView('list');
         return;
       }
-      var lm=id('loaderMsg');if(lm)lm.textContent='Uploading photo '+(idx+1)+' of '+photoArr.length+'...';
-      combined=combined?(combined+'||'+photoArr[idx]):photoArr[idx];
-      gasCall('serverUpdatePhotoLog',S.token,{logID:logID,date:entry.date,time:entry.time,
-        type:entry.type,zone:entry.zone,location:entry.location,notes:entry.notes,photos:combined}
-      ).then(function(){idx++;nextPhoto();});
+      var lm=id('loaderMsg');
+      if(lm)lm.textContent='Uploading photo '+(idx+1)+' of '+photoArr.length+'...';
+      var singlePhoto=photoArr[idx];
+      // Send ONLY this one photo in a dedicated append call
+      gasCall('serverAppendPhotoToLog',S.token,{logID:logID,photo:singlePhoto}).then(function(){
+        idx++;nextPhoto();
+      });
     }
     nextPhoto();
   });
@@ -5098,22 +5108,63 @@ function plSaveEdit(logID){
   }
 }
 function doPlSaveEdit(updated,logID){
+  var newPhotos=(PL.editPhotos&&PL.editPhotos.length>0)?true:false;
+  // Step 1: Save text fields
   gasCall('serverUpdatePhotoLog',S.token,updated).then(function(r){
-    hideLoader();closeModal('mGeneric');
-    if(r&&r.success){
-      toast('Entry updated!','ok');
+    if(!r||!r.success){hideLoader();toast((r&&r.message)||'Update failed.','error');return;}
+    if(!newPhotos){
+      // No new photos — done
+      hideLoader();toast('Entry updated!','ok');closeModal('mGeneric');
       for(var i=0;i<PL.entries.length;i++){
         if(PL.entries[i].logID===logID){
           PL.entries[i].date=updated.date;PL.entries[i].time=updated.time;
           PL.entries[i].type=updated.type;PL.entries[i].zone=updated.zone;
           PL.entries[i].location=updated.location;PL.entries[i].notes=updated.notes;
-          if(updated.photos!==undefined)PL.entries[i].photos=updated.photos;
           break;
         }
       }
-      PL.editPhotos=[];
-      plRenderCards(PL.entries);
-    } else toast((r&&r.message)||'Update failed.','error');
+      PL.editPhotos=[];plRenderCards(PL.entries);return;
+    }
+    // Step 2: Upload each new photo one at a time
+    var b64list=[];var fi=0;
+    function processEditNext(){
+      if(fi>=PL.editPhotos.length){uploadEditPhoto(0);return;}
+      var f=PL.editPhotos[fi];
+      var reader=new FileReader();
+      reader.onload=function(ev){
+        var img2=new Image();
+        img2.onload=function(){
+          var c2=document.createElement('canvas');
+          var sc=Math.min(200/img2.width,200/img2.height,1);
+          c2.width=Math.round(img2.width*sc);c2.height=Math.round(img2.height*sc);
+          c2.getContext('2d').drawImage(img2,0,0,c2.width,c2.height);
+          b64list.push(c2.toDataURL('image/jpeg',0.5));
+          fi++;processEditNext();
+        };
+        img2.src=ev.target.result;
+      };
+      reader.readAsDataURL(f);
+    }
+    function uploadEditPhoto(ei){
+      if(ei>=b64list.length){
+        hideLoader();toast('Entry updated with '+b64list.length+' new photo'+(b64list.length!==1?'s':'')+'!','ok');
+        closeModal('mGeneric');
+        for(var i=0;i<PL.entries.length;i++){
+          if(PL.entries[i].logID===logID){
+            PL.entries[i].date=updated.date;PL.entries[i].time=updated.time;
+            PL.entries[i].type=updated.type;PL.entries[i].zone=updated.zone;
+            PL.entries[i].location=updated.location;PL.entries[i].notes=updated.notes;
+            break;
+          }
+        }
+        PL.editPhotos=[];plRenderCards(PL.entries);return;
+      }
+      var lm=id('loaderMsg');if(lm)lm.textContent='Uploading edit photo '+(ei+1)+' of '+b64list.length+'...';
+      gasCall('serverAppendPhotoToLog',S.token,{logID:logID,photo:b64list[ei]}).then(function(){
+        ei++;uploadEditPhoto(ei);
+      });
+    }
+    processEditNext();
   });
 }
 function driveToImgUrl(url){
