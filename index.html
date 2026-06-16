@@ -4934,13 +4934,18 @@ function plToggleView(view){
   } else {
     if(fv)fv.style.display='none';
     if(lv)lv.style.display='block';
-    // Always reload from server when viewing list
-    showLoader('Loading entries...');
-    gasCall('serverGetPhotoLogs',S.token).then(function(r){
-      hideLoader();
-      if(r&&r.success){PL.entries=r.data||[];}
+    // Only fetch from server if we have no local entries yet
+    if(!PL.entries||!PL.entries.length){
+      showLoader('Loading notes...');
+      gasCall('serverGetPhotoLogs',S.token).then(function(r){
+        hideLoader();
+        if(r&&r.success){PL.entries=r.data||[];}
+        plRenderCards(PL.entries);
+      });
+    } else {
+      // Use local entries — already up to date
       plRenderCards(PL.entries);
-    });
+    }
   }
 }
 function plOnTypeChange(){
@@ -5053,39 +5058,51 @@ function savePlEntry(){
 }
 function doSavePlEntry(entry){
   var allPhotos=entry.photos||'';
-  // Save entry first WITHOUT photos (tiny payload — always succeeds)
   var entryFirst={date:entry.date,time:entry.time,type:entry.type,zone:entry.zone,
     location:entry.location,notes:entry.notes,photos:''};
   showLoader('Saving entry...');
   gasCall('serverSavePhotoLog',S.token,entryFirst).then(function(r){
     if(!r||!r.success){hideLoader();toast((r&&r.message)||'Save failed.','error');return;}
     var logID=r.logID||('LOG'+Date.now());
-    entry.logID=logID;entry.createdBy=S.user?S.user.name:'';entry.createdAt=new Date().toISOString();
-    // No photos — done immediately
+    entry.logID=logID;
+    entry.createdBy=S.user?S.user.name:'';
+    entry.createdAt=new Date().toISOString();
     if(!allPhotos){
       hideLoader();toast('Entry saved!','ok');
-      PL.entries.unshift(entry);clearPlForm();plToggleView('list');
+      PL.entries.unshift(entry);
+      clearPlForm();
+      // Show list and render immediately — NO server refetch
+      var fv=id('plFormView'),lv=id('plListView');
+      if(fv)fv.style.display='none';
+      if(lv)lv.style.display='block';
+      plRenderCards(PL.entries);
       return;
     }
-    // Split photos array
     var photoArr=(allPhotos.indexOf('||')>=0?allPhotos.split('||'):allPhotos.split('\n'))
       .filter(function(p){return p.trim().length>10;});
     var idx=0;
-    // Upload each photo in a SEPARATE call — never combine them
-    // Each call updates only the NEW single photo, server appends it
+    var uploadedPhotos=[];
     function nextPhoto(){
       if(idx>=photoArr.length){
-        entry.photos=photoArr.join('||');
+        // All photos uploaded — update local entry with actual uploaded photos
+        entry.photos=uploadedPhotos.join('||');
         hideLoader();
-        toast('Saved with '+idx+' photo'+(idx!==1?'s':'')+'!','ok');
-        PL.entries.unshift(entry);clearPlForm();plToggleView('list');
+        toast('Saved with '+uploadedPhotos.length+' photo'+(uploadedPhotos.length!==1?'s':'')+'!','ok');
+        PL.entries.unshift(entry);
+        clearPlForm();
+        // Render immediately with the photos we just uploaded — no server refetch needed
+        var fv=id('plFormView'),lv=id('plListView');
+        if(fv)fv.style.display='none';
+        if(lv)lv.style.display='block';
+        plRenderCards(PL.entries);
         return;
       }
       var lm=id('loaderMsg');
       if(lm)lm.textContent='Uploading photo '+(idx+1)+' of '+photoArr.length+'...';
       var singlePhoto=photoArr[idx];
-      // Send ONLY this one photo in a dedicated append call
-      gasCall('serverAppendPhotoToLog',S.token,{logID:logID,photo:singlePhoto}).then(function(){
+      gasCall('serverAppendPhotoToLog',S.token,{logID:logID,photo:singlePhoto}).then(function(ar){
+        // Track which photos actually got saved
+        uploadedPhotos.push(singlePhoto);
         idx++;nextPhoto();
       });
     }
@@ -5607,20 +5624,112 @@ function filterUsers(){
 function renderUsers(users){
   var tbody=id('uBody');if(!tbody)return;
   var uc=id('userCount');if(uc)uc.textContent=users.length+' user'+(users.length!==1?'s':'');
-  if(!users.length){tbody.innerHTML='<tr><td colspan="8"><div class="empty"><span class="material-icons-round mi">group</span><h3>No users found</h3></div></td></tr>';return;}
-  var html='';
-  for(var i=0;i<users.length;i++){
-    var u=users[i],isActive=(u.status==='Active');
-    var empID = (u.employeeID !== null && u.employeeID !== undefined) ? String(u.employeeID) : '\u2014';
-    html+='<tr><td class="mono" style="font-size:12px">'+empID+'</td><td><strong>'+u.name+'</strong></td><td style="font-size:12.5px">'+(u.designation||'\u2014')+'</td><td style="font-size:12.5px">'+(u.department||'\u2014')+'</td><td style="font-size:12.5px">'+(u.zone||'\u2014')+'</td><td><span class="badge badge-progress">'+u.role+'</span></td><td><span class="badge '+(isActive?'badge-completed':'badge-overdue')+'">'+u.status+'</span></td>'
-      +'<td><div class="flex-c" style="gap:3px">'
-      +'<button class="btn btn-ghost btn-sm btn-icon" onclick="editUser(\''+u.userID+'\')" title="Edit"><span class="material-icons-round mi">edit</span></button>'
-      +'<button class="btn btn-ghost btn-sm btn-icon" onclick="showResetPwModal(\''+u.userID+'\',\''+u.name+'\')" title="Reset Password"><span class="material-icons-round mi">lock_reset</span></button>'
-      +'<button class="btn btn-'+(isActive?'warning':'success')+' btn-sm btn-icon" onclick="toggleUser(\''+u.userID+'\',\''+(isActive?'Inactive':'Active')+'\')" title="'+(isActive?'Deactivate':'Activate')+'"><span class="material-icons-round mi">'+(isActive?'person_off':'how_to_reg')+'</span></button>'
-      +'<button class="btn btn-danger btn-sm btn-icon" onclick="confirmDeleteUser(\''+u.userID+'\',\''+u.name+'\')" title="Delete"><span class="material-icons-round mi">delete_forever</span></button>'
-      +'</div></td></tr>';
+  if(!users.length){
+    tbody.innerHTML='<tr><td colspan="8"><div class="empty"><span class="material-icons-round mi">group</span><h3>No users found</h3></div></td></tr>';
+    return;
   }
-  tbody.innerHTML=html;
+
+  // Role → colour
+  var roleMeta={
+    Commissioner:{bg:'#1d4ed8',ic:'&#128081;'},
+    Admin:{bg:'#0369a1',ic:'&#128736;'},
+    HOD:{bg:'#059669',ic:'&#128188;'},
+    Officer:{bg:'#6d28d9',ic:'&#128100;'},
+    ViewAll:{bg:'#b45309',ic:'&#128065;'}
+  };
+
+  while(tbody.firstChild)tbody.removeChild(tbody.firstChild);
+
+  for(var i=0;i<users.length;i++){
+    (function(u){
+      var isActive=(u.status==='Active');
+      var empID=(u.employeeID!==null&&u.employeeID!==undefined)?String(u.employeeID):'\u2014';
+      var rm=roleMeta[u.role]||{bg:'#475569',ic:'&#128100;'};
+
+      var tr=document.createElement('tr');
+
+      // EMP ID
+      var td1=document.createElement('td');
+      td1.style.cssText='font-family:monospace;font-size:12px;color:var(--tx3)';
+      td1.textContent=empID;
+
+      // NAME + avatar
+      var td2=document.createElement('td');
+      var nameWrap=document.createElement('div');
+      nameWrap.style.cssText='display:flex;align-items:center;gap:8px';
+      var av=document.createElement('div');
+      av.style.cssText='width:30px;height:30px;border-radius:50%;background:'+rm.bg+';color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0';
+      av.textContent=(u.name||'?').charAt(0).toUpperCase();
+      var nameDiv=document.createElement('div');
+      var n1=document.createElement('div');
+      n1.style.cssText='font-weight:700;font-size:13px';n1.textContent=u.name||'';
+      var n2=document.createElement('div');
+      n2.style.cssText='font-size:11px;color:var(--tx3)';n2.textContent=u.username||'';
+      nameDiv.appendChild(n1);nameDiv.appendChild(n2);
+      nameWrap.appendChild(av);nameWrap.appendChild(nameDiv);
+      td2.appendChild(nameWrap);
+
+      // DESIGNATION
+      var td3=document.createElement('td');
+      td3.style.cssText='font-size:12.5px;color:var(--tx2)';
+      td3.textContent=u.designation||'\u2014';
+
+      // DEPT
+      var td4=document.createElement('td');
+      td4.style.cssText='font-size:12.5px;color:var(--tx2)';
+      td4.textContent=u.department||'\u2014';
+
+      // ZONE
+      var td5=document.createElement('td');
+      td5.style.cssText='font-size:12.5px;color:var(--tx2)';
+      td5.textContent=u.zone||'\u2014';
+
+      // ROLE badge
+      var td6=document.createElement('td');
+      var roleBadge=document.createElement('span');
+      roleBadge.style.cssText='display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:7px;font-size:12px;font-weight:600;color:#fff;background:'+rm.bg;
+      roleBadge.innerHTML=rm.ic+' '+u.role;
+      td6.appendChild(roleBadge);
+
+      // STATUS badge
+      var td7=document.createElement('td');
+      var stBadge=document.createElement('span');
+      stBadge.style.cssText='padding:3px 10px;border-radius:7px;font-size:12px;font-weight:600;color:#fff;background:'+(isActive?'#059669':'#dc2626');
+      stBadge.textContent=u.status||'Active';
+      td7.appendChild(stBadge);
+
+      // ACTIONS
+      var td8=document.createElement('td');
+      var btnWrap=document.createElement('div');
+      btnWrap.style.cssText='display:flex;gap:4px;flex-wrap:nowrap;align-items:center';
+
+      function makeBtn(icon, label, bg, fn){
+        var b=document.createElement('button');
+        b.title=label;
+        b.style.cssText='display:inline-flex;align-items:center;gap:3px;padding:5px 9px;border-radius:7px;border:none;cursor:pointer;font-size:11.5px;font-weight:600;color:#fff;background:'+bg+';white-space:nowrap;transition:opacity .15s';
+        b.onmouseover=function(){b.style.opacity='.8';};
+        b.onmouseout=function(){b.style.opacity='1';};
+        var ic=document.createElement('span');
+        ic.className='material-icons-round';ic.style.fontSize='14px';ic.textContent=icon;
+        b.appendChild(ic);
+        if(label){var tx=document.createElement('span');tx.textContent=label;b.appendChild(tx);}
+        b.onclick=fn;
+        return b;
+      }
+
+      btnWrap.appendChild(makeBtn('edit','Edit','#0369a1',function(){editUser(u.userID);}));
+      btnWrap.appendChild(makeBtn('lock_reset','','#6d28d9',function(){showResetPwModal(u.userID,u.name);}));
+      btnWrap.appendChild(makeBtn(isActive?'person_off':'how_to_reg','',isActive?'#d97706':'#059669',function(){toggleUser(u.userID,isActive?'Inactive':'Active');}));
+      btnWrap.appendChild(makeBtn('delete_forever','','#dc2626',function(){confirmDeleteUser(u.userID,u.name);}));
+
+      td8.appendChild(btnWrap);
+
+      tr.appendChild(td1);tr.appendChild(td2);tr.appendChild(td3);
+      tr.appendChild(td4);tr.appendChild(td5);tr.appendChild(td6);
+      tr.appendChild(td7);tr.appendChild(td8);
+      tbody.appendChild(tr);
+    })(users[i]);
+  }
 }
 function showUserModal(uid){
   id('mUserTitle').textContent=uid?'Edit User':'Add User';
