@@ -1889,7 +1889,7 @@ tbody tr:hover { background: var(--surface2); }
       </div>
 
       <!-- ENTRY FORM (View A - default) -->
-      <div id="plFormView">
+      <div id="plFormView" style="display:none">
         <div class="card mb16">
           <div class="card-hd"><span class="card-title">&#128247; New Entry</span></div>
           <div class="card-bd">
@@ -3722,16 +3722,75 @@ function buildHODRows(tasks, canReassign){
 }
 function renderKanban(tasks){
   var board=id('kanban');if(!board)return;
+  // Clear safely
+  while(board.firstChild)board.removeChild(board.firstChild);
+
   var cols={Pending:[],'In Progress':[],Completed:[],'Review Pending':[],Overdue:[],Closed:[]};
   var clrs={Pending:'#f59e0b','In Progress':'#0ea5e9',Completed:'#10b981','Review Pending':'#8b5cf6',Overdue:'#ef4444',Closed:'#64748b'};
-  for(var i=0;i<tasks.length;i++){var t=tasks[i],s=(t.isOverdue&&t.status!=='Completed')?'Overdue':(t.status||'Pending');(cols[s]||cols.Pending).push(t);}
-  var html='',colKeys=Object.keys(cols);
-  for(var ci=0;ci<colKeys.length;ci++){
-    var status=colKeys[ci],colTasks=cols[status],cards='';
-    for(var ti=0;ti<colTasks.length;ti++){var t=colTasks[ti];cards+='<div class="k-card '+(t.priority||'').toLowerCase()+'" onclick="viewTask(\''+t.taskID+'\')"><div class="k-card-id">'+t.taskID+(t.source==='AI'?' \u00b7 AI':'')+'</div><div class="k-card-desc">'+htmlEsc(t.description.substring(0,70))+(t.description.length>70?'...':'')+'</div><div class="k-card-ft"><span>'+htmlEsc(t.department)+'</span><span class="'+(t.isOverdue?'k-overdue':'')+'">'+fDateShort(t.dueDate)+'</span></div></div>';}
-    html+='<div class="k-col"><div class="k-col-hd"><span class="k-col-title" style="color:'+clrs[status]+'">'+status+'</span><span class="k-count">'+colTasks.length+'</span></div>'+cards+(colTasks.length===0?'<div style="padding:16px;text-align:center;font-size:12px;color:var(--tx3)">No tasks</div>':'')+'</div>';
+  for(var i=0;i<tasks.length;i++){
+    var t=tasks[i];
+    var s=(t.isOverdue&&t.status!=='Completed'&&t.status!=='Closed')?'Overdue':(t.status||'Pending');
+    (cols[s]||cols.Pending).push(t);
   }
-  board.innerHTML=html;
+
+  var colKeys=Object.keys(cols);
+  for(var ci=0;ci<colKeys.length;ci++){
+    var status=colKeys[ci];
+    var colTasks=cols[status];
+    var col=document.createElement('div');
+    col.className='k-col';
+
+    // Column header
+    var hd=document.createElement('div');
+    hd.className='k-col-hd';
+    var title=document.createElement('span');
+    title.className='k-col-title';
+    title.style.color=clrs[status]||'#64748b';
+    title.textContent=status;
+    var cnt=document.createElement('span');
+    cnt.className='k-count';
+    cnt.textContent=colTasks.length;
+    hd.appendChild(title);hd.appendChild(cnt);
+    col.appendChild(hd);
+
+    if(!colTasks.length){
+      var empty=document.createElement('div');
+      empty.style.cssText='padding:16px;text-align:center;font-size:12px;color:var(--tx3)';
+      empty.textContent='No tasks';
+      col.appendChild(empty);
+    }
+
+    for(var ti=0;ti<colTasks.length;ti++){
+      try{
+        var t=colTasks[ti];
+        var card=document.createElement('div');
+        card.className='k-card '+(t.priority||'').toLowerCase();
+        (function(tid){card.onclick=function(){viewTask(tid);};})(t.taskID);
+
+        var cardId=document.createElement('div');
+        cardId.className='k-card-id';
+        cardId.textContent=t.taskID+(t.source==='AI'?' \u00b7 AI':'');
+
+        var cardDesc=document.createElement('div');
+        cardDesc.className='k-card-desc';
+        var desc=String(t.description||'');
+        cardDesc.textContent=desc.length>70?desc.substring(0,70)+'...':desc;
+
+        var cardFt=document.createElement('div');
+        cardFt.className='k-card-ft';
+        var deptSpan=document.createElement('span');
+        deptSpan.textContent=t.department||'';
+        var dueSpan=document.createElement('span');
+        if(t.isOverdue)dueSpan.className='k-overdue';
+        dueSpan.textContent=fDateShort(t.dueDate);
+        cardFt.appendChild(deptSpan);cardFt.appendChild(dueSpan);
+
+        card.appendChild(cardId);card.appendChild(cardDesc);card.appendChild(cardFt);
+        col.appendChild(card);
+      }catch(e){console.error('Kanban card error',ti,e);}
+    }
+    board.appendChild(col);
+  }
 }
 function switchView(v,btn){var tabs=document.querySelectorAll('#trackerTabs .tab');for(var i=0;i<tabs.length;i++)tabs[i].classList.remove('active');btn.classList.add('active');var cv=id('viewCards'),kv=id('viewKanban');if(cv)cv.style.display=v==='kanban'?'none':'';if(kv)kv.style.display=v==='kanban'?'':'none';if(v==='kanban')renderKanban(S.filtered);}
 function switchTaskTab(tab,btn){var tabs=document.querySelectorAll('#taskTabs .tab');for(var i=0;i<tabs.length;i++)tabs[i].classList.remove('active');btn.classList.add('active');var tm=id('tab-manual'),ta=id('tab-ai');if(tm)tm.classList.toggle('dn',tab!=='manual');if(ta)ta.classList.toggle('dn',tab!=='ai');}
@@ -4831,28 +4890,40 @@ function clearMultiOfficerList(){
 // ── PHOTO LOG ────────────────────────────────────────────────
 var PL={photos:[],entries:[],editPhotos:[],isAdmin:false};
 function plCheckAdmin(){
-  return S.user&&(S.user.role==='Admin'||S.user.role==='Commissioner');
+  // Triple-check: use PL.isAdmin flag AND live role check
+  var liveCheck = S.user && (S.user.role==='Admin'||S.user.role==='Commissioner');
+  return liveCheck && PL.isAdmin;
 }
 function loadPhotoLog(){
   var isAdmin=(S.user&&(S.user.role==='Admin'||S.user.role==='Commissioner'));
   PL.isAdmin=isAdmin;
-  // Show admin actions only for admin/commissioner
+  // Strictly show/hide admin controls
   var adminAct=id('plAdminActions'),viewAct=id('plViewActions');
   if(adminAct)adminAct.style.display=isAdmin?'':'none';
   if(viewAct)viewAct.style.display=isAdmin?'none':'';
-  // Set form defaults
-  var pd=id('pl-date');if(pd&&!pd.value)pd.value=new Date().toISOString().slice(0,10);
-  var pt=id('pl-time');if(pt&&!pt.value){var now=new Date();pt.value=zeroPad(now.getHours(),2)+':'+zeroPad(now.getMinutes(),2);}
-  // Officers/HOD go to list; admins go to form
-  plToggleView(isAdmin?'form':'list');
-  // Load entries in background
+  // Always hide form first — non-admins can never see the form
+  var fv=id('plFormView'),lv=id('plListView');
+  if(fv){fv.style.display='none';}
+  if(lv){lv.style.display='none';}
+  if(isAdmin){
+    // Admins start on form, set defaults
+    var pd=id('pl-date');if(pd&&!pd.value)pd.value=new Date().toISOString().slice(0,10);
+    var pt=id('pl-time');if(pt&&!pt.value){var now=new Date();pt.value=zeroPad(now.getHours(),2)+':'+zeroPad(now.getMinutes(),2);}
+    if(fv)fv.style.display='block';
+  } else {
+    // Non-admins go straight to list
+    if(lv)lv.style.display='block';
+  }
+  // Load entries
+  showLoader('Loading notes...');
   gasCall('serverGetPhotoLogs',S.token).then(function(r){
+    hideLoader();
     if(r&&r.success){
       PL.entries=r.data||[];
       var pc=id('plCount');
       if(pc)pc.textContent=PL.entries.length+' entr'+(PL.entries.length===1?'y':'ies');
-      if(!isAdmin)plRenderCards(PL.entries);
     }
+    plRenderCards(PL.entries);
   });
 }
 function plToggleView(view){
@@ -5120,7 +5191,17 @@ function plEditEntry(logID){
   var e=null;
   for(var i=0;i<PL.entries.length;i++){if(PL.entries[i].logID===logID){e=PL.entries[i];break;}}
   if(!e)return;
-  PL.editPhotos=[];// reset edit photo queue
+  PL.editPhotos=[];
+  PL.editLogID=logID;
+  // Parse existing photos
+  var existingPhotos=[];
+  if(e.photos&&e.photos.trim()){
+    var raw=e.photos.trim();
+    var arr=raw.indexOf('||')>=0?raw.split('||'):raw.split('\n');
+    for(var i=0;i<arr.length;i++){if(arr[i].trim().length>10)existingPhotos.push(arr[i].trim());}
+  }
+  PL.editExistingPhotos=existingPhotos.slice(); // mutable copy
+
   var html='<div style="padding:4px">'
     +'<div class="f-row">'
     +'<div class="f-group"><label class="f-label">Date</label><input type="date" class="f-ctrl" id="plEdit-date" value="'+e.date+'"></div>'
@@ -5128,15 +5209,16 @@ function plEditEntry(logID){
     +'</div>'
     +'<div class="f-row">'
     +'<div class="f-group"><label class="f-label">Type</label><select class="f-sel" id="plEdit-type"><option>Inspection</option><option>Meeting</option><option>Site Visit</option></select></div>'
-    +'<div class="f-group"><label class="f-label">Zone</label><input type="text" class="f-ctrl" id="plEdit-zone" value="'+(e.zone||'')+'" placeholder="Zone(s)"></div>'
+    +'<div class="f-group"><label class="f-label">Zone / Department</label><input type="text" class="f-ctrl" id="plEdit-zone" value="'+(e.zone||'')+'" placeholder="Zone(s) or Department(s)"></div>'
     +'</div>'
     +'<div class="f-group"><label class="f-label">Location</label><input type="text" class="f-ctrl" id="plEdit-loc" value="'+(e.location||'')+'" placeholder="Ward / Venue"></div>'
     +'<div class="f-group"><label class="f-label">Notes <span class="req">*</span></label><textarea class="f-ctrl" id="plEdit-notes" rows="4">'+e.notes+'</textarea></div>'
-    // Photo upload section
-    +'<div class="f-group">'
-    +'<label class="f-label">Add More Photos <span style="font-size:11px;color:var(--tx3);font-weight:400">(appended to existing)</span></label>'
-    +'<div style="border:2px dashed var(--border);border-radius:10px;padding:16px;text-align:center;cursor:pointer;background:var(--surface2)" onclick="document.getElementById(\'plEditPhotoInput\').click()">'
-    +'<span class="material-icons-round mi" style="font-size:28px;color:var(--tx3)">add_photo_alternate</span>'
+    // Existing photos with delete buttons
+    +(existingPhotos.length>0?'<div class="f-group"><label class="f-label">Existing Photos <span style="font-size:11px;color:var(--tx3)">(tap X to remove)</span></label><div id="plEditExistingGrid" style="display:flex;flex-wrap:wrap;gap:8px;padding:10px;background:var(--surface2);border-radius:8px"></div></div>':'')
+    // Add new photos
+    +'<div class="f-group"><label class="f-label">Add More Photos</label>'
+    +'<div style="border:2px dashed var(--border);border-radius:10px;padding:14px;text-align:center;cursor:pointer;background:var(--surface2)" onclick="document.getElementById(\'plEditPhotoInput\').click()">'
+    +'<span class="material-icons-round mi" style="font-size:24px;color:var(--tx3)">add_photo_alternate</span>'
     +'<div style="font-size:12px;color:var(--tx3);margin-top:4px">Tap to add photos</div>'
     +'</div>'
     +'<input type="file" id="plEditPhotoInput" accept="image/*" multiple style="display:none" onchange="plEditAddPhotos(this.files)">'
@@ -5146,12 +5228,46 @@ function plEditEntry(logID){
     +'<button class="btn btn-primary" onclick="plSaveEdit(\''+logID+'\')"><span class="material-icons-round mi">save</span> Save Changes</button>'
     +'<button class="btn btn-ghost" onclick="closeModal(\'mGeneric\')">Cancel</button>'
     +'</div></div>';
+
   var gb=id('mGenericBody');if(gb)gb.innerHTML=html;
   var gt=id('mGenericTitle');if(gt)gt.textContent='Edit Entry';
   openModal('mGeneric');
+
   setTimeout(function(){
     var st=id('plEdit-type');if(st)st.value=e.type||'Inspection';
+    // Render existing photo thumbnails with delete buttons
+    plRenderEditExistingPhotos();
   },50);
+}
+
+function plRenderEditExistingPhotos(){
+  var grid=id('plEditExistingGrid');if(!grid)return;
+  while(grid.firstChild)grid.removeChild(grid.firstChild);
+  for(var i=0;i<PL.editExistingPhotos.length;i++){
+    (function(idx,url){
+      var wrap=document.createElement('div');
+      wrap.style.cssText='position:relative;width:70px;height:70px;border-radius:8px;overflow:hidden;border:1.5px solid var(--border)';
+      var img=document.createElement('img');
+      img.style.cssText='width:100%;height:100%;object-fit:cover';
+      // Load via GAS proxy if Drive URL
+      loadPhotoIntoImg(img,url);
+      var del=document.createElement('button');
+      del.textContent='\u00d7';
+      del.style.cssText='position:absolute;top:2px;right:2px;background:rgba(239,68,68,.85);color:#fff;border:none;border-radius:50%;width:20px;height:20px;cursor:pointer;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center;line-height:1;padding:0';
+      del.title='Remove this photo';
+      del.onclick=function(e){
+        e.stopPropagation();
+        PL.editExistingPhotos.splice(idx,1);
+        plRenderEditExistingPhotos();
+        toast('Photo removed. Save to apply.','info');
+      };
+      wrap.appendChild(img);wrap.appendChild(del);
+      grid.appendChild(wrap);
+    })(i,PL.editExistingPhotos[i]);
+  }
+  if(!PL.editExistingPhotos.length){
+    grid.innerHTML='<span style="color:var(--tx3);font-size:13px;padding:8px">All photos removed</span>';
+  }
 }
 function plEditAddPhotos(files){
   if(!PL.editPhotos)PL.editPhotos=[];
@@ -5174,75 +5290,21 @@ function plEditAddPhotos(files){
 }
 function plSaveEdit(logID){
   var updated={
-    logID:logID,
-    date:V('plEdit-date'),
-    time:V('plEdit-time'),
-    type:V('plEdit-type'),
-    zone:V('plEdit-zone'),
-    location:V('plEdit-loc'),
-    notes:id('plEdit-notes')?id('plEdit-notes').value:''
+    logID:logID,date:V('plEdit-date'),time:V('plEdit-time'),
+    type:V('plEdit-type'),zone:V('plEdit-zone'),
+    location:V('plEdit-loc'),notes:id('plEdit-notes')?id('plEdit-notes').value:''
   };
   if(!updated.notes.trim()){toast('Notes cannot be empty.','error');return;}
+  // Save existing photos (with any removed) as the new base
+  updated.photos=(PL.editExistingPhotos||[]).join('||');
   showLoader('Saving...');
-  // If new photos to upload, process them first
-  if(PL.editPhotos&&PL.editPhotos.length>0){
-    var newB64s=[];var idx=0;
-    function processEditPhoto(){
-      if(idx>=PL.editPhotos.length){
-        // Find existing photos for this entry
-        var existing='';
-        for(var i=0;i<PL.entries.length;i++){if(PL.entries[i].logID===logID){existing=PL.entries[i].photos||'';break;}}
-        // Append new photos
-        var combined=existing?(existing+(newB64s.length?'||'+newB64s.join('||'):'')):(newB64s.join('||'));
-        updated.photos=combined;
-        doPlSaveEdit(updated,logID);return;
-      }
-      var f=PL.editPhotos[idx];
-      var reader=new FileReader();
-      reader.onload=function(e){
-        var img=new Image();
-        img.onload=function(){
-          var canvas=document.createElement('canvas');
-          var maxSize=300;var scale=Math.min(maxSize/img.width,maxSize/img.height,1);
-          canvas.width=Math.round(img.width*scale);canvas.height=Math.round(img.height*scale);
-          canvas.getContext('2d').drawImage(img,0,0,canvas.width,canvas.height);
-          var b64=canvas.toDataURL('image/jpeg',0.65);
-          if(b64.length<40000)newB64s.push(b64);
-          idx++;processEditPhoto();
-        };
-        img.onerror=function(){idx++;processEditPhoto();};
-        img.src=e.target.result;
-      };
-      reader.readAsDataURL(f);
-    }
-    processEditPhoto();
-  } else {
-    doPlSaveEdit(updated,logID);
-  }
-}
-function doPlSaveEdit(updated,logID){
-  var newPhotos=(PL.editPhotos&&PL.editPhotos.length>0)?true:false;
-  // Step 1: Save text fields
   gasCall('serverUpdatePhotoLog',S.token,updated).then(function(r){
     if(!r||!r.success){hideLoader();toast((r&&r.message)||'Update failed.','error');return;}
-    if(!newPhotos){
-      // No new photos — done
-      hideLoader();toast('Entry updated!','ok');closeModal('mGeneric');
-      for(var i=0;i<PL.entries.length;i++){
-        if(PL.entries[i].logID===logID){
-          PL.entries[i].date=updated.date;PL.entries[i].time=updated.time;
-          PL.entries[i].type=updated.type;PL.entries[i].zone=updated.zone;
-          PL.entries[i].location=updated.location;PL.entries[i].notes=updated.notes;
-          break;
-        }
-      }
-      PL.editPhotos=[];plRenderCards(PL.entries);return;
-    }
-    // Step 2: Upload each new photo one at a time
-    var b64list=[];var fi=0;
-    function processEditNext(){
-      if(fi>=PL.editPhotos.length){uploadEditPhoto(0);return;}
-      var f=PL.editPhotos[fi];
+    if(!PL.editPhotos||!PL.editPhotos.length){finishEdit(logID,updated);return;}
+    // Process + upload new photos one by one
+    var b64s=[];var fi=0;
+    function processNext(){
+      if(fi>=PL.editPhotos.length){uploadNext(0);return;}
       var reader=new FileReader();
       reader.onload=function(ev){
         var img2=new Image();
@@ -5251,34 +5313,30 @@ function doPlSaveEdit(updated,logID){
           var sc=Math.min(200/img2.width,200/img2.height,1);
           c2.width=Math.round(img2.width*sc);c2.height=Math.round(img2.height*sc);
           c2.getContext('2d').drawImage(img2,0,0,c2.width,c2.height);
-          b64list.push(c2.toDataURL('image/jpeg',0.5));
-          fi++;processEditNext();
-        };
-        img2.src=ev.target.result;
-      };
-      reader.readAsDataURL(f);
+          b64s.push(c2.toDataURL('image/jpeg',0.5));fi++;processNext();
+        };img2.src=ev.target.result;
+      };reader.readAsDataURL(PL.editPhotos[fi]);
     }
-    function uploadEditPhoto(ei){
-      if(ei>=b64list.length){
-        hideLoader();toast('Entry updated with '+b64list.length+' new photo'+(b64list.length!==1?'s':'')+'!','ok');
-        closeModal('mGeneric');
-        for(var i=0;i<PL.entries.length;i++){
-          if(PL.entries[i].logID===logID){
-            PL.entries[i].date=updated.date;PL.entries[i].time=updated.time;
-            PL.entries[i].type=updated.type;PL.entries[i].zone=updated.zone;
-            PL.entries[i].location=updated.location;PL.entries[i].notes=updated.notes;
-            break;
-          }
-        }
-        PL.editPhotos=[];plRenderCards(PL.entries);return;
-      }
-      var lm=id('loaderMsg');if(lm)lm.textContent='Uploading edit photo '+(ei+1)+' of '+b64list.length+'...';
-      gasCall('serverAppendPhotoToLog',S.token,{logID:logID,photo:b64list[ei]}).then(function(){
-        ei++;uploadEditPhoto(ei);
-      });
+    function uploadNext(ni){
+      if(ni>=b64s.length){finishEdit(logID,updated);return;}
+      var lm=id('loaderMsg');if(lm)lm.textContent='Uploading photo '+(ni+1)+' of '+b64s.length+'...';
+      gasCall('serverAppendPhotoToLog',S.token,{logID:logID,photo:b64s[ni]}).then(function(){uploadNext(ni+1);});
     }
-    processEditNext();
+    processNext();
   });
+}
+function finishEdit(logID,updated){
+  hideLoader();closeModal('mGeneric');toast('Entry updated!','ok');
+  for(var i=0;i<PL.entries.length;i++){
+    if(PL.entries[i].logID===logID){
+      PL.entries[i].date=updated.date;PL.entries[i].time=updated.time;
+      PL.entries[i].type=updated.type;PL.entries[i].zone=updated.zone;
+      PL.entries[i].location=updated.location;PL.entries[i].notes=updated.notes;
+      if(updated.photos!==undefined)PL.entries[i].photos=updated.photos;
+      break;
+    }
+  }
+  PL.editPhotos=[];PL.editExistingPhotos=[];plRenderCards(PL.entries);
 }
 function driveToImgUrl(url){
   // Convert any Drive URL to uc?export=view which works without Google login
