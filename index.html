@@ -489,6 +489,7 @@ body {
   display: flex; align-items: center; justify-content: center;
   color: #fff; font-size: 15px; font-weight: 700;
 }
+@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
 .pl-zone-chip{display:inline-flex;align-items:center;gap:5px;padding:5px 10px;border-radius:999px;border:1.5px solid var(--border);background:var(--surface);cursor:pointer;font-size:12px;font-weight:500;transition:all .15s;user-select:none}
 .pl-zone-chip:hover{border-color:var(--c-blue);color:var(--c-blue)}
 .pl-zone-chip input{display:none}
@@ -2819,8 +2820,12 @@ function demoFn(fn,args){
   if(fn==='serverGetLogo'){var lv=LS.get('sc-logo')||'';return{success:true,value:lv};}
   if(fn==='serverSaveLogo'){if(args[1]){LS.set('sc-logo',args[1]);}else{LS.del('sc-logo');}return{success:true};}
   if(fn==='serverBulkCreateTasks'){var cnt=0;if(args[1])for(var i=0;i<args[1].length;i++){DEMO.tasks.push(args[1][i]);cnt++;}return{success:true,count:cnt,created:[]};}
-  if(fn==='serverSavePhotoLog'){var lid='LOG'+Date.now();return{success:true,logID:lid};}
-  if(fn==='serverGetPhotoLogs'){return{success:true,data:[]};}
+  if(fn==='serverCreateNote'){var nid='NOTE'+Date.now();return{success:true,noteID:nid};}
+  if(fn==='serverGetNotes'){return{success:true,data:[]};}
+  if(fn==='serverAddNotePhoto'){return{success:true,photoID:'PH'+Date.now()};}
+  if(fn==='serverDeleteNotePhoto'){return{success:true};}
+  if(fn==='serverUpdateNote'){return{success:true};}
+  if(fn==='serverDeleteNote'){return{success:true};}
 
   if(fn==='serverAddDepartment'){if(!IS_GAS&&S.lookup&&S.lookup.departments){var found2=false;for(var i=0;i<S.lookup.departments.length;i++)if(S.lookup.departments[i].DeptName===args[1]){found2=true;break;}if(!found2)S.lookup.departments.push({DeptID:'D'+Date.now(),DeptName:args[1],Status:'Active'});}return{success:true};}
   if(fn==='serverAddDesignation'){if(!IS_GAS&&S.lookup&&S.lookup.designations){var found3=false;for(var i=0;i<S.lookup.designations.length;i++)if(S.lookup.designations[i].DesigName===args[1]){found3=true;break;}if(!found3)S.lookup.designations.push({DesigID:'DG'+Date.now(),DesigName:args[1],Status:'Active'});}return{success:true};}
@@ -4896,44 +4901,51 @@ function clearMultiOfficerList(){
 }
 
 // ── PHOTO LOG ────────────────────────────────────────────────
-var PL={photos:[],entries:[],editPhotos:[],isAdmin:false};
+var PL={photos:[],entries:[],editPhotos:[],editExistingPhotos:[],editRemovedPhotoIDs:[],editNoteID:null,isAdmin:false};
 function plCheckAdmin(){
-  // Triple-check: use PL.isAdmin flag AND live role check
   var liveCheck = S.user && (S.user.role==='Admin'||S.user.role==='Commissioner');
   return liveCheck && PL.isAdmin;
 }
+
+// ════════════════════════════════════════════════════════════
+// NOTES MODULE — v2: optimistic local-first rendering
+// Photos and text appear in the list THE INSTANT Save is pressed,
+// built directly from the files the user just picked (no network
+// wait). The server save happens in the background; if a photo
+// fails to persist, that specific photo gets a small retry badge
+// — it never blocks or hides the rest of the entry.
+// ════════════════════════════════════════════════════════════
+
 function loadPhotoLog(){
   var isAdmin=(S.user&&(S.user.role==='Admin'||S.user.role==='Commissioner'));
   PL.isAdmin=isAdmin;
-  // Strictly show/hide admin controls
   var adminAct=id('plAdminActions'),viewAct=id('plViewActions');
   if(adminAct)adminAct.style.display=isAdmin?'':'none';
   if(viewAct)viewAct.style.display=isAdmin?'none':'';
-  // Always hide form first — non-admins can never see the form
   var fv=id('plFormView'),lv=id('plListView');
   if(fv){fv.style.display='none';}
   if(lv){lv.style.display='none';}
   if(isAdmin){
-    // Admins start on form, set defaults
     var pd=id('pl-date');if(pd&&!pd.value)pd.value=new Date().toISOString().slice(0,10);
     var pt=id('pl-time');if(pt&&!pt.value){var now=new Date();pt.value=zeroPad(now.getHours(),2)+':'+zeroPad(now.getMinutes(),2);}
     if(fv)fv.style.display='block';
   } else {
-    // Non-admins go straight to list
     if(lv)lv.style.display='block';
   }
-  // Load entries
   showLoader('Loading notes...');
-  gasCall('serverGetPhotoLogs',S.token).then(function(r){
+  gasCall('serverGetNotes',S.token).then(function(r){
     hideLoader();
     if(r&&r.success){
       PL.entries=r.data||[];
       var pc=id('plCount');
       if(pc)pc.textContent=PL.entries.length+' entr'+(PL.entries.length===1?'y':'ies');
+    } else if(r&&r.message){
+      toast(r.message,'error');
     }
     plRenderCards(PL.entries);
   });
 }
+
 function plToggleView(view){
   var fv=id('plFormView'),lv=id('plListView');
   if(view==='form'){
@@ -4942,20 +4954,19 @@ function plToggleView(view){
   } else {
     if(fv)fv.style.display='none';
     if(lv)lv.style.display='block';
-    // Only fetch from server if we have no local entries yet
     if(!PL.entries||!PL.entries.length){
       showLoader('Loading notes...');
-      gasCall('serverGetPhotoLogs',S.token).then(function(r){
+      gasCall('serverGetNotes',S.token).then(function(r){
         hideLoader();
         if(r&&r.success){PL.entries=r.data||[];}
         plRenderCards(PL.entries);
       });
     } else {
-      // Use local entries — already up to date
       plRenderCards(PL.entries);
     }
   }
 }
+
 function plOnTypeChange(){
   var type=V('pl-type');
   var zoneRow=id('plZoneRow'), deptRow=id('plDeptRow'), lbl=id('pl-notes-label');
@@ -4990,32 +5001,63 @@ function plBuildDeptChips(){
 function plUpdateDeptDisplay(){
   var checks=document.querySelectorAll('#plDeptChips input[type=checkbox]:checked');
   var vals=[];for(var i=0;i<checks.length;i++)vals.push(checks[i].value);
-  // Store selected depts in pl-zone field (used as "context" for the entry)
   var el=id('pl-zone');if(el)el.value=vals.join(', ');
 }
 function plUpdateZoneDisplay(){
-  // Collect checked zones and join for hidden field
   var chips=document.querySelectorAll('#plZoneChips input[type=checkbox]:checked');
   var zones=[];for(var i=0;i<chips.length;i++)zones.push(chips[i].value);
   var el=id('pl-zone');if(el)el.value=zones.join(', ');
 }
+
 function handlePlPhotoSelect(files){plAddPhotos(Array.prototype.slice.call(files));}
-function handlePlPhotoDrop(e){e.preventDefault();var el=id('plDropZone');if(el)el.style.borderColor='var(--border)';var files=[];for(var i=0;i<e.dataTransfer.files.length;i++){var f=e.dataTransfer.files[i];if(f.type.indexOf('image/')===0)files.push(f);}plAddPhotos(files);}
+function handlePlPhotoDrop(e){
+  e.preventDefault();
+  var el=id('plDropZone');if(el)el.style.borderColor='var(--border)';
+  var files=[];
+  for(var i=0;i<e.dataTransfer.files.length;i++){
+    var f=e.dataTransfer.files[i];
+    if(f.type.indexOf('image/')===0)files.push(f);
+  }
+  plAddPhotos(files);
+}
 function plAddPhotos(files){
+  if(!PL.photos)PL.photos=[];
   var rem=15-PL.photos.length,skipped=0;
-  for(var i=0;i<files.length&&i<rem;i++){if(files[i].size>5*1024*1024){skipped++;continue;}PL.photos.push(files[i]);}
-  if(skipped)toast(skipped+' photo(s) skipped — max 5MB each.','info');
+  for(var i=0;i<files.length&&i<rem;i++){
+    if(files[i].size>8*1024*1024){skipped++;continue;}
+    PL.photos.push(files[i]);
+  }
+  if(skipped)toast(skipped+' photo(s) skipped \u2014 max 8MB each.','info');
   plRenderPhotoPreview();
 }
 function plRenderPhotoPreview(){
-  var pp=id('plPhotoPreview');if(!pp)return;
-  var html='';
+  var prev=id('plPhotoPreview');if(!prev)return;
+  while(prev.firstChild)prev.removeChild(prev.firstChild);
   for(var i=0;i<PL.photos.length;i++){
-    var url=URL.createObjectURL(PL.photos[i]);
-    html+='<div style="position:relative;width:72px;height:72px;border-radius:8px;overflow:hidden;border:1px solid var(--border);flex-shrink:0"><img src="'+url+'" style="width:100%;height:100%;object-fit:cover"><button onclick="PL.photos.splice('+i+',1);plRenderPhotoPreview()" style="position:absolute;top:2px;right:2px;background:rgba(0,0,0,.6);border:none;border-radius:50%;width:18px;height:18px;color:#fff;cursor:pointer;font-size:12px;line-height:18px;text-align:center;padding:0">&times;</button></div>';
+    (function(idx){
+      var wrap=document.createElement('div');
+      wrap.style.cssText='position:relative;width:64px;height:64px;border-radius:8px;overflow:hidden;border:1px solid var(--border)';
+      var img=document.createElement('img');
+      img.style.cssText='width:100%;height:100%;object-fit:cover';
+      img.src=URL.createObjectURL(PL.photos[idx]); // instant preview, zero network
+      var del=document.createElement('button');
+      del.textContent='\u00d7';
+      del.style.cssText='position:absolute;top:1px;right:1px;background:rgba(0,0,0,.6);border:none;border-radius:50%;width:18px;height:18px;color:#fff;cursor:pointer;font-size:12px;line-height:18px;text-align:center;padding:0';
+      del.onclick=function(){PL.photos.splice(idx,1);plRenderPhotoPreview();};
+      wrap.appendChild(img);wrap.appendChild(del);
+      prev.appendChild(wrap);
+    })(i);
   }
-  pp.innerHTML=html;
 }
+
+// ─── SAVE: optimistic local-first ─────────────────────────────
+// 1. Build the in-memory entry + preview thumbnails from the picked
+//    files INSTANTLY (no network wait) and render it at the top of
+//    the list right away.
+// 2. Save the note text to the server (small, fast, reliable).
+// 3. Upload each photo independently to its own NotesPhotos row.
+//    Each photo has its own success/fail state; a failure on one
+//    photo never affects the others or hides the entry.
 function savePlEntry(){
   var date=V('pl-date'),time=V('pl-time'),type=V('pl-type'),zone=V('pl-zone'),
       loc=V('pl-location'),notes=id('pl-notes')?id('pl-notes').value:'';
@@ -5028,102 +5070,95 @@ function savePlEntry(){
   }
   if(!notes.trim()){toast('Please enter notes / observations.','error');return;}
 
-  if(PL.photos.length===0){
-    // No photos — save directly
-    var entry={date:date,time:time,type:type,zone:zone,location:loc,notes:notes,photos:''};
-    doSavePlEntry(entry);
-    return;
-  }
+  var pickedFiles=(PL.photos||[]).slice();
+  var tempID='TEMP'+Date.now();
 
-  // Compress all photos first, then save everything in ONE single call
-  showLoader('Processing photos ('+PL.photos.length+')...');
-  var processed=[]; var idx=0;
-  function processNext(){
-    if(idx>=PL.photos.length){
-      hideLoader();
-      var entry={date:date,time:time,type:type,zone:zone,location:loc,notes:notes,
-                 photos:processed.join('||')};
-      doSavePlEntry(entry);
-      return;
-    }
-    var f=PL.photos[idx];
-    var lm=id('loaderMsg');
-    if(lm)lm.textContent='Processing photo '+(idx+1)+' of '+PL.photos.length+'...';
-    var reader=new FileReader();
-    reader.onload=function(ev){
-      var img=new Image();
-      img.onload=function(){
-        var canvas=document.createElement('canvas');
-        // 300px at quality 0.65 ≈ 15-18KB per photo — safe for Sheets 50K cell limit
-        var maxSize=300;
-        var scale=Math.min(maxSize/img.width,maxSize/img.height,1);
-        canvas.width=Math.round(img.width*scale);
-        canvas.height=Math.round(img.height*scale);
-        canvas.getContext('2d').drawImage(img,0,0,canvas.width,canvas.height);
-        var b64=canvas.toDataURL('image/jpeg',0.65);
-        if(b64.length<45000)processed.push(b64); // only include if under 45KB
-        idx++;processNext();
-      };
-      img.onerror=function(){idx++;processNext();};
-      img.src=ev.target.result;
-    };
-    reader.onerror=function(){idx++;processNext();};
-    reader.readAsDataURL(f);
-  }
-  processNext();
-}
-function doSavePlEntry(entry){
-  showLoader('Saving entry...');
-  // Send everything in ONE call — text + all photos together
-  // serverSavePhotoLog stores the full photos string in col 8 at row creation time
-  gasCall('serverSavePhotoLog',S.token,{
-    date:entry.date, time:entry.time, type:entry.type, zone:entry.zone,
-    location:entry.location, notes:entry.notes, photos:entry.photos||''
-  }).then(function(r){
-    hideLoader();
+  // STEP 1 — build local preview entry immediately, no network wait
+  var localEntry={
+    noteID:tempID, date:date, time:time, type:type, zone:zone, location:loc, notes:notes,
+    createdBy:S.user?S.user.name:'', createdAt:new Date().toISOString(),
+    photos: pickedFiles.map(function(f){
+      return { photoID:'temp_'+Math.random().toString(36).slice(2), photoData:URL.createObjectURL(f), pending:true };
+    }),
+    _saving:true
+  };
+  PL.entries.unshift(localEntry);
+  clearPlForm();
+  var fv=id('plFormView'),lv=id('plListView');
+  if(fv)fv.style.display='none';
+  if(lv)lv.style.display='block';
+  plRenderCards(PL.entries); // photos visible THE INSTANT save is pressed
+
+  // STEP 2 — save the note text to the server in the background
+  gasCall('serverCreateNote',S.token,{date:date,time:time,type:type,zone:zone,location:loc,notes:notes}).then(function(r){
     if(!r||!r.success){
-      toast((r&&r.message)||'Save failed. Please try again.','error');
+      localEntry._saving=false;
+      localEntry._failed=true;
+      plRenderCards(PL.entries);
+      toast((r&&r.message)||'Failed to save note. Tap Retry on the entry.','error');
       return;
     }
-    entry.logID = r.logID || ('LOG'+Date.now());
-    entry.createdBy = S.user ? S.user.name : '';
-    entry.createdAt = new Date().toISOString();
-    var photoCount = entry.photos
-      ? entry.photos.split('||').filter(function(p){return p.length>10;}).length
-      : 0;
-    if(photoCount>0){
-      toast('Entry saved with '+photoCount+' photo'+(photoCount!==1?'s':'')+'!','ok');
-    } else {
-      toast('Entry saved successfully!','ok');
-    }
-    // Prepend to local cache and render immediately — photos visible right away
-    PL.entries.unshift(entry);
-    clearPlForm();
-    var fv=id('plFormView'), lv=id('plListView');
-    if(fv)fv.style.display='none';
-    if(lv)lv.style.display='block';
+    var realNoteID=r.noteID;
+    localEntry.noteID=realNoteID;
+    localEntry._saving=false;
     plRenderCards(PL.entries);
+    toast('Note saved!','ok');
+
+    // STEP 3 — upload each photo independently; update its own state on completion
+    if(!pickedFiles.length)return;
+    pickedFiles.forEach(function(file, idx){
+      var photoEntry=localEntry.photos[idx];
+      var reader=new FileReader();
+      reader.onload=function(ev){
+        var img=new Image();
+        img.onload=function(){
+          var canvas=document.createElement('canvas');
+          var maxSize=350;
+          var scale=Math.min(maxSize/img.width,maxSize/img.height,1);
+          canvas.width=Math.round(img.width*scale);
+          canvas.height=Math.round(img.height*scale);
+          canvas.getContext('2d').drawImage(img,0,0,canvas.width,canvas.height);
+          var b64=canvas.toDataURL('image/jpeg',0.7);
+          gasCall('serverAddNotePhoto',S.token,{noteID:realNoteID,photo:b64}).then(function(pr){
+            if(pr&&pr.success){
+              photoEntry.photoID=pr.photoID;
+              photoEntry.photoData=b64; // swap blob URL for the real compressed version
+              photoEntry.pending=false;
+            } else {
+              photoEntry.pending=false;
+              photoEntry.failed=true;
+            }
+            plRenderCards(PL.entries);
+          });
+        };
+        img.onerror=function(){photoEntry.pending=false;photoEntry.failed=true;plRenderCards(PL.entries);};
+        img.src=ev.target.result;
+      };
+      reader.onerror=function(){photoEntry.pending=false;photoEntry.failed=true;plRenderCards(PL.entries);};
+      reader.readAsDataURL(file);
+    });
   });
 }
+
 function clearPlForm(){
   var f=['pl-time','pl-type','pl-zone','pl-location','pl-notes'];
   for(var i=0;i<f.length;i++){var e=id(f[i]);if(e)e.value='';}
   var pd=id('pl-date');if(pd)pd.value=new Date().toISOString().slice(0,10);
-  // Uncheck all zone and dept chips
   var chips=document.querySelectorAll('#plZoneChips input[type=checkbox],#plDeptChips input[type=checkbox]');
   for(var i=0;i<chips.length;i++)chips[i].checked=false;
-  // Hide both conditional rows
   var zr=id('plZoneRow');if(zr)zr.style.display='none';
   var dr=id('plDeptRow');if(dr)dr.style.display='none';
   PL.photos=[];plRenderPhotoPreview();
 }
+
+// ─── RENDER — pure DOM, no innerHTML for content, no lazy-load timers ──
 function plRenderCards(entries){
   var strip=id('plSummaryStrip');
   if(strip){
     var ic=0,mc=0,sc=0,pc=0;
     for(var i=0;i<entries.length;i++){
       if(entries[i].type==='Inspection')ic++;else if(entries[i].type==='Meeting')mc++;else sc++;
-      pc+=plCountPhotos(entries[i].photos);
+      pc+=(entries[i].photos?entries[i].photos.length:0);
     }
     strip.innerHTML='<div style="background:rgba(29,78,216,.08);border:1px solid rgba(29,78,216,.2);border-radius:8px;padding:8px 14px;font-size:12.5px;color:#1d4ed8;display:flex;gap:4px;align-items:center"><span class="material-icons-round mi" style="font-size:14px">search</span><strong>'+ic+'</strong> Inspections</div>'
       +'<div style="background:rgba(5,150,105,.08);border:1px solid rgba(5,150,105,.2);border-radius:8px;padding:8px 14px;font-size:12.5px;color:#059669;display:flex;gap:4px;align-items:center"><span class="material-icons-round mi" style="font-size:14px">groups</span><strong>'+mc+'</strong> Meetings</div>'
@@ -5133,8 +5168,6 @@ function plRenderCards(entries){
   var el=id('plCards');if(!el)return;
   var pc2=id('plCount');if(pc2)pc2.textContent=entries.length+' entr'+(entries.length===1?'y':'ies');
 
-  // Build using real DOM nodes (not innerHTML string) — eliminates flicker
-  // because <img> tags get their src set ONCE at creation, never re-fetched
   while(el.firstChild)el.removeChild(el.firstChild);
 
   if(!entries.length){
@@ -5148,7 +5181,11 @@ function plRenderCards(entries){
   var months=['','January','February','March','April','May','June','July','August','September','October','November','December'];
   var typeColors={Inspection:{bg:'rgba(29,78,216,.08)',c:'#1d4ed8',border:'rgba(29,78,216,.2)',icon:'search'},Meeting:{bg:'rgba(5,150,105,.08)',c:'#059669',border:'rgba(5,150,105,.2)',icon:'groups'},'Site Visit':{bg:'rgba(245,158,11,.08)',c:'#d97706',border:'rgba(245,158,11,.2)',icon:'location_on'}};
   var monthGroups={},monthOrder=[];
-  for(var i=0;i<entries.length;i++){var mk=entries[i].date?entries[i].date.slice(0,7):'Unknown';if(!monthGroups[mk]){monthGroups[mk]=[];monthOrder.push(mk);}monthGroups[mk].push(entries[i]);}
+  for(var i=0;i<entries.length;i++){
+    var mk=entries[i].date?entries[i].date.slice(0,7):'Unknown';
+    if(!monthGroups[mk]){monthGroups[mk]=[];monthOrder.push(mk);}
+    monthGroups[mk].push(entries[i]);
+  }
 
   for(var mi=0;mi<monthOrder.length;mi++){
     var mk=monthOrder[mi],mEntries=monthGroups[mk],parts=mk.split('-');
@@ -5165,22 +5202,9 @@ function plRenderCards(entries){
   }
 }
 
-function plCountPhotos(photosStr){
-  if(!photosStr||!photosStr.trim())return 0;
-  var arr=photosStr.indexOf('||')>=0?photosStr.split('||'):photosStr.split('\n');
-  var n=0;for(var i=0;i<arr.length;i++){if(arr[i].trim().length>10)n++;}
-  return n;
-}
-function plParsePhotos(photosStr){
-  if(!photosStr||!photosStr.trim())return [];
-  var arr=photosStr.indexOf('||')>=0?photosStr.split('||'):photosStr.split('\n');
-  var out=[];for(var i=0;i<arr.length;i++){var s=arr[i].trim();if(s.length>10)out.push(s);}
-  return out;
-}
-
 function plMakeEntryCard(e, typeColors, months){
   var tc=typeColors[e.type]||typeColors['Site Visit'];
-  var photos=plParsePhotos(e.photos);
+  var photos=e.photos||[];
   var dayNum=e.date?e.date.split('-').slice(2).join(''):'';
   var monthName=e.date?(months[parseInt((e.date||'0-0').split('-')[1]||1)]||'').slice(0,3):'';
   var dayOfWeek='';
@@ -5189,6 +5213,7 @@ function plMakeEntryCard(e, typeColors, months){
   var card=document.createElement('div');
   card.className='card mb10';
   card.style.borderLeft='4px solid '+tc.border;
+  if(e._failed)card.style.borderLeft='4px solid var(--c-red)';
 
   var body=document.createElement('div');
   body.className='card-bd';
@@ -5197,14 +5222,12 @@ function plMakeEntryCard(e, typeColors, months){
   var row=document.createElement('div');
   row.style.cssText='display:flex;gap:10px;align-items:flex-start';
 
-  // Date block
   var dateBlock=document.createElement('div');
   dateBlock.style.cssText='text-align:center;min-width:48px;flex-shrink:0;background:var(--surface2);border-radius:8px;padding:6px 4px;border:1px solid var(--border)';
   dateBlock.innerHTML='<div style="font-size:11px;font-weight:600;color:'+tc.c+';text-transform:uppercase;letter-spacing:.04em">'+dayOfWeek+'</div>'
     +'<div style="font-size:22px;font-weight:800;color:var(--tx1);line-height:1.1">'+dayNum+'</div>'
     +'<div style="font-size:11px;font-weight:600;color:var(--tx3);text-transform:uppercase">'+monthName+'</div>';
 
-  // Content block
   var content=document.createElement('div');
   content.style.cssText='flex:1;min-width:0';
 
@@ -5218,7 +5241,19 @@ function plMakeEntryCard(e, typeColors, months){
   zoneTag.style.cssText='font-size:12px;color:var(--tx3)';
   zoneTag.textContent=e.zone+(e.location?' \u00b7 '+e.location:'');
   tagRow.appendChild(zoneTag);
-  if(photos.length>0){
+
+  if(e._saving){
+    var savingTag=document.createElement('span');
+    savingTag.style.cssText='font-size:11px;color:var(--c-blue);margin-left:auto;display:flex;align-items:center;gap:4px';
+    savingTag.innerHTML='<span class="material-icons-round" style="font-size:13px">cloud_upload</span>Saving...';
+    tagRow.appendChild(savingTag);
+  } else if(e._failed){
+    var failTag=document.createElement('button');
+    failTag.style.cssText='font-size:11px;color:#fff;background:var(--c-red);border:none;border-radius:6px;padding:3px 9px;margin-left:auto;cursor:pointer;display:flex;align-items:center;gap:4px';
+    failTag.innerHTML='<span class="material-icons-round" style="font-size:13px">refresh</span>Retry Save';
+    failTag.onclick=function(ev){ev.stopPropagation();plRetryEntry(e);};
+    tagRow.appendChild(failTag);
+  } else if(photos.length>0){
     var photoTag=document.createElement('span');
     photoTag.style.cssText='font-size:12px;color:var(--c-teal);margin-left:auto;display:flex;align-items:center;gap:3px';
     photoTag.innerHTML='<span class="material-icons-round mi" style="font-size:13px">photo_camera</span>'+photos.length;
@@ -5226,46 +5261,52 @@ function plMakeEntryCard(e, typeColors, months){
   }
   content.appendChild(tagRow);
 
-  // Notes text — always fully visible, no clamp/expand needed
   var notesDiv=document.createElement('div');
   notesDiv.style.cssText='font-size:13px;color:var(--tx2);line-height:1.6;white-space:pre-wrap;margin-bottom:'+(photos.length>0?'10px':'0');
   notesDiv.textContent=e.notes||'';
   content.appendChild(notesDiv);
 
-  // Photo grid — rendered immediately as real <img> elements with src set directly
-  // No lazy-load, no setTimeout, no hidden sections — eliminates flicker entirely
   if(photos.length>0){
     var grid=document.createElement('div');
     grid.style.cssText='display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px';
-    for(var pi=0;pi<photos.length;pi++){
-      (function(url,idx){
-        var thumb=document.createElement('div');
-        thumb.style.cssText='width:92px;height:92px;border-radius:10px;overflow:hidden;border:2px solid var(--border);cursor:pointer;background:var(--surface2);flex-shrink:0';
-        var img=document.createElement('img');
-        img.src=url; // set directly — base64 data URLs render instantly, no fetch needed
-        img.style.cssText='width:100%;height:100%;object-fit:cover;display:block';
-        img.loading='lazy';
-        img.onclick=function(ev){ev.stopPropagation();plOpenPhotoViewer(photos,idx);};
-        thumb.appendChild(img);
-        grid.appendChild(thumb);
-      })(photos[pi],pi);
-    }
+    var photoUrls=photos.map(function(p){return p.photoData;});
+    photos.forEach(function(p,idx){
+      var thumb=document.createElement('div');
+      thumb.style.cssText='width:92px;height:92px;border-radius:10px;overflow:hidden;border:2px solid '+(p.failed?'var(--c-red)':'var(--border)')+';cursor:pointer;background:var(--surface2);flex-shrink:0;position:relative';
+      var img=document.createElement('img');
+      img.src=p.photoData;
+      img.style.cssText='width:100%;height:100%;object-fit:cover;display:block'+(p.pending?';opacity:.55':'');
+      img.loading='lazy';
+      img.onclick=function(ev){ev.stopPropagation();if(!p.pending)plOpenPhotoViewer(photoUrls,idx);};
+      thumb.appendChild(img);
+      if(p.pending){
+        var spin=document.createElement('div');
+        spin.style.cssText='position:absolute;top:0;left:0;width:100%;height:100%;display:flex;align-items:center;justify-content:center';
+        spin.innerHTML='<span class="material-icons-round" style="font-size:22px;color:#fff;animation:spin 1s linear infinite">sync</span>';
+        thumb.appendChild(spin);
+      } else if(p.failed){
+        var failIcon=document.createElement('div');
+        failIcon.style.cssText='position:absolute;top:0;left:0;width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.5)';
+        failIcon.innerHTML='<span class="material-icons-round" style="font-size:22px;color:#fff">error_outline</span>';
+        thumb.appendChild(failIcon);
+      }
+      grid.appendChild(thumb);
+    });
     content.appendChild(grid);
   }
 
-  // Admin actions
-  if(plCheckAdmin()){
+  if(plCheckAdmin()&&!e._saving){
     var actRow=document.createElement('div');
     actRow.style.cssText='display:flex;gap:8px;margin-top:6px;padding-top:8px;border-top:1px solid var(--border)';
     var editBtn=document.createElement('button');
     editBtn.className='btn btn-ghost btn-sm';
     editBtn.innerHTML='<span class="material-icons-round mi">edit</span> Edit';
-    editBtn.onclick=function(ev){ev.stopPropagation();plEditEntry(e.logID);};
+    editBtn.onclick=function(ev){ev.stopPropagation();plEditEntry(e.noteID);};
     var delBtn=document.createElement('button');
     delBtn.className='btn btn-ghost btn-sm';
     delBtn.style.cssText='color:var(--c-red);border-color:var(--c-red)';
     delBtn.innerHTML='<span class="material-icons-round mi">delete</span> Delete';
-    delBtn.onclick=function(ev){ev.stopPropagation();plDeleteEntry(e.logID);};
+    delBtn.onclick=function(ev){ev.stopPropagation();plDeleteEntry(e.noteID);};
     actRow.appendChild(editBtn);actRow.appendChild(delBtn);
     content.appendChild(actRow);
   }
@@ -5277,8 +5318,24 @@ function plMakeEntryCard(e, typeColors, months){
   return card;
 }
 
-// Full-screen photo viewer with prev/next navigation through the entry's photo set
-function plOpenPhotoViewer(photos, startIdx){
+function plRetryEntry(entry){
+  entry._failed=false;entry._saving=true;
+  plRenderCards(PL.entries);
+  gasCall('serverCreateNote',S.token,{date:entry.date,time:entry.time,type:entry.type,zone:entry.zone,location:entry.location,notes:entry.notes}).then(function(r){
+    if(!r||!r.success){
+      entry._saving=false;entry._failed=true;
+      plRenderCards(PL.entries);
+      toast((r&&r.message)||'Retry failed.','error');
+      return;
+    }
+    entry.noteID=r.noteID;entry._saving=false;
+    plRenderCards(PL.entries);
+    toast('Note saved!','ok');
+  });
+}
+
+// Full-screen photo viewer with prev/next navigation
+function plOpenPhotoViewer(photoUrls, startIdx){
   var existing=id('plPhotoViewerOverlay');
   if(existing)existing.remove();
 
@@ -5301,10 +5358,10 @@ function plOpenPhotoViewer(photos, startIdx){
 
   var curIdx=startIdx||0;
   function show(i){
-    curIdx=((i%photos.length)+photos.length)%photos.length;
-    img.src=photos[curIdx];
+    curIdx=((i%photoUrls.length)+photoUrls.length)%photoUrls.length;
+    img.src=photoUrls[curIdx];
     zoomed=false;img.style.maxWidth='95vw';img.style.maxHeight='80vh';img.style.cursor='zoom-in';
-    if(counter)counter.textContent=(curIdx+1)+' / '+photos.length;
+    if(counter)counter.textContent=(curIdx+1)+' / '+photoUrls.length;
   }
 
   var controls=document.createElement('div');
@@ -5313,7 +5370,7 @@ function plOpenPhotoViewer(photos, startIdx){
   var counter=document.createElement('span');
   counter.style.cssText='font-size:14px;font-family:Arial;min-width:60px;text-align:center';
 
-  if(photos.length>1){
+  if(photoUrls.length>1){
     var prevBtn=document.createElement('button');
     prevBtn.innerHTML='<span class="material-icons-round" style="font-size:28px">chevron_left</span>';
     prevBtn.style.cssText='background:rgba(255,255,255,.15);border:none;color:#fff;width:44px;height:44px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center';
@@ -5321,7 +5378,7 @@ function plOpenPhotoViewer(photos, startIdx){
     controls.appendChild(prevBtn);
   }
   controls.appendChild(counter);
-  if(photos.length>1){
+  if(photoUrls.length>1){
     var nextBtn=document.createElement('button');
     nextBtn.innerHTML='<span class="material-icons-round" style="font-size:28px">chevron_right</span>';
     nextBtn.style.cssText='background:rgba(255,255,255,.15);border:none;color:#fff;width:44px;height:44px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center';
@@ -5342,32 +5399,28 @@ function plOpenPhotoViewer(photos, startIdx){
   document.body.appendChild(overlay);
   show(curIdx);
 }
-function plDeleteEntry(logID){
-  if(!confirm('Delete this entry? This cannot be undone.'))return;
+
+function plDeleteEntry(noteID){
+  if(!confirm('Delete this entry and all its photos? This cannot be undone.'))return;
   showLoader('Deleting...');
-  gasCall('serverDeletePhotoLog',S.token,logID).then(function(r){
+  gasCall('serverDeleteNote',S.token,noteID).then(function(r){
     hideLoader();
     if(r&&r.success){
       toast('Entry deleted.','ok');
-      PL.entries=PL.entries.filter(function(e){return e.logID!==logID;});
+      PL.entries=PL.entries.filter(function(e){return e.noteID!==noteID;});
       plRenderCards(PL.entries);
     } else toast((r&&r.message)||'Delete failed.','error');
   });
 }
-function plEditEntry(logID){
+
+function plEditEntry(noteID){
   var e=null;
-  for(var i=0;i<PL.entries.length;i++){if(PL.entries[i].logID===logID){e=PL.entries[i];break;}}
+  for(var i=0;i<PL.entries.length;i++){if(PL.entries[i].noteID===noteID){e=PL.entries[i];break;}}
   if(!e)return;
   PL.editPhotos=[];
-  PL.editLogID=logID;
-  // Parse existing photos
-  var existingPhotos=[];
-  if(e.photos&&e.photos.trim()){
-    var raw=e.photos.trim();
-    var arr=raw.indexOf('||')>=0?raw.split('||'):raw.split('\n');
-    for(var i=0;i<arr.length;i++){if(arr[i].trim().length>10)existingPhotos.push(arr[i].trim());}
-  }
-  PL.editExistingPhotos=existingPhotos.slice(); // mutable copy
+  PL.editNoteID=noteID;
+  PL.editRemovedPhotoIDs=[]; // track which existing photo rows to delete on save
+  PL.editExistingPhotos=(e.photos||[]).slice(); // mutable copy for the UI
 
   var html='<div style="padding:4px">'
     +'<div class="f-row">'
@@ -5380,9 +5433,7 @@ function plEditEntry(logID){
     +'</div>'
     +'<div class="f-group"><label class="f-label">Location</label><input type="text" class="f-ctrl" id="plEdit-loc" value="'+(e.location||'')+'" placeholder="Ward / Venue"></div>'
     +'<div class="f-group"><label class="f-label">Notes <span class="req">*</span></label><textarea class="f-ctrl" id="plEdit-notes" rows="4">'+e.notes+'</textarea></div>'
-    // Existing photos with delete buttons
-    +(existingPhotos.length>0?'<div class="f-group"><label class="f-label">Existing Photos <span style="font-size:11px;color:var(--tx3)">(tap X to remove)</span></label><div id="plEditExistingGrid" style="display:flex;flex-wrap:wrap;gap:8px;padding:10px;background:var(--surface2);border-radius:8px"></div></div>':'')
-    // Add new photos
+    +(PL.editExistingPhotos.length>0?'<div class="f-group"><label class="f-label">Existing Photos <span style="font-size:11px;color:var(--tx3)">(tap X to remove)</span></label><div id="plEditExistingGrid" style="display:flex;flex-wrap:wrap;gap:8px;padding:10px;background:var(--surface2);border-radius:8px"></div></div>':'')
     +'<div class="f-group"><label class="f-label">Add More Photos</label>'
     +'<div style="border:2px dashed var(--border);border-radius:10px;padding:14px;text-align:center;cursor:pointer;background:var(--surface2)" onclick="document.getElementById(\'plEditPhotoInput\').click()">'
     +'<span class="material-icons-round mi" style="font-size:24px;color:var(--tx3)">add_photo_alternate</span>'
@@ -5392,7 +5443,7 @@ function plEditEntry(logID){
     +'<div id="plEditPhotoPreview" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px"></div>'
     +'</div>'
     +'<div style="display:flex;gap:8px;margin-top:12px">'
-    +'<button class="btn btn-primary" onclick="plSaveEdit(\''+logID+'\')"><span class="material-icons-round mi">save</span> Save Changes</button>'
+    +'<button class="btn btn-primary" onclick="plSaveEdit(\''+noteID+'\')"><span class="material-icons-round mi">save</span> Save Changes</button>'
     +'<button class="btn btn-ghost" onclick="closeModal(\'mGeneric\')">Cancel</button>'
     +'</div></div>';
 
@@ -5402,7 +5453,6 @@ function plEditEntry(logID){
 
   setTimeout(function(){
     var st=id('plEdit-type');if(st)st.value=e.type||'Inspection';
-    // Render existing photo thumbnails with delete buttons
     plRenderEditExistingPhotos();
   },50);
 }
@@ -5411,99 +5461,119 @@ function plRenderEditExistingPhotos(){
   var grid=id('plEditExistingGrid');if(!grid)return;
   while(grid.firstChild)grid.removeChild(grid.firstChild);
   for(var i=0;i<PL.editExistingPhotos.length;i++){
-    (function(idx,url){
+    (function(idx){
+      var p=PL.editExistingPhotos[idx];
       var wrap=document.createElement('div');
       wrap.style.cssText='position:relative;width:70px;height:70px;border-radius:8px;overflow:hidden;border:1.5px solid var(--border)';
       var img=document.createElement('img');
+      img.src=p.photoData;
       img.style.cssText='width:100%;height:100%;object-fit:cover';
-      // Load via GAS proxy if Drive URL
-      loadPhotoIntoImg(img,url);
       var del=document.createElement('button');
       del.textContent='\u00d7';
       del.style.cssText='position:absolute;top:2px;right:2px;background:rgba(239,68,68,.85);color:#fff;border:none;border-radius:50%;width:20px;height:20px;cursor:pointer;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center;line-height:1;padding:0';
       del.title='Remove this photo';
-      del.onclick=function(e){
-        e.stopPropagation();
+      del.onclick=function(ev){
+        ev.stopPropagation();
+        PL.editRemovedPhotoIDs.push(p.photoID);
         PL.editExistingPhotos.splice(idx,1);
         plRenderEditExistingPhotos();
-        toast('Photo removed. Save to apply.','info');
       };
       wrap.appendChild(img);wrap.appendChild(del);
       grid.appendChild(wrap);
-    })(i,PL.editExistingPhotos[i]);
+    })(i);
   }
   if(!PL.editExistingPhotos.length){
     grid.innerHTML='<span style="color:var(--tx3);font-size:13px;padding:8px">All photos removed</span>';
   }
 }
+
 function plEditAddPhotos(files){
   if(!PL.editPhotos)PL.editPhotos=[];
   var arr=Array.prototype.slice.call(files);
-  for(var i=0;i<arr.length&&PL.editPhotos.length<10;i++){
-    if(arr[i].size>5*1024*1024)continue;
+  for(var i=0;i<arr.length&&PL.editPhotos.length<15;i++){
+    if(arr[i].size>8*1024*1024)continue;
     PL.editPhotos.push(arr[i]);
   }
-  // Show preview
   var prev=id('plEditPhotoPreview');if(!prev)return;
-  var html='';
+  while(prev.firstChild)prev.removeChild(prev.firstChild);
   for(var i=0;i<PL.editPhotos.length;i++){
-    var url=URL.createObjectURL(PL.editPhotos[i]);
-    html+='<div style="position:relative;width:60px;height:60px;border-radius:8px;overflow:hidden;border:1px solid var(--border)">'
-      +'<img src="'+url+'" style="width:100%;height:100%;object-fit:cover">'
-      +'<button onclick="PL.editPhotos.splice('+i+',1);plEditAddPhotos([])" style="position:absolute;top:1px;right:1px;background:rgba(0,0,0,.6);border:none;border-radius:50%;width:16px;height:16px;color:#fff;cursor:pointer;font-size:11px;line-height:16px;text-align:center;padding:0">&times;</button>'
-      +'</div>';
+    (function(idx){
+      var wrap=document.createElement('div');
+      wrap.style.cssText='position:relative;width:60px;height:60px;border-radius:8px;overflow:hidden;border:1px solid var(--border)';
+      var img=document.createElement('img');
+      img.src=URL.createObjectURL(PL.editPhotos[idx]);
+      img.style.cssText='width:100%;height:100%;object-fit:cover';
+      var del=document.createElement('button');
+      del.textContent='\u00d7';
+      del.style.cssText='position:absolute;top:1px;right:1px;background:rgba(0,0,0,.6);border:none;border-radius:50%;width:16px;height:16px;color:#fff;cursor:pointer;font-size:11px;line-height:16px;text-align:center;padding:0';
+      del.onclick=function(){PL.editPhotos.splice(idx,1);plEditAddPhotos([]);};
+      wrap.appendChild(img);wrap.appendChild(del);
+      prev.appendChild(wrap);
+    })(i);
   }
-  prev.innerHTML=html;
 }
-function plSaveEdit(logID){
+
+function plSaveEdit(noteID){
   var updated={
-    logID:logID,date:V('plEdit-date'),time:V('plEdit-time'),
+    noteID:noteID,date:V('plEdit-date'),time:V('plEdit-time'),
     type:V('plEdit-type'),zone:V('plEdit-zone'),
     location:V('plEdit-loc'),notes:id('plEdit-notes')?id('plEdit-notes').value:''
   };
   if(!updated.notes.trim()){toast('Notes cannot be empty.','error');return;}
-  // Save existing photos (with any removed) as the new base
-  updated.photos=(PL.editExistingPhotos||[]).join('||');
   showLoader('Saving...');
-  gasCall('serverUpdatePhotoLog',S.token,updated).then(function(r){
+
+  // Step 1: update text fields
+  gasCall('serverUpdateNote',S.token,updated).then(function(r){
     if(!r||!r.success){hideLoader();toast((r&&r.message)||'Update failed.','error');return;}
-    if(!PL.editPhotos||!PL.editPhotos.length){finishEdit(logID,updated);return;}
-    // Process + upload new photos one by one
-    var b64s=[];var fi=0;
-    function processNext(){
-      if(fi>=PL.editPhotos.length){uploadNext(0);return;}
-      var reader=new FileReader();
-      reader.onload=function(ev){
-        var img2=new Image();
-        img2.onload=function(){
-          var c2=document.createElement('canvas');
-          var sc=Math.min(400/img2.width,400/img2.height,1);
-          c2.width=Math.round(img2.width*sc);c2.height=Math.round(img2.height*sc);
-          c2.getContext('2d').drawImage(img2,0,0,c2.width,c2.height);
-          b64s.push(c2.toDataURL('image/jpeg',0.75));fi++;processNext();
-        };img2.src=ev.target.result;
-      };reader.readAsDataURL(PL.editPhotos[fi]);
+
+    // Step 2: delete any photos the admin removed (each its own small call)
+    var removedIDs=(PL.editRemovedPhotoIDs||[]).slice();
+    function deleteNext(){
+      if(!removedIDs.length){uploadNewPhotos();return;}
+      var pid=removedIDs.shift();
+      gasCall('serverDeleteNotePhoto',S.token,pid).then(function(){deleteNext();});
     }
-    function uploadNext(ni){
-      if(ni>=b64s.length){finishEdit(logID,updated);return;}
-      var lm=id('loaderMsg');if(lm)lm.textContent='Uploading photo '+(ni+1)+' of '+b64s.length+'...';
-      gasCall('serverAppendPhotoToLog',S.token,{logID:logID,photo:b64s[ni]}).then(function(){uploadNext(ni+1);});
+
+    // Step 3: upload any newly added photos (each its own small call)
+    function uploadNewPhotos(){
+      var newPhotos=PL.editPhotos||[];
+      if(!newPhotos.length){finishEdit(noteID,updated);return;}
+      var fi=0;
+      function next(){
+        if(fi>=newPhotos.length){finishEdit(noteID,updated);return;}
+        var lm=id('loaderMsg');if(lm)lm.textContent='Uploading photo '+(fi+1)+' of '+newPhotos.length+'...';
+        var reader=new FileReader();
+        reader.onload=function(ev){
+          var img=new Image();
+          img.onload=function(){
+            var c=document.createElement('canvas');
+            var sc=Math.min(350/img.width,350/img.height,1);
+            c.width=Math.round(img.width*sc);c.height=Math.round(img.height*sc);
+            c.getContext('2d').drawImage(img,0,0,c.width,c.height);
+            var b64=c.toDataURL('image/jpeg',0.7);
+            gasCall('serverAddNotePhoto',S.token,{noteID:noteID,photo:b64}).then(function(){fi++;next();});
+          };
+          img.onerror=function(){fi++;next();};
+          img.src=ev.target.result;
+        };
+        reader.readAsDataURL(newPhotos[fi]);
+      }
+      next();
     }
-    processNext();
+
+    deleteNext();
   });
 }
-function finishEdit(logID,updated){
-  hideLoader();closeModal('mGeneric');toast('Entry updated!','ok');
-  for(var i=0;i<PL.entries.length;i++){
-    if(PL.entries[i].logID===logID){
-      PL.entries[i].date=updated.date;PL.entries[i].time=updated.time;
-      PL.entries[i].type=updated.type;PL.entries[i].zone=updated.zone;
-      PL.entries[i].location=updated.location;PL.entries[i].notes=updated.notes;
-      if(updated.photos!==undefined)PL.entries[i].photos=updated.photos;
-      break;
-    }
-  }
-  PL.editPhotos=[];PL.editExistingPhotos=[];plRenderCards(PL.entries);
+
+function finishEdit(noteID,updated){
+  hideLoader();closeModal('mGeneric');
+  toast('Entry updated!','ok');
+  // Refresh from server so the photo list reflects deletions/additions accurately
+  gasCall('serverGetNotes',S.token).then(function(r){
+    if(r&&r.success){PL.entries=r.data||[];}
+    PL.editPhotos=[];PL.editExistingPhotos=[];PL.editRemovedPhotoIDs=[];
+    plRenderCards(PL.entries);
+  });
 }
 function driveToImgUrl(url){
   // Convert any Drive URL to uc?export=view which works without Google login
