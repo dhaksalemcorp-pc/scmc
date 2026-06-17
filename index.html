@@ -5017,9 +5017,9 @@ function plRenderPhotoPreview(){
   pp.innerHTML=html;
 }
 function savePlEntry(){
-  var date=V('pl-date'),time=V('pl-time'),type=V('pl-type'),zone=V('pl-zone'),loc=V('pl-location'),notes=V('pl-notes');
+  var date=V('pl-date'),time=V('pl-time'),type=V('pl-type'),zone=V('pl-zone'),
+      loc=V('pl-location'),notes=id('pl-notes')?id('pl-notes').value:'';
   if(!date||!type){toast('Please fill Date and select a Type.','error');return;}
-  // Validate context field based on type
   if((type==='Inspection'||type==='Site Visit')&&!zone){
     toast('Please select at least one Zone for '+type+'.','error');return;
   }
@@ -5027,94 +5027,82 @@ function savePlEntry(){
     toast('Please select at least one Department for the Meeting.','error');return;
   }
   if(!notes.trim()){toast('Please enter notes / observations.','error');return;}
-  var entry={date:date,time:time,type:type,zone:zone,location:loc,notes:notes,photos:''};
 
-  if(PL.photos.length===0){doSavePlEntry(entry);return;}
+  if(PL.photos.length===0){
+    // No photos — save directly
+    var entry={date:date,time:time,type:type,zone:zone,location:loc,notes:notes,photos:''};
+    doSavePlEntry(entry);
+    return;
+  }
 
-  // Resize each photo to max 300x300 JPEG before storing as base64
-  // This keeps each photo under ~20KB — safe for Sheets cell storage
-  showLoader('Processing photos...');
-  var processed=[],idx=0;
+  // Compress all photos first, then save everything in ONE single call
+  showLoader('Processing photos ('+PL.photos.length+')...');
+  var processed=[]; var idx=0;
   function processNext(){
     if(idx>=PL.photos.length){
-      entry.photos=processed.join('||');// use || as separator
-      hideLoader();doSavePlEntry(entry);return;
+      hideLoader();
+      var entry={date:date,time:time,type:type,zone:zone,location:loc,notes:notes,
+                 photos:processed.join('||')};
+      doSavePlEntry(entry);
+      return;
     }
     var f=PL.photos[idx];
-    var lm=id('loaderMsg');if(lm)lm.textContent='Processing photo '+(idx+1)+' of '+PL.photos.length+'...';
+    var lm=id('loaderMsg');
+    if(lm)lm.textContent='Processing photo '+(idx+1)+' of '+PL.photos.length+'...';
     var reader=new FileReader();
-    reader.onload=function(e){
+    reader.onload=function(ev){
       var img=new Image();
       img.onload=function(){
         var canvas=document.createElement('canvas');
-        var maxSize=400;  // 400px keeps clarity while staying under ~25KB
+        // 300px at quality 0.65 ≈ 15-18KB per photo — safe for Sheets 50K cell limit
+        var maxSize=300;
         var scale=Math.min(maxSize/img.width,maxSize/img.height,1);
         canvas.width=Math.round(img.width*scale);
         canvas.height=Math.round(img.height*scale);
         canvas.getContext('2d').drawImage(img,0,0,canvas.width,canvas.height);
-        var b64=canvas.toDataURL('image/jpeg',0.75);  // 0.75 quality — clear and readable
-        // Only include if under 40KB base64
-        if(b64.length<55000){processed.push(b64);}
+        var b64=canvas.toDataURL('image/jpeg',0.65);
+        if(b64.length<45000)processed.push(b64); // only include if under 45KB
         idx++;processNext();
       };
       img.onerror=function(){idx++;processNext();};
-      img.src=e.target.result;
+      img.src=ev.target.result;
     };
+    reader.onerror=function(){idx++;processNext();};
     reader.readAsDataURL(f);
   }
   processNext();
 }
 function doSavePlEntry(entry){
-  var allPhotos=entry.photos||'';
-  var entryFirst={date:entry.date,time:entry.time,type:entry.type,zone:entry.zone,
-    location:entry.location,notes:entry.notes,photos:''};
   showLoader('Saving entry...');
-  gasCall('serverSavePhotoLog',S.token,entryFirst).then(function(r){
-    if(!r||!r.success){hideLoader();toast((r&&r.message)||'Save failed.','error');return;}
-    var logID=r.logID||('LOG'+Date.now());
-    entry.logID=logID;
-    entry.createdBy=S.user?S.user.name:'';
-    entry.createdAt=new Date().toISOString();
-    if(!allPhotos){
-      hideLoader();toast('Entry saved!','ok');
-      PL.entries.unshift(entry);
-      clearPlForm();
-      // Show list and render immediately — NO server refetch
-      var fv=id('plFormView'),lv=id('plListView');
-      if(fv)fv.style.display='none';
-      if(lv)lv.style.display='block';
-      plRenderCards(PL.entries);
+  // Send everything in ONE call — text + all photos together
+  // serverSavePhotoLog stores the full photos string in col 8 at row creation time
+  gasCall('serverSavePhotoLog',S.token,{
+    date:entry.date, time:entry.time, type:entry.type, zone:entry.zone,
+    location:entry.location, notes:entry.notes, photos:entry.photos||''
+  }).then(function(r){
+    hideLoader();
+    if(!r||!r.success){
+      toast((r&&r.message)||'Save failed. Please try again.','error');
       return;
     }
-    var photoArr=(allPhotos.indexOf('||')>=0?allPhotos.split('||'):allPhotos.split('\n'))
-      .filter(function(p){return p.trim().length>10;});
-    var idx=0;
-    var uploadedPhotos=[];
-    function nextPhoto(){
-      if(idx>=photoArr.length){
-        // All photos uploaded — update local entry with actual uploaded photos
-        entry.photos=uploadedPhotos.join('||');
-        hideLoader();
-        toast('Saved with '+uploadedPhotos.length+' photo'+(uploadedPhotos.length!==1?'s':'')+'!','ok');
-        PL.entries.unshift(entry);
-        clearPlForm();
-        // Render immediately with the photos we just uploaded — no server refetch needed
-        var fv=id('plFormView'),lv=id('plListView');
-        if(fv)fv.style.display='none';
-        if(lv)lv.style.display='block';
-        plRenderCards(PL.entries);
-        return;
-      }
-      var lm=id('loaderMsg');
-      if(lm)lm.textContent='Uploading photo '+(idx+1)+' of '+photoArr.length+'...';
-      var singlePhoto=photoArr[idx];
-      gasCall('serverAppendPhotoToLog',S.token,{logID:logID,photo:singlePhoto}).then(function(ar){
-        // Track which photos actually got saved
-        uploadedPhotos.push(singlePhoto);
-        idx++;nextPhoto();
-      });
+    entry.logID = r.logID || ('LOG'+Date.now());
+    entry.createdBy = S.user ? S.user.name : '';
+    entry.createdAt = new Date().toISOString();
+    var photoCount = entry.photos
+      ? entry.photos.split('||').filter(function(p){return p.length>10;}).length
+      : 0;
+    if(photoCount>0){
+      toast('Entry saved with '+photoCount+' photo'+(photoCount!==1?'s':'')+'!','ok');
+    } else {
+      toast('Entry saved successfully!','ok');
     }
-    nextPhoto();
+    // Prepend to local cache and render immediately — photos visible right away
+    PL.entries.unshift(entry);
+    clearPlForm();
+    var fv=id('plFormView'), lv=id('plListView');
+    if(fv)fv.style.display='none';
+    if(lv)lv.style.display='block';
+    plRenderCards(PL.entries);
   });
 }
 function clearPlForm(){
