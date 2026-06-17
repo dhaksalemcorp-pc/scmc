@@ -4610,9 +4610,16 @@ function exportPDF(tasks,context){
   }
   var sigHTML=isComm?'<div style="margin-top:36px;padding:16px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px"><div style="font-size:9.5px;color:#475569;margin-bottom:18px;font-style:italic;text-align:center">This report has been generated from the Salem City Municipal Corporation Task Management System for the Commissioner\'s review and appropriate action.</div><div style="display:flex;gap:40px"><div style="flex:1;text-align:center"><div style="height:36px"></div><div style="border-top:1.5px solid #0b1f45;padding-top:6px"><div style="font-size:11px;font-weight:700;color:#0b1f45">Personal Clerk to Commissioner</div><div style="font-size:9px;color:#64748b;margin-top:2px">Submitted By</div><div style="font-size:9px;color:#94a3b8;margin-top:1px">Date: '+dateStr+'</div></div></div><div style="flex:1;text-align:center"><div style="height:36px"></div><div style="border-top:1.5px solid #0b1f45;padding-top:6px"><div style="font-size:11px;font-weight:700;color:#0b1f45">Commissioner</div><div style="font-size:9px;color:#64748b;margin-top:2px">Salem City Municipal Corporation</div><div style="font-size:9px;color:#94a3b8;margin-top:1px">Date: _______________</div></div></div></div></div>':'';
   var css='@page{size:A4;margin:15mm}*{box-sizing:border-box;margin:0;padding:0}body{font-family:"Segoe UI",Arial,sans-serif;font-size:11px;color:#1e293b;background:#fff;line-height:1.5}.watermark{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%) rotate(-35deg);font-size:80px;font-weight:900;color:rgba(11,31,69,.03);white-space:nowrap;pointer-events:none;letter-spacing:10px}.hband{background:linear-gradient(135deg,#0b1f45,#1a3a6b);color:#fff;display:flex;align-items:stretch}.gbar{width:8px;background:linear-gradient(180deg,#f59e0b,#d97706);flex-shrink:0}.hmain{flex:1;padding:16px 18px;display:flex;justify-content:space-between;align-items:center}.emblem{width:52px;height:52px;background:linear-gradient(135deg,#f59e0b,#d97706);border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-size:20px;font-weight:900;flex-shrink:0}.gdiv{height:3px;background:linear-gradient(90deg,#f59e0b,#d97706,#f59e0b)}.metarow{background:#f8fafc;border-bottom:1px solid #e2e8f0;padding:7px 16px;display:flex;gap:20px;flex-wrap:wrap;font-size:9.5px;color:#475569}.sechd{display:flex;align-items:center;gap:8px;margin:16px 0 10px;padding-bottom:5px;border-bottom:2px solid #0b1f45}.secnum{width:20px;height:20px;background:#0b1f45;color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9.5px;font-weight:800;flex-shrink:0}.sechd h2{font-size:11px;font-weight:800;color:#0b1f45;text-transform:uppercase;letter-spacing:.07em}.kpirow{display:flex;gap:10px;margin-bottom:16px}.kbox{flex:1;border-radius:7px;padding:11px 10px;text-align:center;border:1px solid}.kbox .knum{font-size:22px;font-weight:900;line-height:1}.kbox .klbl{font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;margin-top:3px}.knavy{background:#eff6ff;border-color:#bfdbfe}.knavy .knum,.knavy .klbl{color:#1d4ed8}.kgreen{background:#f0fdf4;border-color:#bbf7d0}.kgreen .knum,.kgreen .klbl{color:#15803d}.kgold{background:#fffbeb;border-color:#fde68a}.kgold .knum,.kgold .klbl{color:#b45309}.kred{background:#fff1f2;border-color:#fecdd3}.kred .knum,.kred .klbl{color:#be123c}.kteal{background:#f0f9ff;border-color:#bae6fd}.kteal .knum,.kteal .klbl{color:#0369a1}.bgrid{display:flex;gap:12px}.bcol{flex:1}.twrap{border:1px solid #e2e8f0;border-radius:6px;overflow:hidden;margin-bottom:14px}table{width:100%;border-collapse:collapse}thead tr{background:#0b1f45;color:#fff}thead th{padding:7px 9px;text-align:left;font-weight:700;font-size:9px;text-transform:uppercase;letter-spacing:.05em;white-space:nowrap}tbody tr:nth-child(even){background:#f8fafc}.pbreak{page-break-before:always}.fband{margin-top:16px;border-top:2px solid #e2e8f0;padding-top:7px;display:flex;justify-content:space-between;align-items:center;font-size:8.5px;color:#94a3b8}@media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact}}';
+  // Read saved logo for PDF header
+  var savedLogo='';
+  try{savedLogo=localStorage.getItem('sc-logo')||'';}catch(e){}
+  var emblemHtml=savedLogo
+    ?'<img src="'+savedLogo+'" style="width:52px;height:52px;border-radius:50%;object-fit:contain;background:#fff;border:2px solid rgba(255,255,255,.3);padding:3px;flex-shrink:0" alt="SCMC Logo">'
+    :'<div class="emblem">SC</div>';
+
   var html='<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>Task Report \u2014 Salem Corporation</title><style>'+css+'</style></head><body>'
     +'<div class="watermark">SALEM CORPORATION</div>'
-    +'<div class="hband"><div class="gbar"></div><div class="hmain"><div style="display:flex;align-items:center;gap:14px"><div class="emblem">SC</div><div><div style="font-size:14px;font-weight:800;letter-spacing:.02em">Salem City Municipal Corporation</div><div style="font-size:9px;color:rgba(255,255,255,.6);margin-top:2px;text-transform:uppercase;letter-spacing:.05em">Tamil Nadu Government \u00b7 Urban Local Body</div></div></div><div style="text-align:right"><div style="background:rgba(245,158,11,.2);border:1px solid rgba(245,158,11,.4);color:#fbbf24;padding:3px 10px;border-radius:4px;font-size:8.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin-bottom:4px;display:inline-block">'+(isComm?'Commissioner Review Report':'Task Export Report')+'</div><div style="font-size:15px;font-weight:800">'+(isComm?'Task Performance Review':'Task Report')+'</div><div style="font-size:8.5px;color:rgba(255,255,255,.6);margin-top:3px;line-height:1.8">Report No: <strong>'+reportNo+'</strong><br>Date: <strong>'+dateStr+'</strong> \u00b7 Time: <strong>'+timeStr+'</strong></div></div></div></div>'
+    +'<div class="hband"><div class="gbar"></div><div class="hmain"><div style="display:flex;align-items:center;gap:14px">'+emblemHtml+'<div><div style="font-size:14px;font-weight:800;letter-spacing:.02em">Salem City Municipal Corporation</div><div style="font-size:9px;color:rgba(255,255,255,.6);margin-top:2px;text-transform:uppercase;letter-spacing:.05em">Tamil Nadu Government \u00b7 Urban Local Body</div></div></div><div style="text-align:right"><div style="background:rgba(245,158,11,.2);border:1px solid rgba(245,158,11,.4);color:#fbbf24;padding:3px 10px;border-radius:4px;font-size:8.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin-bottom:4px;display:inline-block">'+(isComm?'Commissioner Review Report':'Task Export Report')+'</div><div style="font-size:15px;font-weight:800">'+(isComm?'Task Performance Review':'Task Report')+'</div><div style="font-size:8.5px;color:rgba(255,255,255,.6);margin-top:3px;line-height:1.8">Report No: <strong>'+reportNo+'</strong><br>Date: <strong>'+dateStr+'</strong> \u00b7 Time: <strong>'+timeStr+'</strong></div></div></div></div>'
     +'<div class="gdiv"></div>'
     +'<div class="metarow"><div>\ud83d\udccb Prepared by: <strong>'+preparedBy+'</strong></div><div>\ud83d\udd0d Filters: <strong>'+filterNote+'</strong></div><div>\ud83d\udcca Records: <strong>'+total+' tasks</strong></div></div>'
     +'<div class="sechd" style="margin-top:14px"><div class="secnum">1</div><h2>Executive Summary</h2></div>'
@@ -5040,14 +5047,14 @@ function savePlEntry(){
       var img=new Image();
       img.onload=function(){
         var canvas=document.createElement('canvas');
-        var maxSize=200;  // Smaller = faster upload, still clear enough for reference
+        var maxSize=400;  // 400px keeps clarity while staying under ~25KB
         var scale=Math.min(maxSize/img.width,maxSize/img.height,1);
         canvas.width=Math.round(img.width*scale);
         canvas.height=Math.round(img.height*scale);
         canvas.getContext('2d').drawImage(img,0,0,canvas.width,canvas.height);
-        var b64=canvas.toDataURL('image/jpeg',0.50);  // 0.5 quality keeps each photo <10KB
-        // Only include if under 20KB base64
-        if(b64.length<28000){processed.push(b64);}
+        var b64=canvas.toDataURL('image/jpeg',0.75);  // 0.75 quality — clear and readable
+        // Only include if under 40KB base64
+        if(b64.length<55000){processed.push(b64);}
         idx++;processNext();
       };
       img.onerror=function(){idx++;processNext();};
@@ -5328,10 +5335,10 @@ function plSaveEdit(logID){
         var img2=new Image();
         img2.onload=function(){
           var c2=document.createElement('canvas');
-          var sc=Math.min(200/img2.width,200/img2.height,1);
+          var sc=Math.min(400/img2.width,400/img2.height,1);
           c2.width=Math.round(img2.width*sc);c2.height=Math.round(img2.height*sc);
           c2.getContext('2d').drawImage(img2,0,0,c2.width,c2.height);
-          b64s.push(c2.toDataURL('image/jpeg',0.5));fi++;processNext();
+          b64s.push(c2.toDataURL('image/jpeg',0.75));fi++;processNext();
         };img2.src=ev.target.result;
       };reader.readAsDataURL(PL.editPhotos[fi]);
     }
@@ -5464,10 +5471,18 @@ function buildPhotoGrid(photosStr, idPrefix){
 function openPhotoFull(imgId){
   var img=document.getElementById(imgId);
   if(!img||!img.src||img.style.display==='none')return;
+  var src=img.src;
   var w=window.open('','_blank');
   if(w){
-    w.document.write('<html><body style="margin:0;background:#111;display:flex;align-items:center;justify-content:center;min-height:100vh;touch-action:pinch-zoom">'
-      +'<img src="'+img.src+'" style="max-width:100%;max-height:100vh;object-fit:contain" onclick="window.close()">'
+    w.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=5"><title>Photo</title>'
+      +'<style>*{margin:0;padding:0;box-sizing:border-box}body{background:#000;min-height:100vh;display:flex;align-items:center;justify-content:center;overflow:auto}'
+      +'img{max-width:100vw;max-height:100vh;object-fit:contain;cursor:zoom-in;display:block}'
+      +'img.zoomed{max-width:none;max-height:none;width:auto;height:auto;cursor:zoom-out}'
+      +'#hint{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:rgba(255,255,255,.15);color:#fff;padding:6px 16px;border-radius:999px;font-size:13px;font-family:Arial,sans-serif;pointer-events:none;opacity:1;transition:opacity 1s}'
+      +'</style></head><body>'
+      +'<img id="ph" src="'+src+'" onclick="var me=document.getElementById(\'ph\');me.classList.toggle(\'zoomed\')" />'
+      +'<div id="hint">Tap to zoom &bull; Pinch to zoom on mobile &bull; Close tab to exit</div>'
+      +'<script>setTimeout(function(){var h=document.getElementById(\'hint\');if(h)h.style.opacity=\'0\';},2500);<\/script>'
       +'</body></html>');
     w.document.close();
   }
@@ -5516,9 +5531,61 @@ function generatePlDiary(fmt){
   showLoader('AI is generating diary...');
   var notesText='';
   for(var i=0;i<entries.length;i++){var e=entries[i];notesText+='---\nDate: '+e.date+' '+e.time+'\nType: '+e.type+'\nZone: '+e.zone+(e.location?' | Location: '+e.location:'')+' \nNotes: '+e.notes+'\n';}
-  var styleMap={diary:"Write as Commissioner's official diary. 2-3 crisp sentences per entry, past tense, third person, formal government style. Format: Date | Type | Summary.",weekly:"Weekly activity report. Group by type. Each item: date, location, 1-sentence summary and action.",monthly:"Monthly summary. Date-wise one-liners: Date | Type | Location | Short Summary."};
-  var prompt='You are an administrative assistant for Salem City Municipal Corporation. Generate a professional '+style+' for the Commissioner.\n\n'+(styleMap[style]||styleMap.diary)+'\n\nPeriod: '+from+' to '+to+'\nEntries:\n'+notesText+'\n\nOutput only the diary content. Be concise and formal.';
-  fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1000,messages:[{role:'user',content:prompt}]})})
+  var styleMap={
+    diary:[
+      'Generate the Commissioner\'s Official Diary in the following format:',
+      '',
+      'For EACH entry, write:',
+      '  DATE: [Full date e.g. 14 June 2026, Day name]',
+      '  TYPE: [Inspection / Meeting / Site Visit]',
+      '  ZONE/DEPT: [Zone name or Department]',
+      '  LOCATION: [Specific location / ward / venue if available]',
+      '  SUMMARY: [2-4 sentences in formal government style, past tense, third person. State what was done, key observations made, issues identified, and any directions given or actions ordered. Be specific and factual.]',
+      '  ACTION TAKEN / DIRECTED: [Any specific directions, orders or follow-up actions mentioned]',
+      '  ---',
+      '',
+      'Use formal Tamil Nadu government administrative language. Do not omit any entry. Each entry must be complete and self-contained.'
+    ].join('\n'),
+    weekly:[
+      'Generate a Weekly Activity Report for the Commissioner with the following structure:',
+      '',
+      'WEEKLY ACTIVITY REPORT',
+      'Period: [From date] to [To date]',
+      '',
+      'Group entries by type (Inspections, Meetings, Site Visits).',
+      'For each entry:',
+      '  - Date | Location | Summary (2 sentences: what happened, what was directed)',
+      '',
+      'End with a brief WEEK SUMMARY: total inspections, meetings, site visits, key themes, major directions given.'
+    ].join('\n'),
+    monthly:[
+      'Generate a Monthly Summary Report for the Commissioner in this format:',
+      '',
+      'MONTHLY ACTIVITY SUMMARY',
+      'Month/Period: [Period]',
+      '',
+      'DATE-WISE ACTIVITY LOG:',
+      'For each date, list: Date | Type | Location | One-sentence summary',
+      '',
+      'MONTHLY STATISTICS:',
+      '- Total Inspections: [count]',
+      '- Total Meetings: [count]  ',
+      '- Total Site Visits: [count]',
+      '- Zones Covered: [list]',
+      '- Departments Covered: [list]',
+      '',
+      'KEY HIGHLIGHTS: [3-5 bullet points of most important actions/directions this month]',
+      '',
+      'Use formal Tamil Nadu government style throughout.'
+    ].join('\n')
+  };
+  var prompt='You are the personal clerk to the Commissioner of Salem City Municipal Corporation, Tamil Nadu. You are generating an official record from inspection and meeting notes.\n\n'
+    +'STYLE: '+style+'\n\n'
+    +'INSTRUCTIONS:\n'+(styleMap[style]||styleMap.diary)+'\n\n'
+    +'PERIOD: '+from+' to '+to+'\n\n'
+    +'SOURCE NOTES ('+entries.length+' entries):\n'+notesText+'\n\n'
+    +'Generate the complete formal document now. Do not add any preamble or explanation — output only the diary/report content itself.';
+  fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:4000,messages:[{role:'user',content:prompt}]})})
   .then(function(r){return r.json();})
   .then(function(data){
     hideLoader();
@@ -5630,13 +5697,13 @@ function renderUsers(users){
     return;
   }
 
-  // Role → colour
+  // Role → clean professional colours
   var roleMeta={
-    Commissioner:{bg:'#1d4ed8',ic:'&#128081;'},
-    Admin:{bg:'#0369a1',ic:'&#128736;'},
-    HOD:{bg:'#059669',ic:'&#128188;'},
-    Officer:{bg:'#6d28d9',ic:'&#128100;'},
-    ViewAll:{bg:'#b45309',ic:'&#128065;'}
+    Commissioner:{bg:'#0f172a',ic:'\u2605'},
+    Admin:{bg:'#1e40af',ic:'\u2022'},
+    HOD:{bg:'#064e3b',ic:'\u2022'},
+    Officer:{bg:'#374151',ic:'\u2022'},
+    ViewAll:{bg:'#4b5563',ic:'\u2022'}
   };
 
   while(tbody.firstChild)tbody.removeChild(tbody.firstChild);
@@ -5688,8 +5755,8 @@ function renderUsers(users){
       // ROLE badge
       var td6=document.createElement('td');
       var roleBadge=document.createElement('span');
-      roleBadge.style.cssText='display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:7px;font-size:12px;font-weight:600;color:#fff;background:'+rm.bg;
-      roleBadge.innerHTML=rm.ic+' '+u.role;
+      roleBadge.style.cssText='display:inline-flex;align-items:center;gap:5px;padding:3px 11px;border-radius:5px;font-size:12px;font-weight:600;color:#fff;background:'+rm.bg+';letter-spacing:.02em';
+      roleBadge.textContent=u.role;
       td6.appendChild(roleBadge);
 
       // STATUS badge
@@ -6449,9 +6516,9 @@ function mpEnableEdit(){
   var ef=[['mp-empid',u.employeeID],['mp-mobile',u.mobile],['mp-email',u.email]];
   for(var i=0;i<ef.length;i++){var el=id(ef[i][0]);if(el)el.value=String(ef[i][1]||'');}
   var unEl=id('mp-username'),unNote=id('mpUsernameNote');
-  var isOfficer=(u.role==='Officer');
-  if(unEl){unEl.value=String(u.username||'');unEl.readOnly=isOfficer;unEl.style.background=isOfficer?'var(--surface2)':'';}
-  if(unNote)unNote.textContent=isOfficer?'(read-only for officers)':'';
+  var isAdmin=(u.role==='Admin'||u.role==='Commissioner');
+  if(unEl){unEl.value=String(u.username||'');unEl.readOnly=!isAdmin;unEl.style.background=!isAdmin?'var(--surface2)':'';}
+  if(unNote)unNote.textContent=!isAdmin?'(username can only be changed by Admin)':'';
   // Show photo controls only in edit mode
   var cam=id('mpCameraBtn'),btns=id('mpPhotoBtns'),wrap=id('mpAvatarWrap');
   if(cam)cam.style.display='flex';
@@ -6502,9 +6569,9 @@ function mpSave(){
 }
 
 function mpSaveProfile(){
-  var u=S.user,isOfficer=(u&&u.role==='Officer');
+  var u=S.user,canChangeUsername=(u&&(u.role==='Admin'||u.role==='Commissioner'));
   var empid    = V('mp-empid').trim();
-  var username = isOfficer?(u.username||''):V('mp-username').trim();
+  var username = canChangeUsername?V('mp-username').trim():(u.username||'');
   var mobile   = V('mp-mobile').trim();
   var email    = V('mp-email').trim();
   if(!username){toast('Username cannot be empty.','error');return;}
