@@ -512,6 +512,7 @@ body {
 .task-card-meta-item .material-icons-round{font-size:13px}
 .hod-section-header{padding:10px 4px 6px;display:flex;align-items:center;gap:8px;margin-top:8px}
 .hod-section-header:first-child{margin-top:0}
+.hod-section-header:hover{opacity:.85}
 .filt-btn{padding:5px 13px;border-radius:7px;font-size:12.5px;font-weight:500;cursor:pointer;border:1.5px solid var(--border);background:var(--surface2);color:var(--tx2);transition:all .15s;white-space:nowrap;line-height:1.4}
 .filt-btn.active{background:var(--c-blue);color:#fff;border-color:var(--c-blue);box-shadow:0 2px 6px rgba(29,78,216,.3)}
 .filt-btn:hover:not(.active){border-color:var(--c-blue);color:var(--c-blue)}
@@ -3672,20 +3673,54 @@ function renderCards(tasks){
       if(tasks[i].officerID===S.user.userID||tasks[i].officerName===S.user.name) myTasks.push(tasks[i]);
       else deptTasks.push(tasks[i]);
     }
-    // My Tasks header
-    var h1=document.createElement('div'); h1.className='hod-section-header';
-    h1.innerHTML='<span class="material-icons-round" style="color:var(--c-blue);font-size:16px">person</span>'
-      +'<span style="font-size:12px;font-weight:700;color:var(--c-blue);text-transform:uppercase;letter-spacing:.05em">My Tasks ('+myTasks.length+')</span>';
-    grid.appendChild(h1);
-    if(!myTasks.length){var nm=document.createElement('div');nm.className='card';nm.style.padding='16px';nm.style.color='var(--tx3)';nm.style.textAlign='center';nm.textContent='No tasks assigned to you directly.';grid.appendChild(nm);}
-    for(var i=0;i<myTasks.length;i++) grid.appendChild(makeTaskCard(myTasks[i],false,true,false));
-    // Dept Tasks header
-    var h2=document.createElement('div'); h2.className='hod-section-header';
-    h2.innerHTML='<span class="material-icons-round" style="color:#059669;font-size:16px">group</span>'
-      +'<span style="font-size:12px;font-weight:700;color:#059669;text-transform:uppercase;letter-spacing:.05em">Department Tasks ('+deptTasks.length+')</span>';
-    grid.appendChild(h2);
-    if(!deptTasks.length){var nd=document.createElement('div');nd.className='card';nd.style.padding='16px';nd.style.color='var(--tx3)';nd.style.textAlign='center';nd.textContent='No department tasks found.';grid.appendChild(nd);}
-    for(var i=0;i<deptTasks.length;i++) grid.appendChild(makeTaskCard(deptTasks[i],false,true,true));
+
+    function makeCollapsibleSection(title, icon, color, sectionTasks, showReassign, sectionKey){
+      var wrap=document.createElement('div');
+      wrap.style.marginBottom='4px';
+
+      var hd=document.createElement('div');
+      hd.className='hod-section-header';
+      hd.style.cssText+='cursor:pointer;display:flex;align-items:center;gap:8px;user-select:none';
+      hd.innerHTML='<span class="material-icons-round" style="color:'+color+';font-size:16px">'+icon+'</span>'
+        +'<span style="font-size:12px;font-weight:700;color:'+color+';text-transform:uppercase;letter-spacing:.05em">'+title+' ('+sectionTasks.length+')</span>'
+        +'<span class="material-icons-round hod-chevron" style="margin-left:auto;color:'+color+';font-size:20px;transition:transform .2s">expand_more</span>';
+
+      var body=document.createElement('div');
+      body.className='hod-section-body';
+
+      // Restore previous collapsed state (persists across re-renders / filter changes)
+      var collapsed = S.hodCollapsed && S.hodCollapsed[sectionKey];
+      if(collapsed){
+        body.style.display='none';
+        var chev=hd.querySelector('.hod-chevron');
+        if(chev)chev.style.transform='rotate(-90deg)';
+      }
+
+      hd.onclick=function(){
+        var isOpen = body.style.display!=='none';
+        body.style.display = isOpen?'none':'';
+        var chev=hd.querySelector('.hod-chevron');
+        if(chev)chev.style.transform = isOpen?'rotate(-90deg)':'';
+        if(!S.hodCollapsed)S.hodCollapsed={};
+        S.hodCollapsed[sectionKey]=isOpen; // true = now collapsed
+      };
+
+      if(!sectionTasks.length){
+        var nm=document.createElement('div');
+        nm.className='card';nm.style.padding='16px';nm.style.color='var(--tx3)';nm.style.textAlign='center';
+        nm.textContent='No tasks found.';
+        body.appendChild(nm);
+      } else {
+        for(var i=0;i<sectionTasks.length;i++) body.appendChild(makeTaskCard(sectionTasks[i],false,true,showReassign));
+      }
+
+      wrap.appendChild(hd);
+      wrap.appendChild(body);
+      return wrap;
+    }
+
+    grid.appendChild(makeCollapsibleSection('My Tasks','person','var(--c-blue)',myTasks,false,'myTasks'));
+    grid.appendChild(makeCollapsibleSection('Department Tasks','group','#059669',deptTasks,true,'deptTasks'));
     return;
   }
 
@@ -4922,15 +4957,14 @@ function loadPhotoLog(){
   var adminAct=id('plAdminActions'),viewAct=id('plViewActions');
   if(adminAct)adminAct.style.display=isAdmin?'':'none';
   if(viewAct)viewAct.style.display=isAdmin?'none':'';
+  // Always land on the All Entries list, regardless of role.
+  // Admin/Commissioner use the New Entry button/tab to switch to the form if needed.
   var fv=id('plFormView'),lv=id('plListView');
   if(fv){fv.style.display='none';}
-  if(lv){lv.style.display='none';}
+  if(lv){lv.style.display='block';}
   if(isAdmin){
     var pd=id('pl-date');if(pd&&!pd.value)pd.value=new Date().toISOString().slice(0,10);
     var pt=id('pl-time');if(pt&&!pt.value){var now=new Date();pt.value=zeroPad(now.getHours(),2)+':'+zeroPad(now.getMinutes(),2);}
-    if(fv)fv.style.display='block';
-  } else {
-    if(lv)lv.style.display='block';
   }
   showLoader('Loading notes...');
   gasCall('serverGetNotes',S.token).then(function(r){
@@ -5741,8 +5775,17 @@ function generatePlDiary(fmt){
   closeModal('mPlDiary');
   if(fmt==='excel'){exportPlDiaryExcel(entries,from,to);return;}
   showLoader('AI is generating diary...');
+  // Sort chronologically so the AI describes events in date order
+  entries=entries.slice().sort(function(a,b){
+    var da=a.date+' '+(a.time||'00:00'),db=b.date+' '+(b.time||'00:00');
+    return da<db?-1:da>db?1:0;
+  });
   var notesText='';
-  for(var i=0;i<entries.length;i++){var e=entries[i];notesText+='---\nDate: '+e.date+' '+e.time+'\nType: '+e.type+'\nZone: '+e.zone+(e.location?' | Location: '+e.location:'')+' \nNotes: '+e.notes+'\n';}
+  for(var i=0;i<entries.length;i++){
+    var e=entries[i];
+    var pc=plPhotoCount(e);
+    notesText+='---\nDate: '+e.date+' '+e.time+'\nType: '+e.type+'\nZone/Dept: '+e.zone+(e.location?' | Location: '+e.location:'')+(pc>0?' | Photos attached: '+pc:'')+' \nNotes: '+e.notes+'\n';
+  }
   var styleMap={
     diary:[
       'Generate the Commissioner\'s Official Diary in the following format:',
@@ -5809,33 +5852,99 @@ function generatePlDiary(fmt){
 }
 function plBasicDiary(entries,style,from,to){
   var months=['','January','February','March','April','May','June','July','August','September','October','November','December'];
+  var sorted=entries.slice().sort(function(a,b){
+    var da=a.date+' '+(a.time||'00:00'),db=b.date+' '+(b.time||'00:00');
+    return da<db?-1:da>db?1:0;
+  });
   var lines=[];
-  for(var i=0;i<entries.length;i++){
-    var e=entries[i],d=new Date(e.date),dateStr=d.getDate()+' '+months[d.getMonth()]+' '+d.getFullYear();
-    var summary=e.notes.split('.')[0].trim();
-    lines.push(dateStr+' | '+e.type+' | '+(e.location||e.zone)+' | '+summary+'.');
+  for(var i=0;i<sorted.length;i++){
+    var e=sorted[i],d=new Date(e.date+'T00:00:00');
+    var dateStr=isNaN(d.getDate())?e.date:(d.getDate()+' '+months[d.getMonth()+1]+' '+d.getFullYear());
+    lines.push(dateStr+(e.time?' '+e.time:'')+' \u2014 '+e.type+' \u2014 '+(e.location||e.zone)+'\n'+(e.notes||''));
   }
-  return lines.join('\n');
+  return lines.join('\n\n');
+}
+function plPhotoCount(e){
+  if(!e.photos)return 0;
+  if(Array.isArray(e.photos))return e.photos.length;
+  // fallback for any legacy string-based entries
+  return String(e.photos).split(/\|\||\n/).filter(function(p){return p.trim().length>10;}).length;
 }
 function exportPlDiaryPDF(entries,aiText,style,from,to){
   var titles={diary:"Commissioner's Diary",weekly:'Weekly Activity Report',monthly:'Monthly Summary'};
   var title=titles[style]||titles.diary;
-  var months=['','Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  var months=['','January','February','March','April','May','June','July','August','September','October','November','December'];
   var typeColors={Inspection:'#1d4ed8',Meeting:'#059669','Site Visit':'#d97706'};
-  var rows='';
-  for(var i=0;i<entries.length;i++){
-    var e=entries[i],col=typeColors[e.type]||'#475569';
-    var d=new Date(e.date),dateStr=d.getDate()+' '+months[d.getMonth()]+' '+d.getFullYear();
-    var pc=e.photos?e.photos.split('\n').filter(function(p){return p.trim();}).length:0;
-    rows+='<tr><td style="padding:7px 9px;font-size:9.5px;font-weight:700;color:#0b1f45;white-space:nowrap">'+dateStr+(e.time?'<br><span style="font-weight:400;color:#94a3b8">'+e.time+'</span>':'')+' </td>'
-      +'<td style="padding:7px 9px"><span style="background:'+col+'22;color:'+col+';border:1px solid '+col+'44;padding:2px 7px;border-radius:4px;font-size:9px;font-weight:700">'+e.type+'</span></td>'
-      +'<td style="padding:7px 9px;font-size:9.5px;color:#475569">'+e.zone+(e.location?'<br><em>'+e.location+'</em>':'')+' </td>'
-      +'<td style="padding:7px 9px;font-size:10px;color:#1e293b">'+e.notes.substring(0,180)+'</td>'
-      +'<td style="padding:7px 9px;text-align:center;font-size:9.5px;color:#0ea5e9">'+(pc>0?pc:'\u2014')+'</td></tr>';
+
+  // Sort entries date-wise (oldest first) for a proper chronological diary
+  var sorted=entries.slice().sort(function(a,b){
+    var da=a.date+' '+(a.time||'00:00'),db=b.date+' '+(b.time||'00:00');
+    return da<db?-1:da>db?1:0;
+  });
+
+  // Group by date for clean date-wise sections in the PDF
+  var dateGroups={},dateOrder=[];
+  for(var i=0;i<sorted.length;i++){
+    var dk=sorted[i].date;
+    if(!dateGroups[dk]){dateGroups[dk]=[];dateOrder.push(dk);}
+    dateGroups[dk].push(sorted[i]);
   }
-  var css='@page{size:A4;margin:15mm}*{box-sizing:border-box;margin:0;padding:0}body{font-family:"Segoe UI",Arial,sans-serif;font-size:11px;color:#1e293b;background:#fff}.hband{background:linear-gradient(135deg,#0b1f45,#1a3a6b);color:#fff;padding:18px 22px;display:flex;justify-content:space-between;align-items:center}.gbar{height:4px;background:linear-gradient(90deg,#f59e0b,#d97706)}.ai-box{background:#f5f3ff;border:1px solid #ddd6fe;border-radius:8px;padding:14px 16px;margin:16px 0;font-size:11px;line-height:1.75;color:#1e293b;white-space:pre-wrap}.sechd{display:flex;align-items:center;gap:8px;margin:16px 0 10px;padding-bottom:5px;border-bottom:2px solid #0b1f45}.sechd h2{font-size:11px;font-weight:800;color:#0b1f45;text-transform:uppercase;letter-spacing:.07em}table{width:100%;border-collapse:collapse}thead tr{background:#0b1f45;color:#fff}thead th{padding:7px 9px;text-align:left;font-size:9px;font-weight:700;text-transform:uppercase}tbody tr:nth-child(even){background:#f8fafc}.fband{margin-top:16px;border-top:2px solid #e2e8f0;padding-top:7px;display:flex;justify-content:space-between;font-size:8.5px;color:#94a3b8}@media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact}}';
+
+  var dateWiseHtml='';
+  for(var di=0;di<dateOrder.length;di++){
+    var dk=dateOrder[di],dayEntries=dateGroups[dk];
+    var d=new Date(dk+'T00:00:00');
+    var dayNames=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+    var fullDateStr=(isNaN(d.getDate())?dk:(d.getDate()+' '+months[d.getMonth()+1]+' '+d.getFullYear()+', '+dayNames[d.getDay()]));
+
+    dateWiseHtml+='<div class="date-block">'
+      +'<div class="date-hd">'+fullDateStr+'</div>';
+
+    for(var ei=0;ei<dayEntries.length;ei++){
+      var e=dayEntries[ei],col=typeColors[e.type]||'#475569';
+      var pc=plPhotoCount(e);
+      dateWiseHtml+='<div class="entry-block">'
+        +'<div class="entry-meta">'
+        +(e.time?'<span class="entry-time">'+e.time+'</span>':'')
+        +'<span class="entry-type" style="background:'+col+'1a;color:'+col+';border:1px solid '+col+'44">'+e.type+'</span>'
+        +'<span class="entry-loc">'+(e.zone||'')+(e.location?' \u00b7 '+e.location:'')+'</span>'
+        +(pc>0?'<span class="entry-photos">\uD83D\uDCF7 '+pc+' photo'+(pc!==1?'s':'')+'</span>':'')
+        +'</div>'
+        +'<div class="entry-notes">'+String(e.notes||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>')+'</div>'
+        +'</div>';
+    }
+    dateWiseHtml+='</div>';
+  }
+
+  var css='@page{size:A4;margin:15mm}*{box-sizing:border-box;margin:0;padding:0}body{font-family:"Segoe UI",Arial,sans-serif;font-size:11px;color:#1e293b;background:#fff}'
+    +'.hband{background:linear-gradient(135deg,#0b1f45,#1a3a6b);color:#fff;padding:18px 22px;display:flex;justify-content:space-between;align-items:center}'
+    +'.gbar{height:4px;background:linear-gradient(90deg,#f59e0b,#d97706)}'
+    +'.ai-box{background:#f5f3ff;border:1px solid #ddd6fe;border-radius:8px;padding:14px 16px;margin:16px 0;font-size:11px;line-height:1.75;color:#1e293b;white-space:pre-wrap}'
+    +'.sechd{display:flex;align-items:center;gap:8px;margin:18px 0 10px;padding-bottom:5px;border-bottom:2px solid #0b1f45}'
+    +'.sechd h2{font-size:11px;font-weight:800;color:#0b1f45;text-transform:uppercase;letter-spacing:.07em}'
+    +'.date-block{margin-bottom:14px;page-break-inside:avoid}'
+    +'.date-hd{background:#0b1f45;color:#fff;font-size:10.5px;font-weight:700;padding:6px 10px;border-radius:5px 5px 0 0;letter-spacing:.02em}'
+    +'.entry-block{border:1px solid #e2e8f0;border-top:none;padding:9px 12px;background:#fff}'
+    +'.entry-block:nth-child(even){background:#f8fafc}'
+    +'.entry-meta{display:flex;align-items:center;gap:8px;margin-bottom:5px;flex-wrap:wrap}'
+    +'.entry-time{font-size:9.5px;font-weight:700;color:#0b1f45;background:#eef2ff;padding:2px 7px;border-radius:4px}'
+    +'.entry-type{font-size:9px;font-weight:700;padding:2px 8px;border-radius:4px}'
+    +'.entry-loc{font-size:10px;color:#64748b}'
+    +'.entry-photos{font-size:9.5px;color:#0ea5e9;margin-left:auto}'
+    +'.entry-notes{font-size:10.5px;line-height:1.6;color:#1e293b;white-space:pre-wrap}'
+    +'.fband{margin-top:18px;border-top:2px solid #e2e8f0;padding-top:7px;display:flex;justify-content:space-between;font-size:8.5px;color:#94a3b8}'
+    +'@media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact}.date-block{page-break-inside:avoid}}';
+
   var now=new Date(),dateStr2=now.toLocaleDateString('en-IN',{day:'2-digit',month:'long',year:'numeric'});
-  var aiHtml=aiText.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');
+  var aiHtml=String(aiText||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');
+
+  // Stats for the summary header
+  var totalPhotos=0,typeCounts={Inspection:0,Meeting:0,'Site Visit':0};
+  for(var i=0;i<entries.length;i++){
+    totalPhotos+=plPhotoCount(entries[i]);
+    if(typeCounts[entries[i].type]!==undefined)typeCounts[entries[i].type]++;
+  }
+
   var html='<!DOCTYPE html><html><head><meta charset="UTF-8"><title>'+title+'</title><style>'+css+'</style></head><body>'
     +'<div class="hband"><div>'
     +'<div style="font-size:14px;font-weight:800">Salem City Municipal Corporation</div>'
@@ -5846,11 +5955,19 @@ function exportPlDiaryPDF(entries,aiText,style,from,to){
     +'</div></div>'
     +'<div class="gbar"></div>'
     +'<div style="padding:14px 0">'
-    +'<div class="sechd"><h2>\u2728 AI-Generated Summary</h2></div>'
-    +'<div class="ai-box"><div style="font-size:9px;font-weight:700;color:#7c3aed;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">Summarised by Claude AI from field notes</div>'+aiHtml+'</div>'
-    +'<div class="sechd"><h2>Complete Entry Log</h2></div>'
-    +'<table><thead><tr><th>Date &amp; Time</th><th>Type</th><th>Zone / Location</th><th>Notes</th><th>Photos</th></tr></thead><tbody>'+rows+'</tbody></table>'
-    +'<div class="fband"><div><strong>Salem City Municipal Corporation</strong> \u00b7 Photo Log \u00b7 '+title+'<br>Period: '+from+' to '+to+' \u00b7 Generated: '+dateStr2+'</div>'
+    +'<div class="sechd"><h2>Summary</h2></div>'
+    +'<div style="display:flex;gap:10px;margin-bottom:6px;flex-wrap:wrap">'
+    +'<div style="background:#eef2ff;border-radius:6px;padding:8px 14px;font-size:10.5px;color:#1d4ed8"><strong>'+entries.length+'</strong> Total Entries</div>'
+    +'<div style="background:#eff6ff;border-radius:6px;padding:8px 14px;font-size:10.5px;color:#1d4ed8"><strong>'+typeCounts.Inspection+'</strong> Inspections</div>'
+    +'<div style="background:#ecfdf5;border-radius:6px;padding:8px 14px;font-size:10.5px;color:#059669"><strong>'+typeCounts.Meeting+'</strong> Meetings</div>'
+    +'<div style="background:#fffbeb;border-radius:6px;padding:8px 14px;font-size:10.5px;color:#d97706"><strong>'+typeCounts['Site Visit']+'</strong> Site Visits</div>'
+    +'<div style="background:#f0f9ff;border-radius:6px;padding:8px 14px;font-size:10.5px;color:#0ea5e9"><strong>'+totalPhotos+'</strong> Photos Attached</div>'
+    +'</div>'
+    +'<div class="sechd"><h2>\u2728 AI-Generated Commissioner\'s Summary</h2></div>'
+    +'<div class="ai-box"><div style="font-size:9px;font-weight:700;color:#7c3aed;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">Summarised by AI from field notes</div>'+aiHtml+'</div>'
+    +'<div class="sechd"><h2>Date-Wise Detailed Entry Log</h2></div>'
+    +dateWiseHtml
+    +'<div class="fband"><div><strong>Salem City Municipal Corporation</strong> \u00b7 Notes Export \u00b7 '+title+'<br>Period: '+from+' to '+to+' \u00b7 Generated: '+dateStr2+'</div>'
     +'<div style="text-align:right">'+entries.length+' entries \u00b7 '+(S.user?S.user.name:'Admin')+'</div></div>'
     +'</div><scr'+'ipt>window.onload=function(){setTimeout(function(){window.print();},500);};<\/scr'+'ipt></body></html>';
   var w=window.open('','_blank');
@@ -5858,9 +5975,16 @@ function exportPlDiaryPDF(entries,aiText,style,from,to){
   else toast('Allow pop-ups to generate PDF.','info');
 }
 function exportPlDiaryExcel(entries,from,to){
-  var rows=[['Salem City Municipal Corporation - Notes Export'],['Period: '+from+' to '+to],[],['Date','Time','Type','Zone','Location','Notes','Photos']];
-  for(var i=0;i<entries.length;i++){var e=entries[i];rows.push([e.date,e.time,e.type,e.zone,e.location||'','"'+(e.notes||'').replace(/"/g,'"')+'"',e.photos||'']);}
-  dlFile(rows.map(function(r){return r.join(',');}).join('\n'),'PhotoLog_'+from+'_to_'+to+'.csv','text/csv');
+  var rows=[['Salem City Municipal Corporation - Notes Export'],['Period: '+from+' to '+to],[],['Date','Time','Type','Zone','Location','Notes','Photo Count']];
+  var sorted=entries.slice().sort(function(a,b){
+    var da=a.date+' '+(a.time||'00:00'),db=b.date+' '+(b.time||'00:00');
+    return da<db?-1:da>db?1:0;
+  });
+  for(var i=0;i<sorted.length;i++){
+    var e=sorted[i];
+    rows.push([e.date,e.time,e.type,e.zone,e.location||'','"'+(e.notes||'').replace(/"/g,'""')+'"',plPhotoCount(e)]);
+  }
+  dlFile(rows.map(function(r){return r.join(',');}).join('\n'),'Notes_'+from+'_to_'+to+'.csv','text/csv');
 }
 function buildCritical(tasksArr){
   var el=id('criticalList');if(!el)return;
