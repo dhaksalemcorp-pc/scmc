@@ -1993,6 +1993,7 @@ tbody tr:hover { background: var(--surface2); }
                   <option value="10">October</option><option value="11">November</option><option value="12">December</option>
                 </select>
               </div>
+              <button class="btn btn-ghost btn-sm" id="plSortBtn" onclick="plToggleSort()" title="Toggle sort order"><span class="material-icons-round mi" id="plSortIcon">arrow_downward</span> <span id="plSortLabel">Newest First</span></button>
               <button class="btn btn-ghost btn-sm" onclick="plClearFilter()"><span class="material-icons-round mi">filter_alt_off</span> Clear</button>
               <span id="plCount" style="font-size:12px;color:var(--tx3);margin-left:auto;font-weight:600"></span>
             </div>
@@ -3564,6 +3565,12 @@ function makeTaskCard(t, isAdmin, isHOD, showReassign){
     ov.textContent = '⚠ OVERDUE';
     hdr.appendChild(ov);
   }
+  if(t._photosSaving){
+    var upTag = document.createElement('span');
+    upTag.style.cssText = 'font-size:10.5px;font-weight:600;color:var(--c-blue);background:rgba(29,78,216,.1);padding:2px 8px;border-radius:999px;display:flex;align-items:center;gap:3px';
+    upTag.innerHTML = '<span class="material-icons-round" style="font-size:12px;animation:spin 1s linear infinite">sync</span>Uploading photos';
+    hdr.appendChild(upTag);
+  }
 
   hdr.appendChild(idSpan);
   hdr.appendChild(typeSpan);
@@ -4296,10 +4303,56 @@ function submitPhotoUpdate(){
   var taskID=V('pu-taskid'),status=V('pu-status'),remarks=V('pu-remarks'),priority=V('pu-priority');
   if(!taskID||!status){toast('Please select a status.','error');return;}
   var btn=id('pu-saveBtn');if(btn)btn.disabled=true;
+
   var allLinks=S.driveLinks.slice();
-  if(S.selPhotos.length===0){doTaskUpdate(taskID,status,remarks,priority,allLinks.join('\n'),btn);return;}
-  var pg=id('photoProgress');if(pg)pg.classList.remove('dn');
-  uploadPhotosSeq(taskID,S.selPhotos,0,allLinks,function(urls){doTaskUpdate(taskID,status,remarks,priority,urls.join('\n'),btn);});
+  var pickedPhotos=S.selPhotos.slice();
+
+  // STEP 1 — close the modal and update the task card in the list IMMEDIATELY
+  // using the status/remarks/priority just entered, with local blob-URL photo
+  // previews. No waiting on network for the UI to reflect the change.
+  closeModal('mPhotoUpload');
+  if(btn)btn.disabled=false;
+
+  var localTask=null;
+  for(var i=0;i<S.tasks.length;i++){if(S.tasks[i].taskID===taskID){localTask=S.tasks[i];break;}}
+  if(localTask){
+    localTask.status=status;
+    localTask.officerRemarks=remarks;
+    localTask.priority=priority;
+    localTask._photosSaving=pickedPhotos.length>0;
+    // Re-render the tracker right away so the card reflects new status instantly
+    if(typeof renderCards==='function'&&S.filtered)renderCards(S.filtered);
+  }
+  toast('Task updated'+(pickedPhotos.length?' \u2014 uploading photos...':'!'),'ok');
+
+  // STEP 2 — save status/remarks/priority to the server in the background
+  // (text-only call — small and fast, photos handled separately below)
+  gasCall('serverUpdateTask',S.token,taskID,{status:status,officerRemarks:remarks,priority:priority,photoLinks:allLinks.join('\n')}).then(function(r){
+    if(!r||!r.success){
+      toast((r&&r.message)||'Update failed to save. Please retry from the task card.','error');
+      return;
+    }
+    if(!pickedPhotos.length){
+      if(localTask)localTask._photosSaving=false;
+      loadTasks(); // refresh from server to pick up server-assigned fields
+      return;
+    }
+    // STEP 3 — upload each photo independently in the background, same
+    // pattern as the Notes module: one small call per photo, no blocking
+    // progress bar, failures isolated to that single photo.
+    var uploadedUrls=[];
+    uploadPhotosSeq(taskID,pickedPhotos,0,uploadedUrls,function(urls){
+      gasCall('serverUpdateTask',S.token,taskID,{photoLinks:urls.join('\n')}).then(function(r2){
+        if(localTask)localTask._photosSaving=false;
+        if(r2&&r2.success){
+          toast('Photos uploaded successfully!','ok');
+        } else {
+          toast('Some photos may not have saved. Please check the task.','error');
+        }
+        loadTasks();
+      });
+    });
+  });
 }
 function uploadPhotosSeq(taskID,photos,idx,urls,done){
   if(idx>=photos.length){done(urls);return;}
@@ -4936,7 +4989,7 @@ function clearMultiOfficerList(){
 }
 
 // ── PHOTO LOG ────────────────────────────────────────────────
-var PL={photos:[],entries:[],editPhotos:[],editExistingPhotos:[],editRemovedPhotoIDs:[],editNoteID:null,isAdmin:false};
+var PL={photos:[],entries:[],editPhotos:[],editExistingPhotos:[],editRemovedPhotoIDs:[],editNoteID:null,isAdmin:false,sortOrder:'desc'};
 function plCheckAdmin(){
   var liveCheck = S.user && (S.user.role==='Admin'||S.user.role==='Commissioner');
   return liveCheck && PL.isAdmin;
@@ -5187,6 +5240,7 @@ function clearPlForm(){
 
 // ─── RENDER — pure DOM, no innerHTML for content, no lazy-load timers ──
 function plRenderCards(entries){
+  entries=plSortEntries(entries); // always honor current sort order (default: newest first)
   var strip=id('plSummaryStrip');
   if(strip){
     var ic=0,mc=0,sc=0,pc=0;
@@ -5214,6 +5268,8 @@ function plRenderCards(entries){
 
   var months=['','January','February','March','April','May','June','July','August','September','October','November','December'];
   var typeColors={Inspection:{bg:'rgba(29,78,216,.08)',c:'#1d4ed8',border:'rgba(29,78,216,.2)',icon:'search'},Meeting:{bg:'rgba(5,150,105,.08)',c:'#059669',border:'rgba(5,150,105,.2)',icon:'groups'},'Site Visit':{bg:'rgba(245,158,11,.08)',c:'#d97706',border:'rgba(245,158,11,.2)',icon:'location_on'}};
+  // entries already sorted above — preserve that order when grouping by month
+  // (do not re-sort monthOrder alphabetically; push in the order encountered)
   var monthGroups={},monthOrder=[];
   for(var i=0;i<entries.length;i++){
     var mk=entries[i].date?entries[i].date.slice(0,7):'Unknown';
@@ -5751,6 +5807,23 @@ function plFilter(){
 function plClearFilter(){
   var f=['plFType','plFZone','plFMonth'];for(var i=0;i<f.length;i++){var e=id(f[i]);if(e)e.value='';}
   plRenderCards(PL.entries);
+}
+function plToggleSort(){
+  PL.sortOrder=(PL.sortOrder==='asc')?'desc':'asc';
+  var icon=id('plSortIcon'),label=id('plSortLabel');
+  if(icon)icon.textContent=PL.sortOrder==='asc'?'arrow_upward':'arrow_downward';
+  if(label)label.textContent=PL.sortOrder==='asc'?'Oldest First':'Newest First';
+  // Re-apply current filter (if any) so sort respects whatever's currently shown
+  plFilter();
+}
+function plSortEntries(entries){
+  var dir=(PL.sortOrder==='asc')?1:-1; // default desc (newest first)
+  return entries.slice().sort(function(a,b){
+    var da=(a.date||'')+' '+(a.time||'00:00'),db=(b.date||'')+' '+(b.time||'00:00');
+    if(da<db)return -1*dir;
+    if(da>db)return 1*dir;
+    return 0;
+  });
 }
 // ── AI DIARY ────────────────────────────────────────────────
 function showPlDiaryModal(){plDiaryPeriod('month');openModal('mPlDiary');}
