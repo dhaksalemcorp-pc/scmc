@@ -510,6 +510,15 @@ body {
 .task-card-meta{display:flex;gap:10px;flex-wrap:wrap}
 .task-card-meta-item{display:flex;align-items:center;gap:4px;font-size:11.5px;color:var(--tx3)}
 .task-card-meta-item .material-icons-round{font-size:13px}
+.cal-day{min-height:84px;border-right:1px solid var(--border);border-bottom:1px solid var(--border);padding:6px;cursor:pointer;transition:background .15s;position:relative}
+.cal-day:hover{background:var(--surface2)}
+.cal-day.other-month{background:var(--surface2);opacity:.4}
+.cal-day.today{background:rgba(29,78,216,.06)}
+.cal-day-num{font-size:12px;font-weight:600;color:var(--tx2)}
+.cal-day.today .cal-day-num{color:var(--c-blue);font-weight:800}
+.cal-day-hd{font-size:10.5px;font-weight:700;color:var(--tx3);text-transform:uppercase;text-align:center;padding:8px 0;border-right:1px solid var(--border);border-bottom:1px solid var(--border);background:var(--surface2)}
+.cal-evt-pill{font-size:10px;background:var(--c-blue);color:#fff;border-radius:4px;padding:1px 5px;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer}
+.cal-evt-pill:hover{opacity:.85}
 .sup-officer-card{border-bottom:1px solid var(--border);padding:14px 16px;cursor:pointer;transition:background .15s}
 .sup-officer-card:last-child{border-bottom:none}
 .sup-officer-card:hover{background:var(--surface2)}
@@ -1359,6 +1368,7 @@ tbody tr:hover { background: var(--surface2); }
       <div class="sb-item" data-page="settings" id="snav-settings" onclick="go('settings')"><span class="material-icons-round sb-i">settings</span> Settings</div>
       <div class="sb-item" id="snav-chgpw" onclick="showMyProfile()"><span class="material-icons-round sb-i">manage_accounts</span> My Profile</div>
       <div class="sb-item" id="snav-photolog" data-page="photolog" onclick="go('photolog')"><span class="material-icons-round sb-i">photo_library</span> Notes</div>
+      <div class="sb-item dn" id="snav-calendar" data-page="calendar" onclick="go('calendar')"><span class="material-icons-round sb-i">calendar_month</span> Calendar</div>
       <div class="sb-item" data-page="about" onclick="go('about')"><span class="material-icons-round sb-i">info</span> About</div>
     </div>
     <div class="sb-footer">
@@ -2155,6 +2165,84 @@ tbody tr:hover { background: var(--surface2); }
             <button class="btn btn-ghost" onclick="closeModal('mPlDownload')">Cancel</button>
             <button class="btn btn-primary" onclick="downloadPlNotes()"><span class="material-icons-round mi">picture_as_pdf</span> Download PDF</button>
           </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CALENDAR PAGE -->
+    <div class="page" id="page-calendar">
+      <div class="ph">
+        <div class="ph-left"><h1>&#128197; Calendar</h1><p>Meetings &amp; schedule \u2014 synced with Google Calendar</p></div>
+        <div class="ph-actions" id="calActions">
+          <button class="btn btn-ghost btn-sm" onclick="calChangeMonth(-1)"><span class="material-icons-round mi">chevron_left</span></button>
+          <span id="calMonthLabel" style="font-size:14px;font-weight:700;color:var(--tx1);min-width:140px;text-align:center;display:inline-block">&#8212;</span>
+          <button class="btn btn-ghost btn-sm" onclick="calChangeMonth(1)"><span class="material-icons-round mi">chevron_right</span></button>
+          <button class="btn btn-ghost btn-sm" onclick="calGoToday()">Today</button>
+          <button class="btn btn-primary btn-sm" id="calNewEventBtn" onclick="showCalNewEventModal()"><span class="material-icons-round mi">add</span> Schedule Meeting</button>
+        </div>
+      </div>
+
+      <div id="calNotConfigured" class="card" style="display:none">
+        <div class="card-bd" style="text-align:center;padding:40px 24px">
+          <span class="material-icons-round" style="font-size:48px;color:var(--tx3)">event_busy</span>
+          <h3 style="color:var(--tx2);margin:12px 0 6px">Calendar not configured yet</h3>
+          <p style="color:var(--tx3)">Ask your Admin to set up Google Calendar integration in Settings.</p>
+        </div>
+      </div>
+
+      <div id="calMainView">
+        <div class="card mb14">
+          <div class="card-bd-0">
+            <div id="calGrid" style="display:grid;grid-template-columns:repeat(7,1fr);border-top:1px solid var(--border);border-left:1px solid var(--border)"></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-hd"><span class="card-title">Upcoming Events</span></div>
+          <div class="card-bd-0" id="calUpcomingList"><div style="padding:16px;color:var(--tx3);font-size:13px">Loading...</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- NEW CALENDAR EVENT MODAL -->
+    <div class="modal-bg" id="mCalNewEvent">
+      <div class="modal-box" style="max-width:480px">
+        <div class="modal-hd"><span class="modal-title">&#128197; Schedule Meeting</span><button class="modal-close" onclick="closeModal('mCalNewEvent')"><span class="material-icons-round">close</span></button></div>
+        <div class="modal-body">
+          <div class="f-group"><label class="f-label">Title <span class="req">*</span></label><input type="text" class="f-ctrl" id="cale-title" placeholder="e.g. Weekly Review Meeting"></div>
+          <div class="f-row">
+            <div class="f-group"><label class="f-label">Date <span class="req">*</span></label><input type="date" class="f-ctrl" id="cale-date"></div>
+            <div class="f-group"><label class="f-label">Time</label><input type="time" class="f-ctrl" id="cale-time"></div>
+          </div>
+          <div class="f-group">
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px"><input type="checkbox" id="cale-allday" onchange="calToggleAllDay(this)" style="width:16px;height:16px;cursor:pointer"> All-day event</label>
+          </div>
+          <div class="f-group" id="cale-durationRow"><label class="f-label">Duration</label>
+            <select class="f-sel" id="cale-duration">
+              <option value="30">30 minutes</option>
+              <option value="60" selected>1 hour</option>
+              <option value="90">1.5 hours</option>
+              <option value="120">2 hours</option>
+              <option value="180">3 hours</option>
+            </select>
+          </div>
+          <div class="f-group"><label class="f-label">Location</label><input type="text" class="f-ctrl" id="cale-location" placeholder="Venue / Meeting room"></div>
+          <div class="f-group mb0"><label class="f-label">Description</label><textarea class="f-ctrl" id="cale-desc" rows="3" placeholder="Agenda or notes"></textarea></div>
+        </div>
+        <div class="modal-ft">
+          <button class="btn btn-ghost" onclick="closeModal('mCalNewEvent')">Cancel</button>
+          <button class="btn btn-primary" onclick="saveCalEvent()"><span class="material-icons-round mi">save</span> Schedule</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- VIEW CALENDAR EVENT MODAL -->
+    <div class="modal-bg" id="mCalViewEvent">
+      <div class="modal-box" style="max-width:440px">
+        <div class="modal-hd"><span class="modal-title" id="calViewTitle">Event</span><button class="modal-close" onclick="closeModal('mCalViewEvent')"><span class="material-icons-round">close</span></button></div>
+        <div class="modal-body" id="calViewBody"></div>
+        <div class="modal-ft">
+          <button class="btn btn-ghost" id="calDeleteBtn" onclick="deleteCalEvent()"><span class="material-icons-round mi">delete</span> Delete</button>
+          <button class="btn btn-ghost" onclick="closeModal('mCalViewEvent')">Close</button>
         </div>
       </div>
     </div>
@@ -3068,6 +3156,16 @@ function applyRoleNav(role){
   var thAct=id('thActions');if(thAct)thAct.style.display=(isOfficer||isSupervision)?'none':'';
   if(!isAdmin&&!isHOD){var bb=id('bulkBar');if(bb)bb.classList.add('dn');}
 
+  // Calendar tab — visible only to roles Admin has enabled in Settings
+  gasCall('serverGetCalendarSettings',S.token).then(function(r){
+    var rolesEnabled=(r&&r.success)?(r.rolesEnabled||[]):[];
+    var calVisible=rolesEnabled.indexOf(role)!==-1;
+    show('snav-calendar', calVisible);
+    if(calVisible&&S.allowedPages&&S.allowedPages.indexOf('calendar')===-1){
+      S.allowedPages.push('calendar');
+    }
+  });
+
   if(isOfficer){
     S.allowedPages=['dashboard','tracker','photolog','about'];
   } else if(isHOD){
@@ -3092,7 +3190,7 @@ function applyRoleNav(role){
     if(ad)ad.classList.remove('dn');if(od)od.classList.add('dn');if(hd)hd.classList.add('dn');if(spd)spd.classList.add('dn');
   }
 }
-var PAGE_META={dashboard:['Dashboard','Overview & Analytics'],taskEntry:['Task Entry','Create and assign tasks'],tracker:['Task Tracker','Monitor all tasks'],commview:['Commissioner View','Executive analytics'],users:['User Management','Manage accounts'],settings:['Settings','System configuration'],photolog:['Notes','Inspection & Meeting Records'],about:['About','Application information']};
+var PAGE_META={dashboard:['Dashboard','Overview & Analytics'],taskEntry:['Task Entry','Create and assign tasks'],tracker:['Task Tracker','Monitor all tasks'],commview:['Commissioner View','Executive analytics'],users:['User Management','Manage accounts'],settings:['Settings','System configuration'],photolog:['Notes','Inspection & Meeting Records'],calendar:['Calendar','Meetings & Schedule'],about:['About','Application information']};
 function go(page){
   if(S.allowedPages&&S.allowedPages.length&&S.allowedPages.indexOf(page)===-1){toast('Access restricted.','error');return;}
   S.page=page;
@@ -3120,6 +3218,7 @@ function go(page){
   else if(page==='users')loadUsers();
   else if(page==='settings')loadSettings();
   else if(page==='photolog')loadPhotoLog();
+  else if(page==='calendar')loadCalendarPage();
 }
 function refreshPage(){go(S.page);}
 function drillDown(type){S.drillFilter=type;go('tracker');}
@@ -7073,6 +7172,282 @@ function testCalendarConnection(){
     }
   });
 }
+
+// ════════════════════════════════════════════════════════════
+// CALENDAR TAB — two-way Google Calendar sync
+// ════════════════════════════════════════════════════════════
+var CAL={viewDate:new Date(),events:[],configured:null,canCreate:false};
+
+function loadCalendarPage(){
+  var isAdmin=S.user&&(S.user.role==='Admin'||S.user.role==='Commissioner');
+  var isHOD=S.user&&S.user.role==='HOD';
+  CAL.canCreate=isAdmin||isHOD;
+  var nb=id('calNewEventBtn');if(nb)nb.style.display=CAL.canCreate?'':'none';
+
+  // Check if calendar is configured at all before trying to load events
+  gasCall('serverGetCalendarSettings',S.token).then(function(r){
+    var configured=!!(r&&r.success&&r.ownerEmail);
+    CAL.configured=configured;
+    var nc=id('calNotConfigured'),mv=id('calMainView'),ca=id('calActions');
+    if(!configured){
+      if(nc)nc.style.display='block';
+      if(mv)mv.style.display='none';
+      if(ca)ca.style.display='none';
+      return;
+    }
+    if(nc)nc.style.display='none';
+    if(mv)mv.style.display='block';
+    if(ca)ca.style.display='flex';
+    calRenderMonth();
+  });
+}
+
+function calChangeMonth(delta){
+  CAL.viewDate.setMonth(CAL.viewDate.getMonth()+delta);
+  calRenderMonth();
+}
+function calGoToday(){
+  CAL.viewDate=new Date();
+  calRenderMonth();
+}
+
+function calRenderMonth(){
+  var y=CAL.viewDate.getFullYear(),m=CAL.viewDate.getMonth();
+  var monthNames=['January','February','March','April','May','June','July','August','September','October','November','December'];
+  var lbl=id('calMonthLabel');if(lbl)lbl.textContent=monthNames[m]+' '+y;
+
+  var firstDay=new Date(y,m,1);
+  var startOffset=firstDay.getDay(); // 0=Sun
+  var daysInMonth=new Date(y,m+1,0).getDate();
+  var daysInPrevMonth=new Date(y,m,0).getDate();
+
+  var gridStart=new Date(y,m,1-startOffset);
+  var gridEnd=new Date(y,m,daysInMonth+(6-new Date(y,m,daysInMonth).getDay()));
+
+  showLoader('Loading calendar...');
+  gasCall('serverGetCalendarEvents',S.token,
+    gridStart.toISOString().slice(0,10),
+    gridEnd.toISOString().slice(0,10)
+  ).then(function(r){
+    hideLoader();
+    CAL.events=(r&&r.success)?(r.data||[]):[];
+    if(r&&!r.success)toast(r.message||'Could not load calendar events.','error');
+    calBuildGrid(y,m,startOffset,daysInMonth,daysInPrevMonth);
+    calRenderUpcoming();
+  });
+}
+
+function calBuildGrid(y,m,startOffset,daysInMonth,daysInPrevMonth){
+  var grid=id('calGrid');if(!grid)return;
+  while(grid.firstChild)grid.removeChild(grid.firstChild);
+
+  var dayHeaders=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  for(var i=0;i<7;i++){
+    var hd=document.createElement('div');
+    hd.className='cal-day-hd';
+    hd.textContent=dayHeaders[i];
+    grid.appendChild(hd);
+  }
+
+  var today=new Date();
+  var totalCells=startOffset+daysInMonth;
+  var trailingCells=(7-(totalCells%7))%7;
+  totalCells+=trailingCells;
+
+  // Group events by date string for quick lookup
+  var eventsByDate={};
+  for(var i=0;i<CAL.events.length;i++){
+    var ev=CAL.events[i];
+    var d=new Date(ev.start);
+    var dk=d.getFullYear()+'-'+zeroPad(d.getMonth()+1,2)+'-'+zeroPad(d.getDate(),2);
+    if(!eventsByDate[dk])eventsByDate[dk]=[];
+    eventsByDate[dk].push(ev);
+  }
+
+  for(var cellIdx=0;cellIdx<totalCells;cellIdx++){
+    var dayNum=cellIdx-startOffset+1;
+    var cellDate,otherMonth=false;
+    if(dayNum<1){cellDate=new Date(y,m-1,daysInPrevMonth+dayNum);otherMonth=true;}
+    else if(dayNum>daysInMonth){cellDate=new Date(y,m+1,dayNum-daysInMonth);otherMonth=true;}
+    else{cellDate=new Date(y,m,dayNum);}
+
+    var dk=cellDate.getFullYear()+'-'+zeroPad(cellDate.getMonth()+1,2)+'-'+zeroPad(cellDate.getDate(),2);
+    var isToday=(cellDate.toDateString()===today.toDateString());
+
+    var cell=document.createElement('div');
+    cell.className='cal-day'+(otherMonth?' other-month':'')+(isToday?' today':'');
+    cell.onclick=(function(dateStr){return function(){calOpenDayQuickAdd(dateStr);};})(dk);
+
+    var numEl=document.createElement('div');
+    numEl.className='cal-day-num';
+    numEl.textContent=cellDate.getDate();
+    cell.appendChild(numEl);
+
+    var dayEvents=eventsByDate[dk]||[];
+    for(var ei=0;ei<Math.min(dayEvents.length,3);ei++){
+      (function(ev){
+        var pill=document.createElement('div');
+        pill.className='cal-evt-pill';
+        var timeStr=ev.allDay?'':new Date(ev.start).toLocaleTimeString('en-IN',{hour:'numeric',minute:'2-digit'})+' ';
+        pill.textContent=timeStr+ev.title;
+        pill.onclick=function(e){e.stopPropagation();calOpenEventView(ev);};
+        cell.appendChild(pill);
+      })(dayEvents[ei]);
+    }
+    if(dayEvents.length>3){
+      var more=document.createElement('div');
+      more.style.cssText='font-size:9.5px;color:var(--tx3);margin-top:2px';
+      more.textContent='+'+(dayEvents.length-3)+' more';
+      cell.appendChild(more);
+    }
+    grid.appendChild(cell);
+  }
+}
+
+function calRenderUpcoming(){
+  var wrap=id('calUpcomingList');if(!wrap)return;
+  while(wrap.firstChild)wrap.removeChild(wrap.firstChild);
+
+  var now=new Date();
+  var upcoming=CAL.events.filter(function(e){return new Date(e.end)>=now;})
+    .sort(function(a,b){return new Date(a.start)-new Date(b.start);})
+    .slice(0,8);
+
+  if(!upcoming.length){
+    var empty=document.createElement('div');
+    empty.style.cssText='padding:16px;color:var(--tx3);font-size:13px';
+    empty.textContent='No upcoming events in this range.';
+    wrap.appendChild(empty);
+    return;
+  }
+
+  var months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  for(var i=0;i<upcoming.length;i++){
+    (function(ev){
+      var row=document.createElement('div');
+      row.style.cssText='display:flex;align-items:center;gap:12px;padding:11px 16px;border-bottom:1px solid var(--border);cursor:pointer';
+      row.onclick=function(){calOpenEventView(ev);};
+
+      var d=new Date(ev.start);
+      var dateBlock=document.createElement('div');
+      dateBlock.style.cssText='text-align:center;min-width:42px;flex-shrink:0';
+      dateBlock.innerHTML='<div style="font-size:18px;font-weight:800;color:var(--tx1);line-height:1.1">'+d.getDate()+'</div><div style="font-size:10.5px;color:var(--tx3);text-transform:uppercase;font-weight:600">'+months[d.getMonth()]+'</div>';
+
+      var info=document.createElement('div');
+      info.style.cssText='flex:1;min-width:0';
+      var titleEl=document.createElement('div');
+      titleEl.style.cssText='font-size:13.5px;font-weight:700;color:var(--tx1)';
+      titleEl.textContent=ev.title;
+      var metaEl=document.createElement('div');
+      metaEl.style.cssText='font-size:11.5px;color:var(--tx3);margin-top:2px';
+      metaEl.textContent=ev.allDay?'All day':(d.toLocaleTimeString('en-IN',{hour:'numeric',minute:'2-digit'})+(ev.location?' \u00b7 '+ev.location:''));
+      info.appendChild(titleEl);info.appendChild(metaEl);
+
+      var chevron=document.createElement('span');
+      chevron.className='material-icons-round';
+      chevron.style.cssText='color:var(--tx3);font-size:18px;flex-shrink:0';
+      chevron.textContent='chevron_right';
+
+      row.appendChild(dateBlock);row.appendChild(info);row.appendChild(chevron);
+      wrap.appendChild(row);
+    })(upcoming[i]);
+  }
+}
+
+function calOpenDayQuickAdd(dateStr){
+  if(!CAL.canCreate)return;
+  showCalNewEventModal();
+  var de=id('cale-date');if(de)de.value=dateStr;
+}
+
+function showCalNewEventModal(){
+  if(!CAL.canCreate){toast('Only Admin, Commissioner and HOD can schedule meetings.','info');return;}
+  var de=id('cale-date');if(de&&!de.value)de.value=new Date().toISOString().slice(0,10);
+  var dt=id('cale-time');if(dt&&!dt.value){var n=new Date();dt.value=zeroPad(n.getHours(),2)+':'+zeroPad(Math.ceil(n.getMinutes()/30)*30%60,2);}
+  var fields=['cale-title','cale-location','cale-desc'];
+  for(var i=0;i<fields.length;i++){var el=id(fields[i]);if(el)el.value='';}
+  var ad=id('cale-allday');if(ad)ad.checked=false;
+  calToggleAllDay({checked:false});
+  openModal('mCalNewEvent');
+}
+function calToggleAllDay(checkbox){
+  var dr=id('cale-durationRow'),tEl=id('cale-time');
+  var isAllDay=checkbox.checked;
+  if(dr)dr.style.display=isAllDay?'none':'';
+  if(tEl)tEl.style.display=isAllDay?'none':'';
+}
+function saveCalEvent(){
+  var title=V('cale-title').trim();
+  var date=V('cale-date');
+  var time=V('cale-time');
+  var allDay=id('cale-allday')&&id('cale-allday').checked;
+  var duration=parseInt(V('cale-duration')||'60',10);
+  var location=V('cale-location').trim();
+  var desc=id('cale-desc')?id('cale-desc').value.trim():'';
+
+  if(!title){toast('Please enter a meeting title.','error');return;}
+  if(!date){toast('Please select a date.','error');return;}
+  if(!allDay&&!time){toast('Please select a time, or mark as all-day.','error');return;}
+
+  var startISO,endISO;
+  if(allDay){
+    startISO=date+'T00:00:00';
+    endISO=date+'T23:59:59';
+  } else {
+    var start=new Date(date+'T'+time+':00');
+    var end=new Date(start.getTime()+duration*60000);
+    startISO=start.toISOString();
+    endISO=end.toISOString();
+  }
+
+  showLoader('Scheduling meeting...');
+  gasCall('serverCreateCalendarEvent',S.token,{
+    title:title,start:startISO,end:endISO,allDay:allDay,location:location,description:desc
+  }).then(function(r){
+    hideLoader();
+    if(r&&r.success){
+      toast('Meeting scheduled! It will also appear in your Google Calendar.','ok');
+      closeModal('mCalNewEvent');
+      calRenderMonth();
+    } else {
+      toast((r&&r.message)||'Failed to schedule meeting.','error');
+    }
+  });
+}
+
+function calOpenEventView(ev){
+  CAL.viewingEvent=ev;
+  var vt=id('calViewTitle');if(vt)vt.textContent=ev.title;
+  var start=new Date(ev.start),end=new Date(ev.end);
+  var dateStr=start.toLocaleDateString('en-IN',{day:'2-digit',month:'long',year:'numeric'});
+  var timeStr=ev.allDay?'All day':(start.toLocaleTimeString('en-IN',{hour:'numeric',minute:'2-digit'})+' \u2013 '+end.toLocaleTimeString('en-IN',{hour:'numeric',minute:'2-digit'}));
+  var body=id('calViewBody');
+  if(body){
+    body.innerHTML=''
+      +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;color:var(--tx2);font-size:13.5px"><span class="material-icons-round mi">event</span>'+dateStr+'</div>'
+      +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;color:var(--tx2);font-size:13.5px"><span class="material-icons-round mi">schedule</span>'+timeStr+'</div>'
+      +(ev.location?'<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;color:var(--tx2);font-size:13.5px"><span class="material-icons-round mi">place</span>'+String(ev.location).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')+'</div>':'')
+      +(ev.description?'<div style="margin-top:10px;padding:10px 12px;background:var(--surface2);border-radius:8px;font-size:13px;color:var(--tx2);white-space:pre-wrap">'+String(ev.description).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')+'</div>':'');
+  }
+  var delBtn=id('calDeleteBtn');if(delBtn)delBtn.style.display=CAL.canCreate?'':'none';
+  openModal('mCalViewEvent');
+}
+function deleteCalEvent(){
+  if(!CAL.viewingEvent)return;
+  if(!confirm('Delete this meeting from the calendar? This cannot be undone.'))return;
+  showLoader('Deleting...');
+  gasCall('serverDeleteCalendarEvent',S.token,CAL.viewingEvent.id).then(function(r){
+    hideLoader();
+    if(r&&r.success){
+      toast('Meeting deleted.','ok');
+      closeModal('mCalViewEvent');
+      calRenderMonth();
+    } else {
+      toast((r&&r.message)||'Failed to delete meeting.','error');
+    }
+  });
+}
+
 function renderSettings(){
   var ld=S.lookup;if(!ld)return;
   // Show current logo in settings
