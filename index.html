@@ -510,14 +510,25 @@ body {
 .task-card-meta{display:flex;gap:10px;flex-wrap:wrap}
 .task-card-meta-item{display:flex;align-items:center;gap:4px;font-size:11.5px;color:var(--tx3)}
 .task-card-meta-item .material-icons-round{font-size:13px}
-.cal-day{min-height:84px;border-right:1px solid var(--border);border-bottom:1px solid var(--border);padding:6px;cursor:pointer;transition:background .15s;position:relative}
+.user-grp{background:var(--surface);border:1px solid var(--border);border-radius:12px;margin-bottom:12px;overflow:hidden}
+.user-grp-hd{display:flex;align-items:center;gap:12px;padding:14px 18px;cursor:pointer;user-select:none;transition:background .15s}
+.user-grp-hd:hover{background:var(--surface2)}
+.user-grp-icon{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:17px;flex-shrink:0}
+.user-grp-title{font-size:14.5px;font-weight:700;color:var(--tx1)}
+.user-grp-count{font-size:12px;color:var(--tx3);font-weight:600}
+.user-grp-chev{margin-left:auto;color:var(--tx3);transition:transform .2s;flex-shrink:0}
+.user-grp.collapsed .user-grp-chev{transform:rotate(-90deg)}
+.user-grp.collapsed .user-grp-body{display:none}
+.user-grp-body{border-top:1px solid var(--border)}
+.cal-day{min-height:84px;border-right:1px solid var(--border);border-bottom:1px solid var(--border);padding:6px;cursor:pointer;transition:background .15s;position:relative;overflow:hidden;min-width:0}
+.cal-evt-pill{font-size:10px;background:var(--c-blue);color:#fff;border-radius:4px;padding:1px 5px;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer;max-width:100%;box-sizing:border-box}
 .cal-day:hover{background:var(--surface2)}
 .cal-day.other-month{background:var(--surface2);opacity:.4}
-.cal-day.today{background:rgba(29,78,216,.06)}
+.cal-day.today{background:rgba(29,78,216,.08);box-shadow:inset 0 0 0 2px var(--c-blue)}
+.cal-day.today .cal-day-num{background:var(--c-blue);color:#fff;width:22px;height:22px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:11px}
 .cal-day-num{font-size:12px;font-weight:600;color:var(--tx2)}
 .cal-day.today .cal-day-num{color:var(--c-blue);font-weight:800}
 .cal-day-hd{font-size:10.5px;font-weight:700;color:var(--tx3);text-transform:uppercase;text-align:center;padding:8px 0;border-right:1px solid var(--border);border-bottom:1px solid var(--border);background:var(--surface2)}
-.cal-evt-pill{font-size:10px;background:var(--c-blue);color:#fff;border-radius:4px;padding:1px 5px;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer}
 .cal-evt-pill:hover{opacity:.85}
 .sup-officer-card{border-bottom:1px solid var(--border);padding:14px 16px;cursor:pointer;transition:background .15s}
 .sup-officer-card:last-child{border-bottom:none}
@@ -1862,27 +1873,16 @@ tbody tr:hover { background: var(--surface2); }
           <button class="btn btn-primary" onclick="showUserModal()"><span class="material-icons-round mi">person_add</span> Add User</button>
         </div>
       </div>
-      <!-- Role filter tabs -->
-      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;align-items:center">
-        <button class="filter-chip active" data-role="" onclick="setUserRoleFilter(this)">All Users</button>
-        <button class="filter-chip" data-role="Commissioner" onclick="setUserRoleFilter(this)">&#128081; Commissioner</button>
-        <button class="filter-chip" data-role="Admin" onclick="setUserRoleFilter(this)">&#128736; Admin</button>
-        <button class="filter-chip" data-role="HOD" onclick="setUserRoleFilter(this)">&#128188; HOD</button>
-        <button class="filter-chip" data-role="Officer" onclick="setUserRoleFilter(this)">&#128100; Officer</button>
-        <div class="search-wrap" style="margin-left:auto;width:220px">
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px;align-items:center">
+        <div class="search-wrap" style="width:260px">
           <span class="material-icons-round mi-prefix">search</span>
-          <input type="text" class="f-ctrl" id="userSearch" placeholder="Search..." oninput="filterUsers()" style="font-size:13px">
+          <input type="text" class="f-ctrl" id="userSearch" placeholder="Search by name, username, designation, dept..." oninput="filterUsers()" style="font-size:13px">
         </div>
-        <span class="c-muted" id="userCount" style="font-size:12px;white-space:nowrap">—</span>
+        <button class="btn btn-ghost btn-sm" onclick="userExpandAll()"><span class="material-icons-round mi">unfold_more</span> Expand All</button>
+        <button class="btn btn-ghost btn-sm" onclick="userCollapseAll()"><span class="material-icons-round mi">unfold_less</span> Collapse All</button>
+        <span class="c-muted" id="userCount" style="font-size:12px;white-space:nowrap;margin-left:auto">&#8212;</span>
       </div>
-      <div class="card card-bd-0">
-        <div class="tbl-wrap">
-          <table>
-            <thead><tr><th>Emp ID</th><th>Name</th><th>Designation</th><th>Dept</th><th>Zone</th><th>Role</th><th>Status</th><th>Actions</th></tr></thead>
-            <tbody id="uBody"></tbody>
-          </table>
-        </div>
-      </div>
+      <div id="userGroupsWrap"></div>
     </div>
 
     <!-- SETTINGS -->
@@ -2178,6 +2178,7 @@ tbody tr:hover { background: var(--surface2); }
           <span id="calMonthLabel" style="font-size:14px;font-weight:700;color:var(--tx1);min-width:140px;text-align:center;display:inline-block">&#8212;</span>
           <button class="btn btn-ghost btn-sm" onclick="calChangeMonth(1)"><span class="material-icons-round mi">chevron_right</span></button>
           <button class="btn btn-ghost btn-sm" onclick="calGoToday()">Today</button>
+          <button class="btn btn-ghost btn-sm" id="calOpenGoogleBtn" onclick="calOpenInGoogle()" title="Open this calendar in Google Calendar"><span class="material-icons-round mi">open_in_new</span> Open in Google Calendar</button>
           <button class="btn btn-primary btn-sm" id="calNewEventBtn" onclick="showCalNewEventModal()"><span class="material-icons-round mi">add</span> Schedule Meeting</button>
         </div>
       </div>
@@ -2250,67 +2251,143 @@ tbody tr:hover { background: var(--surface2); }
     <!-- ABOUT PAGE -->
     <div class="page" id="page-about">
       <div class="ph"><div class="ph-left"><h1>About</h1><p>Application information and credits</p></div></div>
-      <div style="max-width:640px;margin:0 auto">
-        <div class="card mb16">
-          <div class="card-bd" style="text-align:center;padding:32px 24px">
-            <div style="width:80px;height:80px;background:linear-gradient(135deg,#f59e0b,#d97706);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;box-shadow:0 8px 20px rgba(245,158,11,.35)">
-              <span class="material-icons-round mi" style="font-size:38px;color:#fff">account_balance</span>
+      <div style="max-width:760px;margin:0 auto">
+
+        <!-- HERO BANNER -->
+        <div style="position:relative;border-radius:20px;overflow:hidden;margin-bottom:20px;background:linear-gradient(135deg,#0b1f45 0%,#1a3a6b 45%,#1d4ed8 100%);padding:40px 32px;text-align:center;box-shadow:0 12px 32px rgba(11,31,69,.25)">
+          <div style="position:absolute;top:-40px;right:-40px;width:160px;height:160px;background:radial-gradient(circle,rgba(245,158,11,.25),transparent 70%);border-radius:50%"></div>
+          <div style="position:absolute;bottom:-50px;left:-30px;width:180px;height:180px;background:radial-gradient(circle,rgba(14,165,233,.2),transparent 70%);border-radius:50%"></div>
+          <div style="position:relative;z-index:1">
+            <div style="width:72px;height:72px;background:linear-gradient(135deg,#f59e0b,#d97706);border-radius:18px;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;box-shadow:0 10px 24px rgba(245,158,11,.4);transform:rotate(-3deg)">
+              <span class="material-icons-round mi" style="font-size:36px;color:#fff">account_balance</span>
             </div>
-            <h2 style="font-size:20px;font-weight:800;color:var(--tx1);margin-bottom:4px">Salem City Municipal Corporation</h2>
-            <p style="font-size:13px;color:var(--tx3);margin-bottom:20px">Task Management System &nbsp;&middot;&nbsp; Official Internal Portal</p>
-            <div style="background:var(--surface2);border-radius:12px;padding:20px;text-align:left;margin-bottom:20px">
-              <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--tx3);margin-bottom:12px">Created By</div>
-              <div style="display:flex;align-items:center;gap:14px">
-                <div style="width:52px;height:52px;border-radius:50%;background:linear-gradient(135deg,var(--c-blue),var(--c-teal));display:flex;align-items:center;justify-content:center;color:#fff;font-size:22px;font-weight:800;flex-shrink:0">D</div>
-                <div>
-                  <div style="font-size:17px;font-weight:800;color:var(--tx1)">Dhanraj.K</div>
-                  <div style="font-size:13px;color:var(--tx2);margin-top:2px">Junior Assistant</div>
-                  <div style="font-size:13px;color:var(--tx2)">Personal Clerk to the Commissioner</div>
-                  <div style="font-size:12px;color:var(--tx3);margin-top:3px">Salem City Municipal Corporation</div>
-                </div>
-              </div>
+            <h2 style="font-size:23px;font-weight:800;color:#fff;margin-bottom:6px;letter-spacing:-.01em">Salem City Municipal Corporation</h2>
+            <p style="font-size:13.5px;color:rgba(255,255,255,.65);margin-bottom:0">Task Management System &nbsp;&middot;&nbsp; Official Internal Portal</p>
+            <div style="display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);border-radius:999px;padding:5px 14px;margin-top:16px;font-size:11.5px;font-weight:600;color:#fbbf24">
+              <span class="material-icons-round" style="font-size:13px">bolt</span> Version 68 &middot; Live &amp; Actively Maintained
             </div>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;text-align:left;margin-bottom:20px">
-              <div style="background:var(--surface2);border-radius:10px;padding:14px">
-                <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--tx3);margin-bottom:5px">Organisation</div>
-                <div style="font-size:13px;font-weight:600;color:var(--tx1)">Salem City Municipal Corporation</div>
-                <div style="font-size:11.5px;color:var(--tx3)">Tamil Nadu Government · Urban Local Body</div>
-              </div>
-              <div style="background:var(--surface2);border-radius:10px;padding:14px">
-                <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--tx3);margin-bottom:5px">System Version</div>
-                <div style="font-size:13px;font-weight:600;color:var(--tx1)">TMS v9.0</div>
-                <div style="font-size:11.5px;color:var(--tx3)">Built on Google Apps Script</div>
-              </div>
-              <div style="background:var(--surface2);border-radius:10px;padding:14px">
-                <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--tx3);margin-bottom:5px">Purpose</div>
-                <div style="font-size:13px;font-weight:600;color:var(--tx1)">Task Monitoring &amp; Review</div>
-                <div style="font-size:11.5px;color:var(--tx3)">Internal administrative use</div>
-              </div>
-              <div style="background:var(--surface2);border-radius:10px;padding:14px">
-                <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--tx3);margin-bottom:5px">Technology</div>
-                <div style="font-size:13px;font-weight:600;color:var(--tx1)">Google Sheets + Apps Script</div>
-                <div style="font-size:11.5px;color:var(--tx3)">HTML · CSS · JavaScript</div>
-              </div>
-            </div>
-            <div style="background:linear-gradient(135deg,rgba(29,78,216,.08),rgba(14,165,233,.05));border:1px solid rgba(29,78,216,.15);border-radius:10px;padding:14px 16px;text-align:left">
-              <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--c-blue);margin-bottom:6px">Features</div>
-              <div style="display:flex;flex-wrap:wrap;gap:6px">
-                <span style="background:var(--surface);border:1px solid var(--border);border-radius:999px;padding:3px 10px;font-size:11.5px;color:var(--tx2)">&#10003; Task Assignment</span>
-                <span style="background:var(--surface);border:1px solid var(--border);border-radius:999px;padding:3px 10px;font-size:11.5px;color:var(--tx2)">&#10003; AI Notes Extractor</span>
-                <span style="background:var(--surface);border:1px solid var(--border);border-radius:999px;padding:3px 10px;font-size:11.5px;color:var(--tx2)">&#10003; Role-based Access</span>
-                <span style="background:var(--surface);border:1px solid var(--border);border-radius:999px;padding:3px 10px;font-size:11.5px;color:var(--tx2)">&#10003; Commissioner Dashboard</span>
-                <span style="background:var(--surface);border:1px solid var(--border);border-radius:999px;padding:3px 10px;font-size:11.5px;color:var(--tx2)">&#10003; PDF &amp; Excel Export</span>
-                <span style="background:var(--surface);border:1px solid var(--border);border-radius:999px;padding:3px 10px;font-size:11.5px;color:var(--tx2)">&#10003; Photo Attachments</span>
-                <span style="background:var(--surface);border:1px solid var(--border);border-radius:999px;padding:3px 10px;font-size:11.5px;color:var(--tx2)">&#10003; Mobile Responsive</span>
-                <span style="background:var(--surface);border:1px solid var(--border);border-radius:999px;padding:3px 10px;font-size:11.5px;color:var(--tx2)">&#10003; Dark &amp; Light Theme</span>
+          </div>
+        </div>
+
+        <!-- QUICK STATS STRIP -->
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:20px">
+          <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px 10px;text-align:center">
+            <div style="font-size:22px;font-weight:800;color:var(--c-blue)">5</div>
+            <div style="font-size:10.5px;color:var(--tx3);font-weight:600;margin-top:2px">ZONES</div>
+          </div>
+          <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px 10px;text-align:center">
+            <div style="font-size:22px;font-weight:800;color:var(--c-teal)">8+</div>
+            <div style="font-size:10.5px;color:var(--tx3);font-weight:600;margin-top:2px">DEPARTMENTS</div>
+          </div>
+          <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px 10px;text-align:center">
+            <div style="font-size:22px;font-weight:800;color:#7c3aed">5</div>
+            <div style="font-size:10.5px;color:var(--tx3);font-weight:600;margin-top:2px">USER ROLES</div>
+          </div>
+          <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px 10px;text-align:center">
+            <div style="font-size:22px;font-weight:800;color:#d97706">68</div>
+            <div style="font-size:10.5px;color:var(--tx3);font-weight:600;margin-top:2px">VERSIONS BUILT</div>
+          </div>
+        </div>
+
+        <!-- CREATED BY -->
+        <div class="card mb16" style="border:none;background:linear-gradient(135deg,var(--surface),var(--surface2))">
+          <div class="card-bd" style="padding:24px">
+            <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--tx3);margin-bottom:14px;display:flex;align-items:center;gap:6px"><span class="material-icons-round" style="font-size:14px">code</span> Designed &amp; Built By</div>
+            <div style="display:flex;align-items:center;gap:16px">
+              <div style="width:58px;height:58px;border-radius:16px;background:linear-gradient(135deg,var(--c-blue),var(--c-teal));display:flex;align-items:center;justify-content:center;color:#fff;font-size:24px;font-weight:800;flex-shrink:0;box-shadow:0 6px 16px rgba(29,78,216,.3)">D</div>
+              <div>
+                <div style="font-size:18px;font-weight:800;color:var(--tx1)">Dhanraj.K</div>
+                <div style="font-size:13px;color:var(--tx2);margin-top:2px">Junior Assistant &amp; Personal Clerk to the Commissioner</div>
+                <div style="font-size:12px;color:var(--tx3);margin-top:2px">Salem City Municipal Corporation</div>
               </div>
             </div>
           </div>
         </div>
-        <div class="card">
-          <div class="card-bd" style="text-align:center;padding:16px">
-            <p style="font-size:12px;color:var(--tx3)">This system is developed for official internal use by Salem City Municipal Corporation.<br>All data is stored securely in Google Sheets under your organisation's Google Workspace.</p>
+
+        <!-- SYSTEM INFO GRID -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
+          <div class="card" style="border-left:3px solid var(--c-blue)">
+            <div class="card-bd" style="padding:16px">
+              <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px"><span class="material-icons-round" style="font-size:16px;color:var(--c-blue)">account_balance</span><span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--tx3)">Organisation</span></div>
+              <div style="font-size:13.5px;font-weight:600;color:var(--tx1)">Salem City Municipal Corporation</div>
+              <div style="font-size:11.5px;color:var(--tx3);margin-top:2px">Tamil Nadu Government &middot; Urban Local Body</div>
+            </div>
           </div>
+          <div class="card" style="border-left:3px solid var(--c-teal)">
+            <div class="card-bd" style="padding:16px">
+              <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px"><span class="material-icons-round" style="font-size:16px;color:var(--c-teal)">cloud_done</span><span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--tx3)">System Version</span></div>
+              <div style="font-size:13.5px;font-weight:600;color:var(--tx1)">TMS v68</div>
+              <div style="font-size:11.5px;color:var(--tx3);margin-top:2px">Built on Google Apps Script</div>
+            </div>
+          </div>
+          <div class="card" style="border-left:3px solid #7c3aed">
+            <div class="card-bd" style="padding:16px">
+              <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px"><span class="material-icons-round" style="font-size:16px;color:#7c3aed">flag</span><span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--tx3)">Purpose</span></div>
+              <div style="font-size:13.5px;font-weight:600;color:var(--tx1)">Task Monitoring &amp; Review</div>
+              <div style="font-size:11.5px;color:var(--tx3);margin-top:2px">Internal administrative use</div>
+            </div>
+          </div>
+          <div class="card" style="border-left:3px solid #d97706">
+            <div class="card-bd" style="padding:16px">
+              <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px"><span class="material-icons-round" style="font-size:16px;color:#d97706">build_circle</span><span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--tx3)">Technology</span></div>
+              <div style="font-size:13.5px;font-weight:600;color:var(--tx1)">Google Sheets + Apps Script</div>
+              <div style="font-size:11.5px;color:var(--tx3);margin-top:2px">HTML &middot; CSS &middot; JavaScript</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- FEATURE SHOWCASE -->
+        <div class="card mb16">
+          <div class="card-bd" style="padding:22px">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px"><span class="material-icons-round" style="font-size:18px;color:var(--c-blue)">auto_awesome</span><span style="font-size:13.5px;font-weight:700;color:var(--tx1)">What This System Can Do</span></div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+              <div style="display:flex;align-items:flex-start;gap:10px;padding:10px;border-radius:10px;background:var(--surface2)">
+                <span class="material-icons-round" style="font-size:18px;color:var(--c-blue);flex-shrink:0">assignment_turned_in</span>
+                <div><div style="font-size:12.5px;font-weight:700;color:var(--tx1)">Task Assignment</div><div style="font-size:11px;color:var(--tx3)">Multi-officer, zone-wise tracking</div></div>
+              </div>
+              <div style="display:flex;align-items:flex-start;gap:10px;padding:10px;border-radius:10px;background:var(--surface2)">
+                <span class="material-icons-round" style="font-size:18px;color:#7c3aed;flex-shrink:0">smart_toy</span>
+                <div><div style="font-size:12.5px;font-weight:700;color:var(--tx1)">AI Notes Extractor</div><div style="font-size:11px;color:var(--tx3)">Auto-generates tasks from notes</div></div>
+              </div>
+              <div style="display:flex;align-items:flex-start;gap:10px;padding:10px;border-radius:10px;background:var(--surface2)">
+                <span class="material-icons-round" style="font-size:18px;color:var(--c-teal);flex-shrink:0">security</span>
+                <div><div style="font-size:12.5px;font-weight:700;color:var(--tx1)">Role-Based Access</div><div style="font-size:11px;color:var(--tx3)">5 distinct permission levels</div></div>
+              </div>
+              <div style="display:flex;align-items:flex-start;gap:10px;padding:10px;border-radius:10px;background:var(--surface2)">
+                <span class="material-icons-round" style="font-size:18px;color:#d97706;flex-shrink:0">insights</span>
+                <div><div style="font-size:12.5px;font-weight:700;color:var(--tx1)">Commissioner Dashboard</div><div style="font-size:11px;color:var(--tx3)">Real-time zone &amp; dept analytics</div></div>
+              </div>
+              <div style="display:flex;align-items:flex-start;gap:10px;padding:10px;border-radius:10px;background:var(--surface2)">
+                <span class="material-icons-round" style="font-size:18px;color:#dc2626;flex-shrink:0">picture_as_pdf</span>
+                <div><div style="font-size:12.5px;font-weight:700;color:var(--tx1)">PDF &amp; Excel Export</div><div style="font-size:11px;color:var(--tx3)">Date-wise detailed reports</div></div>
+              </div>
+              <div style="display:flex;align-items:flex-start;gap:10px;padding:10px;border-radius:10px;background:var(--surface2)">
+                <span class="material-icons-round" style="font-size:18px;color:#059669;flex-shrink:0">photo_camera</span>
+                <div><div style="font-size:12.5px;font-weight:700;color:var(--tx1)">Photo Attachments</div><div style="font-size:11px;color:var(--tx3)">Instant inspection evidence</div></div>
+              </div>
+              <div style="display:flex;align-items:flex-start;gap:10px;padding:10px;border-radius:10px;background:var(--surface2)">
+                <span class="material-icons-round" style="font-size:18px;color:#0ea5e9;flex-shrink:0">event</span>
+                <div><div style="font-size:12.5px;font-weight:700;color:var(--tx1)">Google Calendar Sync</div><div style="font-size:11px;color:var(--tx3)">Two-way meeting scheduling</div></div>
+              </div>
+              <div style="display:flex;align-items:flex-start;gap:10px;padding:10px;border-radius:10px;background:var(--surface2)">
+                <span class="material-icons-round" style="font-size:18px;color:#f59e0b;flex-shrink:0">mail</span>
+                <div><div style="font-size:12.5px;font-weight:700;color:var(--tx1)">Email Notifications</div><div style="font-size:11px;color:var(--tx3)">Opt-in task assignment alerts</div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- SECURITY / DATA NOTE -->
+        <div style="background:linear-gradient(135deg,rgba(5,150,105,.08),rgba(14,165,233,.05));border:1px solid rgba(5,150,105,.18);border-radius:14px;padding:16px 20px;display:flex;align-items:flex-start;gap:12px;margin-bottom:16px">
+          <span class="material-icons-round" style="font-size:20px;color:var(--c-teal);flex-shrink:0;margin-top:2px">verified_user</span>
+          <div>
+            <div style="font-size:12.5px;font-weight:700;color:var(--tx1);margin-bottom:3px">Secure &amp; Self-Hosted</div>
+            <div style="font-size:12px;color:var(--tx2);line-height:1.6">This system is developed for official internal use by Salem City Municipal Corporation. All data is stored securely in Google Sheets under your organisation's own Google Workspace &mdash; nothing is shared with third parties.</div>
+          </div>
+        </div>
+
+        <div style="text-align:center;padding:8px 0 20px;font-size:11.5px;color:var(--tx3)">
+          Made with care for Salem City Municipal Corporation &middot; Tamil Nadu
         </div>
       </div>
     </div>
@@ -6868,50 +6945,130 @@ function loadUsers(){
   showLoader('Loading users...');
   gasCall('serverGetUsers',S.token).then(function(r){hideLoader();if(r&&r.success){S.users=r.data||[];renderUsers(S.users);}});
 }
-var USER_ROLE_FILTER='';
-function setUserRoleFilter(btn){
-  var chips=document.querySelectorAll('[data-role]');
-  for(var i=0;i<chips.length;i++)chips[i].classList.remove('active');
-  btn.classList.add('active');
-  USER_ROLE_FILTER=btn.dataset.role||'';
-  filterUsers();
-}
 function filterUsers(){
   var q=V('userSearch').toLowerCase();
-  var role=USER_ROLE_FILTER;
-  var filtered=[];
-  for(var i=0;i<S.users.length;i++){
-    var u=S.users[i];
-    if(role&&u.role!==role)continue;
-    if(q){var h=(u.name+u.username+u.designation+u.department+String(u.employeeID||'')).toLowerCase();if(h.indexOf(q)===-1)continue;}
-    filtered.push(u);
+  var filtered=S.users;
+  if(q){
+    filtered=S.users.filter(function(u){
+      var h=(u.name+u.username+u.designation+u.department+String(u.employeeID||'')).toLowerCase();
+      return h.indexOf(q)!==-1;
+    });
   }
   renderUsers(filtered);
 }
+function userExpandAll(){
+  var grps=document.querySelectorAll('.user-grp');
+  for(var i=0;i<grps.length;i++)grps[i].classList.remove('collapsed');
+  S.userGroupsCollapsed={};
+}
+function userCollapseAll(){
+  var grps=document.querySelectorAll('.user-grp');
+  for(var i=0;i<grps.length;i++)grps[i].classList.add('collapsed');
+  if(!S.userGroupsCollapsed)S.userGroupsCollapsed={};
+  var roleOrder=['Commissioner','Admin','HOD','Supervision','Officer','ViewAll'];
+  for(var i=0;i<roleOrder.length;i++)S.userGroupsCollapsed[roleOrder[i]]=true;
+}
+
+// Role → clean professional colours + icon, shared by group headers and badges
+var ROLE_META={
+  Commissioner:{bg:'#0f172a',icon:'military_tech'},
+  Admin:{bg:'#1e40af',icon:'admin_panel_settings'},
+  HOD:{bg:'#064e3b',icon:'business_center'},
+  Supervision:{bg:'#7c3aed',icon:'visibility'},
+  Officer:{bg:'#374151',icon:'badge'},
+  ViewAll:{bg:'#4b5563',icon:'visibility'}
+};
+var ROLE_ORDER=['Commissioner','Admin','HOD','Supervision','Officer','ViewAll'];
+
 function renderUsers(users){
-  var tbody=id('uBody');if(!tbody)return;
+  var wrap=id('userGroupsWrap');if(!wrap)return;
   var uc=id('userCount');if(uc)uc.textContent=users.length+' user'+(users.length!==1?'s':'');
+
+  while(wrap.firstChild)wrap.removeChild(wrap.firstChild);
+
   if(!users.length){
-    tbody.innerHTML='<tr><td colspan="8"><div class="empty"><span class="material-icons-round mi">group</span><h3>No users found</h3></div></td></tr>';
+    var empty=document.createElement('div');
+    empty.className='empty';
+    empty.innerHTML='<span class="material-icons-round mi">group</span><h3>No users found</h3>';
+    wrap.appendChild(empty);
     return;
   }
 
-  // Role → clean professional colours
-  var roleMeta={
-    Commissioner:{bg:'#0f172a',ic:'\u2605'},
-    Admin:{bg:'#1e40af',ic:'\u2022'},
-    HOD:{bg:'#064e3b',ic:'\u2022'},
-    Officer:{bg:'#374151',ic:'\u2022'},
-    ViewAll:{bg:'#4b5563',ic:'\u2022'}
-  };
+  // Group by role, preserving a sensible fixed order
+  var groups={};
+  for(var i=0;i<users.length;i++){
+    var r=users[i].role||'Other';
+    if(!groups[r])groups[r]=[];
+    groups[r].push(users[i]);
+  }
+  var orderedRoles=ROLE_ORDER.filter(function(r){return groups[r];});
+  var extraRoles=Object.keys(groups).filter(function(r){return ROLE_ORDER.indexOf(r)===-1;});
+  orderedRoles=orderedRoles.concat(extraRoles);
 
-  while(tbody.firstChild)tbody.removeChild(tbody.firstChild);
+  if(!S.userGroupsCollapsed)S.userGroupsCollapsed={};
 
+  for(var gi=0;gi<orderedRoles.length;gi++){
+    (function(role){
+      var roleUsers=groups[role];
+      var rm=ROLE_META[role]||{bg:'#475569',icon:'person'};
+      var isCollapsed=!!S.userGroupsCollapsed[role];
+
+      var grpEl=document.createElement('div');
+      grpEl.className='user-grp'+(isCollapsed?' collapsed':'');
+
+      var hd=document.createElement('div');
+      hd.className='user-grp-hd';
+      hd.onclick=function(){
+        grpEl.classList.toggle('collapsed');
+        S.userGroupsCollapsed[role]=grpEl.classList.contains('collapsed');
+      };
+
+      var iconEl=document.createElement('div');
+      iconEl.className='user-grp-icon';
+      iconEl.style.background=rm.bg;
+      iconEl.innerHTML='<span class="material-icons-round" style="font-size:18px">'+rm.icon+'</span>';
+
+      var titleWrap=document.createElement('div');
+      titleWrap.style.cssText='display:flex;align-items:baseline;gap:8px';
+      var titleEl=document.createElement('span');
+      titleEl.className='user-grp-title';
+      titleEl.textContent=role;
+      var countEl=document.createElement('span');
+      countEl.className='user-grp-count';
+      countEl.textContent=roleUsers.length+' user'+(roleUsers.length!==1?'s':'');
+      titleWrap.appendChild(titleEl);titleWrap.appendChild(countEl);
+
+      var chev=document.createElement('span');
+      chev.className='material-icons-round user-grp-chev';
+      chev.textContent='expand_more';
+
+      hd.appendChild(iconEl);hd.appendChild(titleWrap);hd.appendChild(chev);
+
+      var body=document.createElement('div');
+      body.className='user-grp-body';
+      var tblWrap=document.createElement('div');
+      tblWrap.className='tbl-wrap';
+      var table=document.createElement('table');
+      var thead=document.createElement('thead');
+      thead.innerHTML='<tr><th>Emp ID</th><th>Name</th><th>Designation</th><th>Dept</th><th>Zone</th><th>Status</th><th>Actions</th></tr>';
+      var tbody=document.createElement('tbody');
+      renderUserRows(tbody,roleUsers,rm);
+      table.appendChild(thead);table.appendChild(tbody);
+      tblWrap.appendChild(table);
+      body.appendChild(tblWrap);
+
+      grpEl.appendChild(hd);
+      grpEl.appendChild(body);
+      wrap.appendChild(grpEl);
+    })(orderedRoles[gi]);
+  }
+}
+
+function renderUserRows(tbody,users,rm){
   for(var i=0;i<users.length;i++){
     (function(u){
       var isActive=(u.status==='Active');
       var empID=(u.employeeID!==null&&u.employeeID!==undefined)?String(u.employeeID):'\u2014';
-      var rm=roleMeta[u.role]||{bg:'#475569',ic:'&#128100;'};
 
       var tr=document.createElement('tr');
 
@@ -6951,22 +7108,15 @@ function renderUsers(users){
       td5.style.cssText='font-size:12.5px;color:var(--tx2)';
       td5.textContent=u.zone||'\u2014';
 
-      // ROLE badge
-      var td6=document.createElement('td');
-      var roleBadge=document.createElement('span');
-      roleBadge.style.cssText='display:inline-flex;align-items:center;gap:5px;padding:3px 11px;border-radius:5px;font-size:12px;font-weight:600;color:#fff;background:'+rm.bg+';letter-spacing:.02em';
-      roleBadge.textContent=u.role;
-      td6.appendChild(roleBadge);
-
       // STATUS badge
-      var td7=document.createElement('td');
+      var td6=document.createElement('td');
       var stBadge=document.createElement('span');
       stBadge.style.cssText='padding:3px 10px;border-radius:7px;font-size:12px;font-weight:600;color:#fff;background:'+(isActive?'#059669':'#dc2626');
       stBadge.textContent=u.status||'Active';
-      td7.appendChild(stBadge);
+      td6.appendChild(stBadge);
 
       // ACTIONS
-      var td8=document.createElement('td');
+      var td7=document.createElement('td');
       var btnWrap=document.createElement('div');
       btnWrap.style.cssText='display:flex;gap:4px;flex-wrap:nowrap;align-items:center';
 
@@ -6989,11 +7139,11 @@ function renderUsers(users){
       btnWrap.appendChild(makeBtn(isActive?'person_off':'how_to_reg','',isActive?'#d97706':'#059669',function(){toggleUser(u.userID,isActive?'Inactive':'Active');}));
       btnWrap.appendChild(makeBtn('delete_forever','','#dc2626',function(){confirmDeleteUser(u.userID,u.name);}));
 
-      td8.appendChild(btnWrap);
+      td7.appendChild(btnWrap);
 
       tr.appendChild(td1);tr.appendChild(td2);tr.appendChild(td3);
       tr.appendChild(td4);tr.appendChild(td5);tr.appendChild(td6);
-      tr.appendChild(td7);tr.appendChild(td8);
+      tr.appendChild(td7);
       tbody.appendChild(tr);
     })(users[i]);
   }
@@ -7198,6 +7348,7 @@ function loadCalendarPage(){
   gasCall('serverGetCalendarSettings',S.token).then(function(r){
     var configured=!!(r&&r.success&&r.ownerEmail);
     CAL.configured=configured;
+    CAL.ownerEmail=(r&&r.ownerEmail)||'';
     var nc=id('calNotConfigured'),mv=id('calMainView'),ca=id('calActions');
     if(!configured){
       if(nc)nc.style.display='block';
@@ -7219,6 +7370,12 @@ function calChangeMonth(delta){
 function calGoToday(){
   CAL.viewDate=new Date();
   calRenderMonth();
+}
+function calOpenInGoogle(){
+  if(!CAL.ownerEmail){toast('Calendar email not configured yet.','error');return;}
+  // Google Calendar's web URL accepts the calendar ID (email) directly via /r?cid=
+  var url='https://calendar.google.com/calendar/r?cid='+encodeURIComponent(CAL.ownerEmail);
+  window.open(url,'_blank');
 }
 
 function calRenderMonth(){
