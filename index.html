@@ -1340,7 +1340,7 @@ tbody tr:hover { background: var(--surface2); }
     </div>
     <div class="sb-nav">
       <div class="sb-section-lbl">Main</div>
-      <div class="sb-item active" data-page="dashboard" onclick="go('dashboard')"><span class="material-icons-round sb-i">dashboard</span> Dashboard</div>
+      <div class="sb-item active" data-page="dashboard" id="snav-dashboard" onclick="go('dashboard')"><span class="material-icons-round sb-i">dashboard</span> Dashboard</div>
       <div class="sb-item" data-page="taskEntry" id="snav-taskEntry" onclick="go('taskEntry')"><span class="material-icons-round sb-i">add_task</span> Task Entry</div>
       <div class="sb-item" data-page="tracker" onclick="go('tracker')"><span class="material-icons-round sb-i">track_changes</span> Task Tracker<span class="sb-badge" id="overdBadge" style="display:none">0</span></div>
       <div class="sb-item" data-page="commview" id="snav-commview" onclick="go('commview')"><span class="material-icons-round sb-i">bar_chart</span> Commissioner View</div>
@@ -1884,10 +1884,12 @@ tbody tr:hover { background: var(--surface2); }
         <div class="ph-actions" id="plAdminActions">
           <button class="btn btn-ghost btn-sm" onclick="plToggleView('form')"><span class="material-icons-round mi">add_circle</span> New Entry</button>
           <button class="btn btn-ghost btn-sm" onclick="plToggleView('list')"><span class="material-icons-round mi">view_module</span> All Entries</button>
+          <button class="btn btn-ghost btn-sm" onclick="showPlDownloadModal()"><span class="material-icons-round mi">download</span> Download</button>
           <button class="btn btn-primary btn-sm" onclick="showPlDiaryModal()"><span class="material-icons-round mi">auto_stories</span> AI Diary</button>
         </div>
         <div class="ph-actions" id="plViewActions" style="display:none">
           <button class="btn btn-ghost btn-sm" onclick="plToggleView('list')"><span class="material-icons-round mi">view_module</span> View All Notes</button>
+          <button class="btn btn-ghost btn-sm" onclick="showPlDownloadModal()"><span class="material-icons-round mi">download</span> Download</button>
         </div>
       </div>
 
@@ -1909,12 +1911,12 @@ tbody tr:hover { background: var(--surface2); }
             <div class="f-row">
               <div class="f-group">
                 <label class="f-label">Type <span class="req">*</span></label>
-                <select class="f-sel" id="pl-type" onchange="plOnTypeChange()">
-                  <option value="">Select Type</option>
-                  <option>Inspection</option>
-                  <option>Meeting</option>
-                  <option>Site Visit</option>
-                </select>
+                <div style="display:flex;gap:6px">
+                  <select class="f-sel" id="pl-type" onchange="plOnTypeChange()" style="flex:1">
+                    <option value="">Select Type</option>
+                  </select>
+                  <button type="button" class="btn btn-ghost btn-sm" id="plManageTypesBtn" onclick="plShowManageTypes()" title="Add or remove note types" style="display:none;flex-shrink:0"><span class="material-icons-round mi">tune</span></button>
+                </div>
               </div>
             </div>
             <!-- Zone chips — shown for Inspection and Site Visit -->
@@ -2040,6 +2042,41 @@ tbody tr:hover { background: var(--surface2); }
           </div>
         </div>
       </div>
+
+      <!-- DOWNLOAD NOTES — available to ALL roles, no AI dependency -->
+      <div class="modal-bg" id="mPlDownload">
+        <div class="modal-box" style="max-width:520px">
+          <div class="modal-hd"><span class="modal-title">&#128229; Download Notes</span><button class="modal-close" onclick="closeModal('mPlDownload')"><span class="material-icons-round">close</span></button></div>
+          <div class="modal-body">
+            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px">
+              <button class="btn btn-ghost btn-sm" onclick="plDownloadPeriod('week')">This Week</button>
+              <button class="btn btn-ghost btn-sm" onclick="plDownloadPeriod('lastweek')">Last Week</button>
+              <button class="btn btn-ghost btn-sm" onclick="plDownloadPeriod('month')">This Month</button>
+              <button class="btn btn-ghost btn-sm" onclick="plDownloadPeriod('lastmonth')">Last Month</button>
+              <button class="btn btn-ghost btn-sm" onclick="plDownloadPeriod('all')">All Time</button>
+            </div>
+            <div class="f-row">
+              <div class="f-group"><label class="f-label">From Date <span class="req">*</span></label><input type="date" class="f-ctrl" id="pld-from"></div>
+              <div class="f-group"><label class="f-label">To Date <span class="req">*</span></label><input type="date" class="f-ctrl" id="pld-to"></div>
+            </div>
+            <div class="f-row">
+              <div class="f-group mb0">
+                <label class="f-label">Type</label>
+                <select class="f-sel" id="pld-type"><option value="">All Types</option></select>
+              </div>
+              <div class="f-group mb0">
+                <label class="f-label">Sort Order</label>
+                <select class="f-sel" id="pld-sort"><option value="asc">Oldest \u2192 Newest</option><option value="desc">Newest \u2192 Oldest</option></select>
+              </div>
+            </div>
+            <div id="pldPreview" style="margin-top:10px;font-size:12px;color:var(--tx3)"></div>
+          </div>
+          <div class="modal-ft">
+            <button class="btn btn-ghost" onclick="closeModal('mPlDownload')">Cancel</button>
+            <button class="btn btn-primary" onclick="downloadPlNotes()"><span class="material-icons-round mi">picture_as_pdf</span> Download PDF</button>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- ABOUT PAGE -->
@@ -2116,7 +2153,7 @@ tbody tr:hover { background: var(--surface2); }
   <!-- BOTTOM NAV -->
   <nav class="bottom-nav" id="bottomNav">
     <div class="bottom-nav-inner">
-      <button class="bn-item active" data-page="dashboard" onclick="go('dashboard')">
+      <button class="bn-item active" data-page="dashboard" id="bnDashboard" onclick="go('dashboard')">
         <span class="material-icons-round mi">dashboard</span>
         <span class="bn-label">Dashboard</span>
       </button>
@@ -2172,13 +2209,13 @@ tbody tr:hover { background: var(--surface2); }
       <div class="f-row">
         <div class="f-group"><label class="f-label">Zone</label><select class="f-sel" id="mu-zone"><option value="">Select</option></select></div>
         <div class="f-group"><label class="f-label">Role <span class="req">*</span></label>
-          <select class="f-sel" id="mu-role" onchange="onRoleChange()"><option value="">Select Role</option><option>Commissioner</option><option>Admin</option><option>HOD</option><option>Officer</option></select>
+          <select class="f-sel" id="mu-role" onchange="onRoleChange()"><option value="">Select Role</option><option>Commissioner</option><option>Admin</option><option>HOD</option><option>Supervision</option><option>Officer</option></select>
         </div>
       </div>
       <!-- HOD multi-department field — shown only when role = HOD -->
       <div id="hodDeptRow" style="display:none" class="f-group">
-        <label class="f-label" style="font-size:12px;font-weight:700;color:var(--c-blue);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px">&#127970; HOD Departments <span class="req">*</span></label>
-        <div style="font-size:12px;color:var(--tx3);margin-bottom:8px">Select all departments this HOD oversees. Tasks from these departments will appear in their dashboard.</div>
+        <label class="f-label" id="hodDeptLabel" style="font-size:12px;font-weight:700;color:var(--c-blue);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px">&#127970; HOD Departments <span class="req">*</span></label>
+        <div id="hodDeptHelp" style="font-size:12px;color:var(--tx3);margin-bottom:8px">Select all departments this HOD oversees. Tasks from these departments will appear in their dashboard.</div>
         <div id="hodDeptCheckboxes" style="display:flex;flex-wrap:wrap;gap:8px;padding:12px;background:var(--surface2);border-radius:10px;border:1.5px solid var(--c-blue)"></div>
       </div>
       <div class="f-row">
@@ -2904,7 +2941,7 @@ function showApp(){
     var sn=id('sbName');if(sn)sn.textContent=u.name;
     var sr=id('sbRole');if(sr)sr.textContent=u.role;
     applyRoleNav(u.role);
-    go('dashboard');
+    go(u.role==='Supervision'?'tracker':'dashboard');
     loadLookup();
     loadProfilePhoto();
   }catch(e){
@@ -2922,6 +2959,7 @@ function showApp(){
 function applyRoleNav(role){
   var isAdmin=(role==='Admin'||role==='Commissioner');
   var isHOD=(role==='HOD');
+  var isSupervision=(role==='Supervision');
   var isOfficer=(role==='Officer');
 
   show('snav-taskEntry', isAdmin);
@@ -2930,18 +2968,24 @@ function applyRoleNav(role){
   show('snav-settings', isAdmin);
   show('snav-chgpw', true);
   show('snav-photolog', true); // All roles can view Notes/Photo Log
+  show('snav-dashboard', !isSupervision);
+  show('bnDashboard', !isSupervision);
   show('bnEntry', isAdmin);
   show('bnCommView', isAdmin);
   show('newTaskBtn', isAdmin);
   var thChk=id('thChk');
   if(thChk)thChk.innerHTML=isAdmin?'<input type="checkbox" id="chkAll" onchange="toggleSelectAll(this)" style="width:16px;height:16px;cursor:pointer" title="Select all">':'';
-  var thAct=id('thActions');if(thAct)thAct.style.display=isOfficer?'none':'';
+  var thAct=id('thActions');if(thAct)thAct.style.display=(isOfficer||isSupervision)?'none':'';
   if(!isAdmin&&!isHOD){var bb=id('bulkBar');if(bb)bb.classList.add('dn');}
 
   if(isOfficer){
     S.allowedPages=['dashboard','tracker','photolog','about'];
   } else if(isHOD){
     S.allowedPages=['dashboard','tracker','photolog','about'];
+  } else if(isSupervision){
+    // Supervision: view + update tasks for assigned departments only.
+    // No analytics dashboard, no reassignment — scoped task tracker access.
+    S.allowedPages=['tracker','photolog','about'];
   } else {
     S.allowedPages=['dashboard','taskEntry','tracker','commview','users','settings','photolog','about'];
   }
@@ -2951,6 +2995,9 @@ function applyRoleNav(role){
     if(ad)ad.classList.add('dn');if(od)od.classList.remove('dn');if(hd)hd.classList.add('dn');
   } else if(isHOD){
     if(ad)ad.classList.add('dn');if(od)od.classList.add('dn');if(hd)hd.classList.remove('dn');
+  } else if(isSupervision){
+    // No dashboard shown for Supervision — land directly on Task Tracker
+    if(ad)ad.classList.add('dn');if(od)od.classList.add('dn');if(hd)hd.classList.add('dn');
   } else {
     if(ad)ad.classList.remove('dn');if(od)od.classList.add('dn');if(hd)hd.classList.add('dn');
   }
@@ -3039,9 +3086,17 @@ function onRoleChange(){
   var role=V('mu-role');
   var hodRow=id('hodDeptRow');
   if(!hodRow)return;
-  if(role==='HOD'){
+  if(role==='HOD'||role==='Supervision'){
     hodRow.style.display='block';
     buildHODDeptCheckboxes();
+    var lbl=id('hodDeptLabel'),help=id('hodDeptHelp');
+    if(role==='Supervision'){
+      if(lbl)lbl.innerHTML='&#128065; Supervision Departments <span class="req">*</span>';
+      if(help)help.textContent='Select all departments this Supervisor will view and update tasks for. They can update status but cannot reassign tasks to others.';
+    } else {
+      if(lbl)lbl.innerHTML='&#127970; HOD Departments <span class="req">*</span>';
+      if(help)help.textContent='Select all departments this HOD oversees. Tasks from these departments will appear in their dashboard.';
+    }
   } else {
     hodRow.style.display='none';
   }
@@ -3656,14 +3711,27 @@ function makeTaskCard(t, isAdmin, isHOD, showReassign){
 function renderCards(tasks){
   var grid = id('taskCardsGrid');
   if(!grid) return;
+
+  var isAdmin = S.user && (S.user.role==='Admin'||S.user.role==='Commissioner');
+  var isHOD   = S.user && S.user.role==='HOD';
+  var isSupervision = S.user && S.user.role==='Supervision';
+
+  // Supervision: restrict to only the departments assigned to this user.
+  // (Backend returns the full task set for this role, same as HOD — scoping
+  // happens here, matching the existing HOD pattern.)
+  if(isSupervision){
+    var supDeptStr=S.user.hodDepartments||S.user.department||'';
+    var supDepts=supDeptStr.split(',').map(function(d){return d.trim().toLowerCase();}).filter(function(d){return d;});
+    tasks=tasks.filter(function(t){
+      return supDepts.indexOf(String(t.department||'').toLowerCase())!==-1;
+    });
+  }
+
   var tc = id('taskCount');
   if(tc) tc.textContent = tasks.length + ' task' + (tasks.length!==1?'s':'');
 
   // Clear grid safely
   while(grid.firstChild) grid.removeChild(grid.firstChild);
-
-  var isAdmin = S.user && (S.user.role==='Admin'||S.user.role==='Commissioner');
-  var isHOD   = S.user && S.user.role==='HOD';
 
   if(!tasks.length){
     var empty = document.createElement('div');
@@ -3728,6 +3796,16 @@ function renderCards(tasks){
 
     grid.appendChild(makeCollapsibleSection('My Tasks','person','var(--c-blue)',myTasks,false,'myTasks'));
     grid.appendChild(makeCollapsibleSection('Department Tasks','group','#059669',deptTasks,true,'deptTasks'));
+    return;
+  }
+
+  if(isSupervision){
+    // Flat list, scoped to assigned departments — view + update only, no reassign
+    for(var i=0;i<tasks.length;i++){
+      try{
+        grid.appendChild(makeTaskCard(tasks[i], false, false, false));
+      }catch(e){ console.error('Card error row '+i, e); }
+    }
     return;
   }
 
@@ -5010,6 +5088,7 @@ function loadPhotoLog(){
   var adminAct=id('plAdminActions'),viewAct=id('plViewActions');
   if(adminAct)adminAct.style.display=isAdmin?'':'none';
   if(viewAct)viewAct.style.display=isAdmin?'none':'';
+  var manageBtn=id('plManageTypesBtn');if(manageBtn)manageBtn.style.display=isAdmin?'':'none';
   // Always land on the All Entries list, regardless of role.
   // Admin/Commissioner use the New Entry button/tab to switch to the form if needed.
   var fv=id('plFormView'),lv=id('plListView');
@@ -5019,6 +5098,7 @@ function loadPhotoLog(){
     var pd=id('pl-date');if(pd&&!pd.value)pd.value=new Date().toISOString().slice(0,10);
     var pt=id('pl-time');if(pt&&!pt.value){var now=new Date();pt.value=zeroPad(now.getHours(),2)+':'+zeroPad(now.getMinutes(),2);}
   }
+  plLoadNoteTypes();
   showLoader('Loading notes...');
   gasCall('serverGetNotes',S.token).then(function(r){
     hideLoader();
@@ -5030,6 +5110,131 @@ function loadPhotoLog(){
       toast(r.message,'error');
     }
     plRenderCards(PL.entries);
+  });
+}
+
+// ─── NOTE TYPES — dynamic, Admin/Commissioner can add new ones ──────
+function plLoadNoteTypes(){
+  gasCall('serverGetNoteTypes',S.token).then(function(r){
+    if(r&&r.success&&r.data&&r.data.length){
+      S.noteTypes=r.data;
+    } else if(!S.noteTypes||!S.noteTypes.length){
+      S.noteTypes=['Inspection','Meeting','Site Visit']; // safe fallback
+    }
+    plPopulateTypeDropdowns();
+  });
+}
+function plPopulateTypeDropdowns(){
+  var types=S.noteTypes||['Inspection','Meeting','Site Visit'];
+  // New Entry form dropdown
+  var sel=id('pl-type');
+  if(sel){
+    var cur=sel.value;
+    sel.innerHTML='<option value="">Select Type</option>';
+    for(var i=0;i<types.length;i++){
+      var opt=document.createElement('option');opt.textContent=types[i];sel.appendChild(opt);
+    }
+    if(cur&&types.indexOf(cur)!==-1)sel.value=cur;
+  }
+  // Filter dropdown (All Types + each type)
+  var fsel=id('plFType');
+  if(fsel){
+    var fcur=fsel.value;
+    fsel.innerHTML='<option value="">All Types</option>';
+    for(var i=0;i<types.length;i++){
+      var opt2=document.createElement('option');opt2.textContent=types[i];fsel.appendChild(opt2);
+    }
+    if(fcur)fsel.value=fcur;
+  }
+  // Edit modal dropdown (if open)
+  var esel=id('plEdit-type');
+  if(esel){
+    var ecur=esel.value;
+    esel.innerHTML='';
+    for(var i=0;i<types.length;i++){
+      var opt3=document.createElement('option');opt3.textContent=types[i];esel.appendChild(opt3);
+    }
+    if(ecur)esel.value=ecur;
+  }
+}
+function plShowManageTypes(){
+  var types=S.noteTypes||['Inspection','Meeting','Site Visit'];
+  var html='<div style="padding:4px">'
+    +'<div style="font-size:13px;color:var(--tx2);margin-bottom:12px">Add new note types (e.g. "Site Audit", "Complaint Visit") or remove types you no longer need. Removing a type does not affect notes that already used it.</div>'
+    +'<div id="plTypesList" style="display:flex;flex-direction:column;gap:6px;margin-bottom:14px"></div>'
+    +'<div style="display:flex;gap:8px">'
+    +'<input type="text" class="f-ctrl" id="plNewTypeInput" placeholder="New type name, e.g. Site Audit" style="flex:1">'
+    +'<button class="btn btn-primary btn-sm" onclick="plAddNoteType()"><span class="material-icons-round mi">add</span> Add</button>'
+    +'</div></div>';
+  var gb=id('mGenericBody');if(gb)gb.innerHTML=html;
+  var gt=id('mGenericTitle');if(gt)gt.textContent='Manage Note Types';
+  openModal('mGeneric');
+  plRenderTypesList();
+}
+function plRenderTypesList(){
+  var wrap=id('plTypesList');if(!wrap)return;
+  var types=S.noteTypes||[];
+  while(wrap.firstChild)wrap.removeChild(wrap.firstChild);
+  var defaults=['Inspection','Meeting','Site Visit'];
+  for(var i=0;i<types.length;i++){
+    (function(t){
+      var row=document.createElement('div');
+      row.style.cssText='display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:8px';
+      var label=document.createElement('span');
+      label.style.cssText='font-size:13px;font-weight:600;color:var(--tx1)';
+      label.textContent=t;
+      row.appendChild(label);
+      if(defaults.indexOf(t)===-1){
+        var del=document.createElement('button');
+        del.className='btn btn-ghost btn-sm';
+        del.style.cssText='color:var(--c-red);padding:3px 8px';
+        del.innerHTML='<span class="material-icons-round mi" style="font-size:15px">delete</span>';
+        del.onclick=function(){plDeleteNoteType(t);};
+        row.appendChild(del);
+      } else {
+        var tag=document.createElement('span');
+        tag.style.cssText='font-size:10.5px;color:var(--tx3);font-style:italic';
+        tag.textContent='default';
+        row.appendChild(tag);
+      }
+      wrap.appendChild(row);
+    })(types[i]);
+  }
+}
+function plAddNoteType(){
+  var inp=id('plNewTypeInput');if(!inp)return;
+  var name=inp.value.trim();
+  if(!name){toast('Please enter a type name.','error');return;}
+  showLoader('Adding type...');
+  gasCall('serverAddNoteType',S.token,name).then(function(r){
+    hideLoader();
+    if(r&&r.success){
+      toast('Type "'+name+'" added!','ok');
+      inp.value='';
+      plLoadNoteTypesAndRefreshModal();
+    } else {
+      toast((r&&r.message)||'Failed to add type.','error');
+    }
+  });
+}
+function plDeleteNoteType(name){
+  if(!confirm('Remove type "'+name+'"? Existing notes using this type will not be affected.'))return;
+  showLoader('Removing type...');
+  gasCall('serverDeleteNoteType',S.token,name).then(function(r){
+    hideLoader();
+    if(r&&r.success){
+      toast('Type removed.','ok');
+      plLoadNoteTypesAndRefreshModal();
+    } else {
+      toast((r&&r.message)||'Failed to remove type.','error');
+    }
+  });
+}
+function plLoadNoteTypesAndRefreshModal(){
+  gasCall('serverGetNoteTypes',S.token).then(function(r){
+    if(r&&r.success){S.noteTypes=r.data||[];}
+    plPopulateTypeDropdowns();
+    plRenderTypesList();
   });
 }
 
@@ -5061,7 +5266,9 @@ function plOnTypeChange(){
     if(zoneRow)zoneRow.style.display='none';
     if(deptRow)deptRow.style.display='block';
     plBuildDeptChips();
-  } else if(type==='Inspection'||type==='Site Visit'){
+  } else if(type){
+    // Inspection, Site Visit, and any custom Admin-added type all default
+    // to the Zone field — gives every entry a location context by default.
     if(zoneRow)zoneRow.style.display='block';
     if(deptRow)deptRow.style.display='none';
   } else {
@@ -5070,7 +5277,7 @@ function plOnTypeChange(){
   }
   if(lbl){
     var map={Inspection:'Inspection Observations & Findings',Meeting:'Meeting Notes & Decisions','Site Visit':'Site Visit Remarks'};
-    lbl.textContent=map[type]||'Notes';
+    lbl.textContent=map[type]||(type?type+' Notes':'Notes');
   }
 }
 function plUpdateNotesLabel(){plOnTypeChange();}
@@ -5149,11 +5356,11 @@ function savePlEntry(){
   var date=V('pl-date'),time=V('pl-time'),type=V('pl-type'),zone=V('pl-zone'),
       loc=V('pl-location'),notes=id('pl-notes')?id('pl-notes').value:'';
   if(!date||!type){toast('Please fill Date and select a Type.','error');return;}
-  if((type==='Inspection'||type==='Site Visit')&&!zone){
-    toast('Please select at least one Zone for '+type+'.','error');return;
-  }
   if(type==='Meeting'&&!zone){
     toast('Please select at least one Department for the Meeting.','error');return;
+  }
+  if(type!=='Meeting'&&!zone){
+    toast('Please select at least one Zone for '+type+'.','error');return;
   }
   if(!notes.trim()){toast('Please enter notes / observations.','error');return;}
 
@@ -5542,7 +5749,18 @@ function plEditEntry(noteID){
   openModal('mGeneric');
 
   setTimeout(function(){
-    var st=id('plEdit-type');if(st)st.value=e.type||'Inspection';
+    plPopulateTypeDropdowns(); // fills plEdit-type with current full type list
+    var st=id('plEdit-type');
+    if(st){
+      // If this entry's type isn't in the current active list (e.g. it was
+      // since removed), add it back temporarily so the value displays correctly.
+      if(e.type&&Array.prototype.indexOf.call(st.options,e.type)===-1){
+        var found=false;
+        for(var oi=0;oi<st.options.length;oi++){if(st.options[oi].value===e.type){found=true;break;}}
+        if(!found){var opt=document.createElement('option');opt.textContent=e.type;st.appendChild(opt);}
+      }
+      st.value=e.type||'Inspection';
+    }
     plRenderEditExistingPhotos();
   },50);
 }
@@ -6047,6 +6265,185 @@ function exportPlDiaryPDF(entries,aiText,style,from,to){
   if(w){w.document.write(html);w.document.close();}
   else toast('Allow pop-ups to generate PDF.','info');
 }
+
+// ─── DOWNLOAD NOTES — available to ALL roles, no AI dependency ─────
+// Reuses the same date-wise grouped layout as the AI Diary export but
+// skips the AI summary section entirely — a direct, instant PDF of the
+// raw notes in chronological order (or reverse, by user's choice).
+function showPlDownloadModal(){
+  plPopulateDownloadTypeOptions();
+  plDownloadPeriod('month');
+  openModal('mPlDownload');
+}
+function plPopulateDownloadTypeOptions(){
+  var sel=id('pld-type');if(!sel)return;
+  var types=S.noteTypes||['Inspection','Meeting','Site Visit'];
+  var cur=sel.value;
+  sel.innerHTML='<option value="">All Types</option>';
+  for(var i=0;i<types.length;i++){
+    var opt=document.createElement('option');opt.textContent=types[i];sel.appendChild(opt);
+  }
+  if(cur)sel.value=cur;
+}
+function plDownloadPeriod(period){
+  var now=new Date(),from=new Date(),to=new Date();
+  if(period==='week'){var day=now.getDay()||7;from.setDate(now.getDate()-(day-1));to.setDate(from.getDate()+6);}
+  else if(period==='lastweek'){var day=now.getDay()||7;to.setDate(now.getDate()-day);from.setDate(to.getDate()-6);}
+  else if(period==='month'){from=new Date(now.getFullYear(),now.getMonth(),1);to=new Date(now.getFullYear(),now.getMonth()+1,0);}
+  else if(period==='lastmonth'){from=new Date(now.getFullYear(),now.getMonth()-1,1);to=new Date(now.getFullYear(),now.getMonth(),0);}
+  else if(period==='all'){
+    // Span from the earliest entry to today
+    var minDate=null;
+    for(var i=0;i<PL.entries.length;i++){if(PL.entries[i].date&&(!minDate||PL.entries[i].date<minDate))minDate=PL.entries[i].date;}
+    from=minDate?new Date(minDate+'T00:00:00'):new Date(now.getFullYear(),0,1);
+    to=now;
+  }
+  var fi=id('pld-from'),ti=id('pld-to');
+  if(fi)fi.value=from.toISOString().slice(0,10);if(ti)ti.value=to.toISOString().slice(0,10);
+  plUpdateDownloadPreview();
+}
+function plUpdateDownloadPreview(){
+  var from=V('pld-from'),to=V('pld-to'),type=V('pld-type');
+  if(!from||!to)return;
+  var count=0;
+  for(var i=0;i<PL.entries.length;i++){
+    var e=PL.entries[i];
+    if(e.date<from||e.date>to)continue;
+    if(type&&e.type!==type)continue;
+    count++;
+  }
+  var pv=id('pldPreview');
+  if(pv)pv.innerHTML='<div style="padding:8px 10px;background:var(--surface2);border-radius:7px;color:var(--tx2)"><strong>'+count+'</strong> entr'+(count===1?'y':'ies')+' will be included in the PDF.</div>';
+}
+// Hook the preview update to date/type field changes
+document.addEventListener('change',function(ev){
+  if(ev.target&&(ev.target.id==='pld-from'||ev.target.id==='pld-to'||ev.target.id==='pld-type')){
+    plUpdateDownloadPreview();
+  }
+});
+function downloadPlNotes(){
+  var from=V('pld-from'),to=V('pld-to'),type=V('pld-type'),sortDir=V('pld-sort')||'asc';
+  if(!from||!to){toast('Please select a date range.','error');return;}
+  var entries=[];
+  for(var i=0;i<PL.entries.length;i++){
+    var e=PL.entries[i];
+    if(e.date<from||e.date>to)continue;
+    if(type&&e.type!==type)continue;
+    entries.push(e);
+  }
+  if(!entries.length){toast('No entries found in the selected period.','info');return;}
+  closeModal('mPlDownload');
+  exportPlNotesDirectPDF(entries,from,to,sortDir);
+}
+function exportPlNotesDirectPDF(entries,from,to,sortDir){
+  var months=['','January','February','March','April','May','June','July','August','September','October','November','December'];
+  var defaultColors={Inspection:'#1d4ed8',Meeting:'#059669','Site Visit':'#d97706'};
+  var dir=(sortDir==='desc')?-1:1;
+
+  var sorted=entries.slice().sort(function(a,b){
+    var da=a.date+' '+(a.time||'00:00'),db=b.date+' '+(b.time||'00:00');
+    if(da<db)return -1*dir;
+    if(da>db)return 1*dir;
+    return 0;
+  });
+
+  var dateGroups={},dateOrder=[];
+  for(var i=0;i<sorted.length;i++){
+    var dk=sorted[i].date;
+    if(!dateGroups[dk]){dateGroups[dk]=[];dateOrder.push(dk);}
+    dateGroups[dk].push(sorted[i]);
+  }
+
+  var dateWiseHtml='';
+  for(var di=0;di<dateOrder.length;di++){
+    var dk=dateOrder[di],dayEntries=dateGroups[dk];
+    var d=new Date(dk+'T00:00:00');
+    var dayNames=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+    var fullDateStr=(isNaN(d.getDate())?dk:(d.getDate()+' '+months[d.getMonth()+1]+' '+d.getFullYear()+', '+dayNames[d.getDay()]));
+
+    dateWiseHtml+='<div class="date-block"><div class="date-hd">'+fullDateStr+'</div>';
+    for(var ei=0;ei<dayEntries.length;ei++){
+      var e=dayEntries[ei],col=defaultColors[e.type]||'#475569';
+      var pc=plPhotoCount(e);
+      dateWiseHtml+='<div class="entry-block">'
+        +'<div class="entry-meta">'
+        +(e.time?'<span class="entry-time">'+e.time+'</span>':'')
+        +'<span class="entry-type" style="background:'+col+'1a;color:'+col+';border:1px solid '+col+'44">'+String(e.type||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')+'</span>'
+        +'<span class="entry-loc">'+String(e.zone||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')+(e.location?' \u00b7 '+String(e.location).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'):'')+'</span>'
+        +(pc>0?'<span class="entry-photos">\uD83D\uDCF7 '+pc+' photo'+(pc!==1?'s':'')+'</span>':'')
+        +'</div>'
+        +'<div class="entry-notes">'+String(e.notes||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>')+'</div>'
+        +'</div>';
+    }
+    dateWiseHtml+='</div>';
+  }
+
+  var css='@page{size:A4;margin:15mm}*{box-sizing:border-box;margin:0;padding:0}body{font-family:"Segoe UI",Arial,sans-serif;font-size:11px;color:#1e293b;background:#fff}'
+    +'.hband{background:linear-gradient(135deg,#0b1f45,#1a3a6b);color:#fff;padding:18px 22px;display:flex;justify-content:space-between;align-items:center}'
+    +'.gbar{height:4px;background:linear-gradient(90deg,#f59e0b,#d97706)}'
+    +'.sechd{display:flex;align-items:center;gap:8px;margin:18px 0 10px;padding-bottom:5px;border-bottom:2px solid #0b1f45}'
+    +'.sechd h2{font-size:11px;font-weight:800;color:#0b1f45;text-transform:uppercase;letter-spacing:.07em}'
+    +'.date-block{margin-bottom:14px;page-break-inside:avoid}'
+    +'.date-hd{background:#0b1f45;color:#fff;font-size:10.5px;font-weight:700;padding:6px 10px;border-radius:5px 5px 0 0;letter-spacing:.02em}'
+    +'.entry-block{border:1px solid #e2e8f0;border-top:none;padding:9px 12px;background:#fff}'
+    +'.entry-block:nth-child(even){background:#f8fafc}'
+    +'.entry-meta{display:flex;align-items:center;gap:8px;margin-bottom:5px;flex-wrap:wrap}'
+    +'.entry-time{font-size:9.5px;font-weight:700;color:#0b1f45;background:#eef2ff;padding:2px 7px;border-radius:4px}'
+    +'.entry-type{font-size:9px;font-weight:700;padding:2px 8px;border-radius:4px}'
+    +'.entry-loc{font-size:10px;color:#64748b}'
+    +'.entry-photos{font-size:9.5px;color:#0ea5e9;margin-left:auto}'
+    +'.entry-notes{font-size:10.5px;line-height:1.6;color:#1e293b;white-space:pre-wrap}'
+    +'.fband{margin-top:18px;border-top:2px solid #e2e8f0;padding-top:7px;display:flex;justify-content:space-between;font-size:8.5px;color:#94a3b8}'
+    +'@media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact}.date-block{page-break-inside:avoid}}';
+
+  var now=new Date(),dateStr2=now.toLocaleDateString('en-IN',{day:'2-digit',month:'long',year:'numeric'});
+  var totalPhotos=0,typeCounts={};
+  for(var i=0;i<entries.length;i++){
+    totalPhotos+=plPhotoCount(entries[i]);
+    var t=entries[i].type||'Other';
+    typeCounts[t]=(typeCounts[t]||0)+1;
+  }
+  var typeCountsHtml='';
+  var typeColorsForCount={Inspection:'#1d4ed8',Meeting:'#059669','Site Visit':'#d97706'};
+  for(var tk in typeCounts){
+    var tcol=typeColorsForCount[tk]||'#475569';
+    typeCountsHtml+='<div style="background:'+tcol+'14;border-radius:6px;padding:8px 14px;font-size:10.5px;color:'+tcol+'"><strong>'+typeCounts[tk]+'</strong> '+String(tk).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')+(typeCounts[tk]!==1?'s':'')+'</div>';
+  }
+
+  // Logo from Settings, if uploaded
+  var savedLogo='';
+  try{savedLogo=localStorage.getItem('sc-logo')||'';}catch(e){}
+  var emblemHtml=savedLogo
+    ?'<img src="'+savedLogo+'" style="width:42px;height:42px;border-radius:50%;object-fit:contain;background:#fff;border:2px solid rgba(255,255,255,.3);padding:2px" alt="Logo">'
+    :'';
+
+  var html='<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Notes Export</title><style>'+css+'</style></head><body>'
+    +'<div class="hband"><div style="display:flex;align-items:center;gap:12px">'+emblemHtml+'<div>'
+    +'<div style="font-size:14px;font-weight:800">Salem City Municipal Corporation</div>'
+    +'<div style="font-size:9px;color:rgba(255,255,255,.6);margin-top:2px;text-transform:uppercase;letter-spacing:.05em">Tamil Nadu Government \u00b7 Urban Local Body</div>'
+    +'</div></div><div style="text-align:right">'
+    +'<div style="font-size:16px;font-weight:800">Inspection &amp; Meeting Notes</div>'
+    +'<div style="font-size:9px;color:rgba(255,255,255,.6);margin-top:3px">'+from+' to '+to+' \u00b7 '+(sortDir==='desc'?'Newest first':'Oldest first')+'</div>'
+    +'</div></div>'
+    +'<div class="gbar"></div>'
+    +'<div style="padding:14px 0">'
+    +'<div class="sechd"><h2>Summary</h2></div>'
+    +'<div style="display:flex;gap:10px;margin-bottom:6px;flex-wrap:wrap">'
+    +'<div style="background:#eef2ff;border-radius:6px;padding:8px 14px;font-size:10.5px;color:#1d4ed8"><strong>'+entries.length+'</strong> Total Entries</div>'
+    +typeCountsHtml
+    +'<div style="background:#f0f9ff;border-radius:6px;padding:8px 14px;font-size:10.5px;color:#0ea5e9"><strong>'+totalPhotos+'</strong> Photos Attached</div>'
+    +'</div>'
+    +'<div class="sechd"><h2>Date-Wise Entry Log</h2></div>'
+    +dateWiseHtml
+    +'<div class="fband"><div><strong>Salem City Municipal Corporation</strong> \u00b7 Notes Export<br>Period: '+from+' to '+to+' \u00b7 Generated: '+dateStr2+'</div>'
+    +'<div style="text-align:right">'+entries.length+' entries \u00b7 Downloaded by '+(S.user?S.user.name:'')+' ('+(S.user?S.user.role:'')+')</div></div>'
+    +'</div><scr'+'ipt>window.onload=function(){setTimeout(function(){window.print();},500);};<\/scr'+'ipt></body></html>';
+
+  var w=window.open('','_blank');
+  if(w){w.document.write(html);w.document.close();}
+  else toast('Allow pop-ups to generate PDF.','info');
+}
+
 function exportPlDiaryExcel(entries,from,to){
   var rows=[['Salem City Municipal Corporation - Notes Export'],['Period: '+from+' to '+to],[],['Date','Time','Type','Zone','Location','Notes','Photo Count']];
   var sorted=entries.slice().sort(function(a,b){
@@ -6269,9 +6666,9 @@ function editUser(uid){showUserModal(uid);}
 function saveUser(){
   var uid=V('mu-id');
   var role=V('mu-role');
-  // For HOD: get departments from checkboxes instead of single dept dropdown
-  var dept=role==='HOD'?getHODSelectedDepts():V('mu-dept');
-  if(role==='HOD'&&!dept){toast('Please select at least one department for the HOD.','error');return;}
+  // For HOD/Supervision: get departments from checkboxes instead of single dept dropdown
+  var dept=(role==='HOD'||role==='Supervision')?getHODSelectedDepts():V('mu-dept');
+  if((role==='HOD'||role==='Supervision')&&!dept){toast('Please select at least one department for the '+role+'.','error');return;}
   var d={userID:uid,employeeID:V('mu-emp'),name:V('mu-name'),designation:V('mu-desig'),department:dept,zone:V('mu-zone'),role:role,mobile:V('mu-mobile'),email:V('mu-email'),username:V('mu-uname'),password:V('mu-pass')};
   if(!d.name||!d.username||!d.role){toast('Name, Username and Role are required.','error');return;}
   if(!uid&&!d.password){toast('Password is required for new users.','error');return;}
