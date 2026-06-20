@@ -2172,7 +2172,7 @@ tbody tr:hover { background: var(--surface2); }
     <!-- CALENDAR PAGE -->
     <div class="page" id="page-calendar">
       <div class="ph">
-        <div class="ph-left"><h1>&#128197; Calendar</h1><p>Meetings &amp; schedule \u2014 synced with Google Calendar</p></div>
+        <div class="ph-left"><h1>&#128197; Calendar</h1><p>Meetings &amp; schedule &mdash; synced with Google Calendar</p></div>
         <div class="ph-actions" id="calActions">
           <button class="btn btn-ghost btn-sm" onclick="calChangeMonth(-1)"><span class="material-icons-round mi">chevron_left</span></button>
           <span id="calMonthLabel" style="font-size:14px;font-weight:700;color:var(--tx1);min-width:140px;text-align:center;display:inline-block">&#8212;</span>
@@ -2942,6 +2942,16 @@ function gasCall(fn){
   });
 }
 function id(x){return document.getElementById(x);}
+function zeroPad(n,width){var s=String(n);while(s.length<width)s='0'+s;return s;}
+function htmlEsc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function fDate(d){
+  if(!d)return'\u2014';
+  try{
+    var dt=new Date(d);
+    if(isNaN(dt.getTime()))return String(d);
+    return dt.toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'})+' '+dt.toLocaleTimeString('en-IN',{hour:'numeric',minute:'2-digit'});
+  }catch(e){return String(d);}
+}
 function V(x){var e=document.getElementById(x);return e?e.value:'';}
 function show(elId,visible){var e=document.getElementById(elId);if(e)e.style.display=visible?'':'none';}
 var DEMO={
