@@ -510,6 +510,22 @@ body {
 .task-card-meta{display:flex;gap:10px;flex-wrap:wrap}
 .task-card-meta-item{display:flex;align-items:center;gap:4px;font-size:11.5px;color:var(--tx3)}
 .task-card-meta-item .material-icons-round{font-size:13px}
+.rpt-cat-section{margin-bottom:24px}
+.rpt-cat-hd{display:flex;align-items:center;gap:10px;margin-bottom:12px;padding-bottom:8px;border-bottom:2px solid var(--border)}
+.rpt-cat-title{font-size:13px;font-weight:700;color:var(--tx1);text-transform:uppercase;letter-spacing:.05em}
+.rpt-cat-count{font-size:11.5px;color:var(--tx3);background:var(--surface2);padding:2px 9px;border-radius:999px;font-weight:600}
+.rpt-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:14px}
+.rpt-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:20px 16px;text-align:center;cursor:pointer;transition:all .2s;position:relative}
+.rpt-card:hover{border-color:var(--c-blue);box-shadow:0 6px 18px rgba(29,78,216,.12);transform:translateY(-2px)}
+.rpt-card-icon{font-size:34px;margin-bottom:10px;display:block}
+.rpt-card-name{font-size:13px;font-weight:700;color:var(--tx1);line-height:1.3;margin-bottom:4px}
+.rpt-card-desc{font-size:11px;color:var(--tx3);line-height:1.4}
+.rpt-card-actions{position:absolute;top:8px;right:8px;display:flex;gap:3px;opacity:0;transition:opacity .15s}
+.rpt-card:hover .rpt-card-actions{opacity:1}
+.rpt-card-actions button{width:24px;height:24px;border-radius:6px;border:none;background:var(--surface2);color:var(--tx3);cursor:pointer;display:flex;align-items:center;justify-content:center}
+.rpt-card-actions button:hover{background:var(--c-blue);color:#fff}
+.rpt-icon-pick{width:32px;height:32px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.rpt-icon-pick:hover{border-color:var(--c-blue)}
 .user-grp{background:var(--surface);border:1px solid var(--border);border-radius:12px;margin-bottom:12px;overflow:hidden}
 .user-grp-hd{display:flex;align-items:center;gap:12px;padding:14px 18px;cursor:pointer;user-select:none;transition:background .15s}
 .user-grp-hd:hover{background:var(--surface2)}
@@ -1380,6 +1396,7 @@ tbody tr:hover { background: var(--surface2); }
       <div class="sb-item" id="snav-chgpw" onclick="showMyProfile()"><span class="material-icons-round sb-i">manage_accounts</span> My Profile</div>
       <div class="sb-item" id="snav-photolog" data-page="photolog" onclick="go('photolog')"><span class="material-icons-round sb-i">photo_library</span> Notes</div>
       <div class="sb-item" id="snav-calendar" data-page="calendar" onclick="go('calendar')" style="display:none"><span class="material-icons-round sb-i">calendar_month</span> Calendar</div>
+      <div class="sb-item" id="snav-reports" data-page="reports" onclick="go('reports')" style="display:none"><span class="material-icons-round sb-i">summarize</span> Reports</div>
       <div class="sb-item" data-page="about" onclick="go('about')"><span class="material-icons-round sb-i">info</span> About</div>
     </div>
     <div class="sb-footer">
@@ -2244,6 +2261,63 @@ tbody tr:hover { background: var(--surface2); }
         <div class="modal-ft">
           <button class="btn btn-ghost" id="calDeleteBtn" onclick="deleteCalEvent()"><span class="material-icons-round mi">delete</span> Delete</button>
           <button class="btn btn-ghost" onclick="closeModal('mCalViewEvent')">Close</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- DYNAMIC REPORT GENERATOR PAGE -->
+    <div class="page" id="page-reports">
+      <div class="ph">
+        <div class="ph-left"><h1>&#128202; Reports</h1><p>Dynamic Report Generator &mdash; quick links to specialised report tools</p></div>
+        <div class="ph-actions">
+          <button class="btn btn-primary" onclick="showAddReportModal()"><span class="material-icons-round mi">add_link</span> Add Report</button>
+        </div>
+      </div>
+
+      <div id="reportsEmptyState" class="card" style="display:none">
+        <div class="card-bd" style="text-align:center;padding:48px 24px">
+          <span class="material-icons-round" style="font-size:48px;color:var(--tx3)">summarize</span>
+          <h3 style="color:var(--tx2);margin:12px 0 6px">No reports added yet</h3>
+          <p style="color:var(--tx3);margin-bottom:16px">Add a link to your first hosted report tool &mdash; e.g. the Morning Inspection Report Generator.</p>
+          <button class="btn btn-primary" onclick="showAddReportModal()"><span class="material-icons-round mi">add_link</span> Add Your First Report</button>
+        </div>
+      </div>
+
+      <div id="reportsGroupsWrap"></div>
+    </div>
+
+    <!-- ADD / EDIT REPORT LINK MODAL -->
+    <div class="modal-bg" id="mAddReport">
+      <div class="modal-box" style="max-width:460px">
+        <div class="modal-hd"><span class="modal-title" id="reportModalTitle">&#128279; Add Report Link</span><button class="modal-close" onclick="closeModal('mAddReport')"><span class="material-icons-round">close</span></button></div>
+        <div class="modal-body">
+          <div class="f-group">
+            <label class="f-label">Icon / Emoji</label>
+            <div style="display:flex;gap:8px;align-items:center">
+              <input type="text" class="f-ctrl" id="rpt-icon" placeholder="&#128203;" maxlength="4" style="width:64px;text-align:center;font-size:22px">
+              <div style="display:flex;gap:6px;flex-wrap:wrap">
+                <button type="button" class="rpt-icon-pick" onclick="rptPickIcon('&#127780;')">&#127780;</button>
+                <button type="button" class="rpt-icon-pick" onclick="rptPickIcon('&#128203;')">&#128203;</button>
+                <button type="button" class="rpt-icon-pick" onclick="rptPickIcon('&#128202;')">&#128202;</button>
+                <button type="button" class="rpt-icon-pick" onclick="rptPickIcon('&#128197;')">&#128197;</button>
+                <button type="button" class="rpt-icon-pick" onclick="rptPickIcon('&#128269;')">&#128269;</button>
+                <button type="button" class="rpt-icon-pick" onclick="rptPickIcon('&#9989;')">&#9989;</button>
+                <button type="button" class="rpt-icon-pick" onclick="rptPickIcon('&#128241;')">&#128241;</button>
+              </div>
+            </div>
+          </div>
+          <div class="f-group"><label class="f-label">Report Name <span class="req">*</span></label><input type="text" class="f-ctrl" id="rpt-name" placeholder="e.g. Morning Inspection Report"></div>
+          <div class="f-group">
+            <label class="f-label">Category <span class="req">*</span></label>
+            <input type="text" class="f-ctrl" id="rpt-category" placeholder="e.g. Daily, Weekly, Review" list="rptCategoryList">
+            <datalist id="rptCategoryList"></datalist>
+          </div>
+          <div class="f-group"><label class="f-label">Report URL <span class="req">*</span></label><input type="url" class="f-ctrl" id="rpt-url" placeholder="https://yourname.github.io/report-name/"></div>
+          <div class="f-group mb0"><label class="f-label">Description (optional)</label><textarea class="f-ctrl" id="rpt-desc" rows="2" placeholder="Brief note about what this report covers"></textarea></div>
+        </div>
+        <div class="modal-ft">
+          <button class="btn btn-ghost" onclick="closeModal('mAddReport')">Cancel</button>
+          <button class="btn btn-primary" id="rptSaveBtn" onclick="saveReportLink()"><span class="material-icons-round mi">save</span> Save Report</button>
         </div>
       </div>
     </div>
@@ -3231,6 +3305,7 @@ function applyRoleNav(role){
   show('snav-users', isAdmin);
   show('snav-commview', isAdmin);
   show('snav-settings', isAdmin);
+  show('snav-reports', isAdmin);
   show('snav-chgpw', true);
   show('snav-photolog', true); // All roles can view Notes/Photo Log
   show('snav-dashboard', true);
@@ -3263,7 +3338,7 @@ function applyRoleNav(role){
     // No reassignment — scoped task tracker access.
     S.allowedPages=['dashboard','tracker','photolog','about'];
   } else {
-    S.allowedPages=['dashboard','taskEntry','tracker','commview','users','settings','photolog','about'];
+    S.allowedPages=['dashboard','taskEntry','tracker','commview','users','settings','reports','photolog','about'];
   }
 
   var ad=id('adminDash'),od=id('officerDash'),hd=id('hodDash'),spd=id('supDash');
@@ -3277,7 +3352,7 @@ function applyRoleNav(role){
     if(ad)ad.classList.remove('dn');if(od)od.classList.add('dn');if(hd)hd.classList.add('dn');if(spd)spd.classList.add('dn');
   }
 }
-var PAGE_META={dashboard:['Dashboard','Overview & Analytics'],taskEntry:['Task Entry','Create and assign tasks'],tracker:['Task Tracker','Monitor all tasks'],commview:['Commissioner View','Executive analytics'],users:['User Management','Manage accounts'],settings:['Settings','System configuration'],photolog:['Notes','Inspection & Meeting Records'],calendar:['Calendar','Meetings & Schedule'],about:['About','Application information']};
+var PAGE_META={dashboard:['Dashboard','Overview & Analytics'],taskEntry:['Task Entry','Create and assign tasks'],tracker:['Task Tracker','Monitor all tasks'],commview:['Commissioner View','Executive analytics'],users:['User Management','Manage accounts'],settings:['Settings','System configuration'],photolog:['Notes','Inspection & Meeting Records'],calendar:['Calendar','Meetings & Schedule'],reports:['Reports','Dynamic Report Generator'],about:['About','Application information']};
 function go(page){
   if(S.allowedPages&&S.allowedPages.length&&S.allowedPages.indexOf(page)===-1){toast('Access restricted.','error');return;}
   S.page=page;
@@ -3306,6 +3381,7 @@ function go(page){
   else if(page==='settings')loadSettings();
   else if(page==='photolog')loadPhotoLog();
   else if(page==='calendar')loadCalendarPage();
+  else if(page==='reports')loadReportsPage();
 }
 function refreshPage(){go(S.page);}
 function drillDown(type){S.drillFilter=type;go('tracker');}
@@ -7337,6 +7413,191 @@ function testCalendarConnection(){
 // CALENDAR TAB — two-way Google Calendar sync
 // ════════════════════════════════════════════════════════════
 var CAL={viewDate:new Date(),events:[],configured:null,canCreate:false};
+
+// ════════════════════════════════════════════════════════════
+// DYNAMIC REPORT GENERATOR — Admin-only link directory
+// Each report is a separately hosted page (e.g. GitHub Pages). TMS just
+// stores metadata and opens the link in a new tab — no iframing, no
+// merging code. Admin adds reports by providing name/category/icon/URL.
+// ════════════════════════════════════════════════════════════
+var REPORTS_CACHE=[];
+
+function loadReportsPage(){
+  showLoader('Loading reports...');
+  gasCall('serverGetReportLinks',S.token).then(function(r){
+    hideLoader();
+    if(r&&r.success){
+      REPORTS_CACHE=r.data||[];
+    } else {
+      REPORTS_CACHE=[];
+      if(r&&r.message)toast(r.message,'error');
+    }
+    renderReportsGroups(REPORTS_CACHE);
+  });
+}
+
+function renderReportsGroups(reports){
+  var wrap=id('reportsGroupsWrap'),empty=id('reportsEmptyState');
+  if(!wrap)return;
+  while(wrap.firstChild)wrap.removeChild(wrap.firstChild);
+
+  if(!reports.length){
+    if(empty)empty.style.display='block';
+    return;
+  }
+  if(empty)empty.style.display='none';
+
+  // Group by category, preserving first-seen order
+  var groups={},order=[];
+  for(var i=0;i<reports.length;i++){
+    var cat=reports[i].category||'General';
+    if(!groups[cat]){groups[cat]=[];order.push(cat);}
+    groups[cat].push(reports[i]);
+  }
+
+  for(var gi=0;gi<order.length;gi++){
+    (function(cat){
+      var items=groups[cat];
+      var section=document.createElement('div');
+      section.className='rpt-cat-section';
+
+      var hd=document.createElement('div');
+      hd.className='rpt-cat-hd';
+      var title=document.createElement('span');
+      title.className='rpt-cat-title';
+      title.textContent=cat;
+      var count=document.createElement('span');
+      count.className='rpt-cat-count';
+      count.textContent=items.length+' report'+(items.length!==1?'s':'');
+      hd.appendChild(title);hd.appendChild(count);
+
+      var grid=document.createElement('div');
+      grid.className='rpt-grid';
+
+      for(var i=0;i<items.length;i++){
+        (function(rpt){
+          var card=document.createElement('div');
+          card.className='rpt-card';
+          card.onclick=function(){window.open(rpt.url,'_blank','noopener');};
+          card.title=rpt.description||rpt.name;
+
+          var actions=document.createElement('div');
+          actions.className='rpt-card-actions';
+          var editBtn=document.createElement('button');
+          editBtn.innerHTML='<span class="material-icons-round" style="font-size:13px">edit</span>';
+          editBtn.onclick=function(e){e.stopPropagation();showAddReportModal(rpt);};
+          var delBtn=document.createElement('button');
+          delBtn.innerHTML='<span class="material-icons-round" style="font-size:13px">delete</span>';
+          delBtn.onclick=function(e){e.stopPropagation();deleteReportLink(rpt.reportID,rpt.name);};
+          actions.appendChild(editBtn);actions.appendChild(delBtn);
+
+          var iconEl=document.createElement('span');
+          iconEl.className='rpt-card-icon';
+          iconEl.textContent=rpt.icon||'\uD83D\uDCCB';
+
+          var nameEl=document.createElement('div');
+          nameEl.className='rpt-card-name';
+          nameEl.textContent=rpt.name;
+
+          card.appendChild(actions);
+          card.appendChild(iconEl);
+          card.appendChild(nameEl);
+          if(rpt.description){
+            var descEl=document.createElement('div');
+            descEl.className='rpt-card-desc';
+            descEl.textContent=rpt.description;
+            card.appendChild(descEl);
+          }
+          grid.appendChild(card);
+        })(items[i]);
+      }
+
+      section.appendChild(hd);
+      section.appendChild(grid);
+      wrap.appendChild(section);
+    })(order[gi]);
+  }
+}
+
+function rptPopulateCategoryList(){
+  var dl=id('rptCategoryList');if(!dl)return;
+  var cats=[];
+  for(var i=0;i<REPORTS_CACHE.length;i++){
+    if(cats.indexOf(REPORTS_CACHE[i].category)===-1)cats.push(REPORTS_CACHE[i].category);
+  }
+  dl.innerHTML='';
+  for(var i=0;i<cats.length;i++){
+    var opt=document.createElement('option');opt.value=cats[i];dl.appendChild(opt);
+  }
+}
+
+function showAddReportModal(rpt){
+  rptPopulateCategoryList();
+  var titleEl=id('reportModalTitle');
+  var fields=['rpt-icon','rpt-name','rpt-category','rpt-url','rpt-desc'];
+  if(rpt){
+    if(titleEl)titleEl.innerHTML='&#9999;&#65039; Edit Report Link';
+    id('rpt-icon').value=rpt.icon||'\uD83D\uDCCB';
+    id('rpt-name').value=rpt.name||'';
+    id('rpt-category').value=rpt.category||'';
+    id('rpt-url').value=rpt.url||'';
+    id('rpt-desc').value=rpt.description||'';
+    REPORT_EDIT_ID=rpt.reportID;
+  } else {
+    if(titleEl)titleEl.innerHTML='&#128279; Add Report Link';
+    for(var i=0;i<fields.length;i++){var el=id(fields[i]);if(el)el.value='';}
+    id('rpt-icon').value='\uD83D\uDCCB';
+    REPORT_EDIT_ID=null;
+  }
+  openModal('mAddReport');
+}
+var REPORT_EDIT_ID=null;
+function rptPickIcon(emoji){
+  var el=id('rpt-icon');if(el)el.value=emoji;
+}
+function saveReportLink(){
+  var icon=V('rpt-icon').trim()||'\uD83D\uDCCB';
+  var name=V('rpt-name').trim();
+  var category=V('rpt-category').trim()||'General';
+  var url=V('rpt-url').trim();
+  var desc=id('rpt-desc')?id('rpt-desc').value.trim():'';
+
+  if(!name){toast('Please enter a report name.','error');return;}
+  if(!url){toast('Please enter the report URL.','error');return;}
+  if(!/^https?:\/\//i.test(url)){toast('URL must start with http:// or https://','error');return;}
+
+  var btn=id('rptSaveBtn');if(btn)btn.disabled=true;
+  showLoader(REPORT_EDIT_ID?'Updating report...':'Adding report...');
+
+  var payload={name:name,category:category,icon:icon,url:url,description:desc};
+  var call=REPORT_EDIT_ID
+    ? gasCall('serverUpdateReportLink',S.token,Object.assign({reportID:REPORT_EDIT_ID},payload))
+    : gasCall('serverAddReportLink',S.token,payload);
+
+  call.then(function(r){
+    hideLoader();if(btn)btn.disabled=false;
+    if(r&&r.success){
+      toast(REPORT_EDIT_ID?'Report updated!':'Report added!','ok');
+      closeModal('mAddReport');
+      loadReportsPage();
+    } else {
+      toast((r&&r.message)||'Failed to save report.','error');
+    }
+  });
+}
+function deleteReportLink(reportID,name){
+  if(!confirm('Remove "'+name+'" from the Reports list? This only removes the link \u2014 the hosted report page itself is unaffected.'))return;
+  showLoader('Removing report...');
+  gasCall('serverDeleteReportLink',S.token,reportID).then(function(r){
+    hideLoader();
+    if(r&&r.success){
+      toast('Report removed.','ok');
+      loadReportsPage();
+    } else {
+      toast((r&&r.message)||'Failed to remove report.','error');
+    }
+  });
+}
 
 function loadCalendarPage(){
   var isAdmin=S.user&&(S.user.role==='Admin'||S.user.role==='Commissioner');
