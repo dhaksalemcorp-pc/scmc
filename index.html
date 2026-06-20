@@ -3297,15 +3297,16 @@ function showApp(){
 }
 function applyRoleNav(role){
   var isAdmin=(role==='Admin'||role==='Commissioner');
+  var isAdminOnly=(role==='Admin'); // strictly Admin — excludes Commissioner
   var isHOD=(role==='HOD');
   var isSupervision=(role==='Supervision');
   var isOfficer=(role==='Officer');
 
   show('snav-taskEntry', isAdmin);
-  show('snav-users', isAdmin);
+  show('snav-users', isAdminOnly);
   show('snav-commview', isAdmin);
-  show('snav-settings', isAdmin);
-  show('snav-reports', isAdmin);
+  show('snav-settings', isAdminOnly);
+  show('snav-reports', isAdminOnly);
   show('snav-chgpw', true);
   show('snav-photolog', true); // All roles can view Notes/Photo Log
   show('snav-dashboard', true);
@@ -3337,8 +3338,12 @@ function applyRoleNav(role){
     // plus view + update tasks for assigned departments only.
     // No reassignment — scoped task tracker access.
     S.allowedPages=['dashboard','tracker','photolog','about'];
-  } else {
+  } else if(isAdminOnly){
     S.allowedPages=['dashboard','taskEntry','tracker','commview','users','settings','reports','photolog','about'];
+  } else {
+    // Commissioner: full visibility into tasks and analytics, but
+    // User Management, Settings, and Reports remain Admin-only.
+    S.allowedPages=['dashboard','taskEntry','tracker','commview','photolog','about'];
   }
 
   var ad=id('adminDash'),od=id('officerDash'),hd=id('hodDash'),spd=id('supDash');
