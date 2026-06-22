@@ -4759,66 +4759,155 @@ function hodReassignFromUpdate(){
   if(taskID)hodReassignTask(taskID);
 }
 function hodReassignTask(taskID){
-  // Use mGeneric modal with officer selector
   var t=null;
   for(var i=0;i<S.tasks.length;i++){if(S.tasks[i].taskID===taskID){t=S.tasks[i];break;}}
   if(!t)return;
   var hodDeptStr=S.user.hodDepartments||S.user.department||'';
   var hodDepts=hodDeptStr.split(',').map(function(d){return d.trim().toLowerCase();});
-  var officers=S.lookup&&S.lookup.officers?S.lookup.officers:[];
-  var opts='<option value="">— Select Officer —</option>';
-  var found=false;
-  for(var i=0;i<officers.length;i++){
-    var o=officers[i];
+  var allUsers=S.lookup&&S.lookup.officers?S.lookup.officers:[];
+
+  // Officers in the HOD's own department(s)
+  var officerOpts=[];
+  for(var i=0;i<allUsers.length;i++){
+    var o=allUsers[i];
+    if(o.role!=='Officer')continue;
     var oDepts=(o.department||'').split(',').map(function(d){return d.trim().toLowerCase();});
     var matches=false;
     for(var j=0;j<oDepts.length;j++){
       for(var k=0;k<hodDepts.length;k++){if(oDepts[j]&&oDepts[j]===hodDepts[k]){matches=true;break;}}
       if(matches)break;
     }
-    if(matches&&String(o.userID)!==String(S.user.userID)){
-      opts+='<option value="'+o.userID+'|'+o.name+'|'+(o.designation||'')+'">'+o.name+(o.designation?' — '+o.designation:'')+'</option>';
-      found=true;
-    }
+    if(matches&&String(o.userID)!==String(S.user.userID))officerOpts.push(o);
   }
-  if(!found)opts='<option value="">No subordinates found for your department(s)</option>';
+
+  // Other HODs (any department, excluding self) — for handing off to a peer
+  var hodOpts=[];
+  for(var i=0;i<allUsers.length;i++){
+    var o=allUsers[i];
+    if(o.role==='HOD'&&String(o.userID)!==String(S.user.userID))hodOpts.push(o);
+  }
+
   var html='<div style="padding:4px">'
     +'<div style="background:var(--surface2);border-radius:8px;padding:10px 12px;margin-bottom:12px;border-left:3px solid var(--c-blue)">'
     +'<div style="font-size:11px;font-weight:700;color:var(--tx3);text-transform:uppercase">Task being reassigned</div>'
     +'<div style="font-size:13px;font-weight:600;margin-top:2px">'+t.taskID+'</div>'
-    +'<div style="font-size:12.5px;color:var(--tx2)">'+t.description.substring(0,100)+'</div>'
-    +'<div style="font-size:12px;color:var(--tx3);margin-top:4px">Current officer: <strong>'+t.officerName+'</strong></div>'
+    +'<div style="font-size:12.5px;color:var(--tx2)">'+htmlEsc(String(t.description||'').substring(0,100))+'</div>'
+    +'<div style="font-size:12px;color:var(--tx3);margin-top:4px">Current officer: <strong>'+htmlEsc(t.officerName||'')+'</strong></div>'
     +'</div>'
-    +'<div class="f-group"><label class="f-label">Assign to Officer <span class="req">*</span></label>'
-    +'<select class="f-sel" id="raSel">'+opts+'</select></div>'
-    +'<div class="f-group"><label class="f-label">Reason (optional)</label>'
+    +'<div style="font-size:11.5px;color:var(--tx3);margin-bottom:10px">Select one or more people below. The first person selected receives this task directly; anyone else selected gets their own independent copy of the same task.</div>';
+
+  html+='<div class="f-group"><label class="f-label">Officers in Your Department(s)</label>'
+    +'<div id="raOfficerChips" style="display:flex;flex-wrap:wrap;gap:6px;padding:10px;background:var(--surface2);border-radius:8px;max-height:160px;overflow-y:auto">';
+  if(!officerOpts.length){
+    html+='<span style="color:var(--tx3);font-size:12.5px">No officers found in your department(s).</span>';
+  } else {
+    for(var i=0;i<officerOpts.length;i++){
+      var o=officerOpts[i];
+      html+='<label class="pl-zone-chip"><input type="checkbox" class="ra-target-cb" data-id="'+o.userID+'" data-name="'+htmlEsc(o.name)+'" data-desig="'+htmlEsc(o.designation||'')+'" data-dept="'+htmlEsc(o.department||'')+'" data-role="Officer"> '+htmlEsc(o.name)+(o.designation?' \u2014 '+htmlEsc(o.designation):'')+'</label>';
+    }
+  }
+  html+='</div></div>';
+
+  html+='<div class="f-group"><label class="f-label">Hand Off to Another HOD</label>'
+    +'<div id="raHodChips" style="display:flex;flex-wrap:wrap;gap:6px;padding:10px;background:var(--surface2);border-radius:8px;max-height:140px;overflow-y:auto">';
+  if(!hodOpts.length){
+    html+='<span style="color:var(--tx3);font-size:12.5px">No other HOD accounts found.</span>';
+  } else {
+    for(var i=0;i<hodOpts.length;i++){
+      var o=hodOpts[i];
+      html+='<label class="pl-zone-chip"><input type="checkbox" class="ra-target-cb" data-id="'+o.userID+'" data-name="'+htmlEsc(o.name)+'" data-desig="'+htmlEsc(o.designation||'')+'" data-dept="'+htmlEsc(o.department||'')+'" data-role="HOD"> '+htmlEsc(o.name)+(o.department?' \u2014 '+htmlEsc(o.department):'')+'</label>';
+    }
+  }
+  html+='</div><div style="font-size:11px;color:var(--tx3);margin-top:4px">Handing off to another HOD moves the task into their department.</div></div>';
+
+  html+='<div class="f-group"><label class="f-label">Reason (optional)</label>'
     +'<textarea class="f-ctrl" id="raNote" rows="2" placeholder="e.g. Redistributing workload..."></textarea></div>'
     +'<div style="display:flex;gap:8px;margin-top:12px">'
     +'<button class="btn btn-primary" onclick="doHodReassign(\''+taskID+'\')"><span class="material-icons-round mi">swap_horiz</span> Confirm Reassign</button>'
     +'<button class="btn btn-ghost" onclick="closeModal(\'mGeneric\')">Cancel</button>'
     +'</div></div>';
+
   var gb=id('mGenericBody');if(gb)gb.innerHTML=html;
   var gt=id('mGenericTitle');if(gt)gt.textContent='Reassign Task';
   openModal('mGeneric');
 }
+
 function doHodReassign(taskID){
-  var sel=id('raSel');if(!sel||!sel.value){toast('Please select an officer.','error');return;}
-  var parts=sel.value.split('|');
-  var oID=parts[0],oName=parts[1]||'',oDesig=parts[2]||'';
+  var t=null;
+  for(var i=0;i<S.tasks.length;i++){if(S.tasks[i].taskID===taskID){t=S.tasks[i];break;}}
+  if(!t)return;
+
+  var checks=document.querySelectorAll('.ra-target-cb:checked');
+  if(!checks.length){toast('Please select at least one person to reassign to.','error');return;}
+
+  var targets=[];
+  for(var i=0;i<checks.length;i++){
+    targets.push({
+      id:checks[i].getAttribute('data-id'),
+      name:checks[i].getAttribute('data-name'),
+      desig:checks[i].getAttribute('data-desig'),
+      dept:checks[i].getAttribute('data-dept'),
+      role:checks[i].getAttribute('data-role')
+    });
+  }
+
   var note=id('raNote')?id('raNote').value.trim():'';
   var now=new Date();
   var ts=now.toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'})+' '+now.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',hour12:true});
-  var histLine='[Reassigned to '+oName+(oDesig?' ('+oDesig+')':'')+' by '+S.user.name+' on '+ts+']'+(note?' — '+note:'');
+
   showLoader('Reassigning...');
-  gasCall('serverUpdateTask',S.token,taskID,{
-    officerID:oID,officerName:oName,designation:oDesig,
+
+  // First target: update the ORIGINAL task record directly (no new row).
+  var first=targets[0];
+  var histLine='[Reassigned to '+first.name+(first.desig?' ('+first.desig+')':'')+' by '+S.user.name+' on '+ts+']'+(note?' \u2014 '+note:'');
+  var updatePayload={
+    officerID:first.id,officerName:first.name,designation:first.desig,
     status:'Pending',
     officerRemarks:histLine,
     updatedBy:S.user.name,updatedAt:now.toISOString()
-  }).then(function(r){
-    hideLoader();closeModal('mGeneric');
-    if(r&&r.success){toast('Task reassigned to '+oName+'!','ok');loadTasks();}
-    else toast((r&&r.message)||'Reassign failed.','error');
+  };
+  // If handing off to another HOD, the task's department moves with them
+  if(first.role==='HOD'&&first.dept)updatePayload.department=first.dept;
+
+  gasCall('serverUpdateTask',S.token,taskID,updatePayload).then(function(r){
+    if(!r||!r.success){
+      hideLoader();closeModal('mGeneric');
+      toast((r&&r.message)||'Reassign failed.','error');
+      return;
+    }
+    var extras=targets.slice(1);
+    if(!extras.length){
+      hideLoader();closeModal('mGeneric');
+      toast('Task reassigned to '+first.name+'!','ok');
+      loadTasks();
+      return;
+    }
+    // Remaining targets each get their OWN independent copy of the task,
+    // created via the HOD-clone path (restricted server-side to the HOD's
+    // own department, exactly like the primary reassignment above).
+    var created=0,idx=0;
+    function cloneNext(){
+      if(idx>=extras.length){
+        hideLoader();closeModal('mGeneric');
+        toast('Reassigned to '+first.name+' + '+created+' more.','ok');
+        loadTasks();
+        return;
+      }
+      var tgt=extras[idx];
+      var cloneDept=(tgt.role==='HOD'&&tgt.dept)?tgt.dept:t.department;
+      gasCall('serverCreateTask',S.token,{
+        taskType:t.taskType,zone:t.zone,dateAssigned:t.dateAssigned,time:t.time,
+        priority:t.priority,department:cloneDept,designation:tgt.desig,
+        officerID:tgt.id,officerName:tgt.name,
+        description:t.description+'\n\n[Cloned from '+taskID+' \u2014 reassigned by '+S.user.name+' on '+ts+']'+(note?' \u2014 '+note:''),
+        dueDate:t.dueDate,source:t.source||'Manual',
+        isReassignClone:true
+      }).then(function(cr){
+        if(cr&&cr.success)created++;
+        idx++;cloneNext();
+      });
+    }
+    cloneNext();
   });
 }
 function officerUpdate(taskID){
