@@ -2072,6 +2072,16 @@ tbody tr:hover { background: var(--surface2); }
               <input type="file" id="plPhotoInput" accept="image/*" multiple style="display:none" onchange="handlePlPhotoSelect(this.files)">
               <div id="plPhotoPreview" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:10px"></div>
             </div>
+            <div class="f-group">
+              <label class="f-label">Document Attachments <span style="font-size:11px;color:var(--tx3)">(signed PDF copies &mdash; meeting minutes, inspection reports, etc.)</span></label>
+              <div id="plPdfDropZone" style="border:2px dashed var(--border);border-radius:10px;padding:18px;text-align:center;cursor:pointer;background:var(--surface2)"
+                onclick="document.getElementById('plPdfInput').click()">
+                <span class="material-icons-round mi" style="font-size:28px;color:var(--tx3)">picture_as_pdf</span>
+                <div style="font-size:13px;color:var(--tx3);margin-top:6px">Tap to upload signed PDF(s)</div>
+              </div>
+              <input type="file" id="plPdfInput" accept="application/pdf" multiple style="display:none" onchange="handlePlPdfSelect(this.files)">
+              <div id="plPdfPreview" style="display:flex;flex-direction:column;gap:6px;margin-top:10px"></div>
+            </div>
             <div style="display:flex;gap:10px;margin-top:4px">
               <button class="btn btn-primary" onclick="savePlEntry()"><span class="material-icons-round mi">save</span> Save Entry</button>
               <button class="btn btn-ghost" onclick="clearPlForm()"><span class="material-icons-round mi">clear</span> Clear</button>
@@ -5723,7 +5733,7 @@ function clearMultiOfficerList(){
 }
 
 // ── PHOTO LOG ────────────────────────────────────────────────
-var PL={photos:[],entries:[],editPhotos:[],editExistingPhotos:[],editRemovedPhotoIDs:[],editNoteID:null,isAdmin:false,sortOrder:'desc'};
+var PL={photos:[],pdfs:[],entries:[],editPhotos:[],editExistingPhotos:[],editRemovedPhotoIDs:[],editNoteID:null,editPdfs:[],editExistingAttachments:[],editRemovedAttachmentIDs:[],isAdmin:false,sortOrder:'desc'};
 function plCheckAdmin(){
   var liveCheck = S.user && (S.user.role==='Admin'||S.user.role==='Commissioner');
   return liveCheck && PL.isAdmin;
@@ -6000,6 +6010,45 @@ function plRenderPhotoPreview(){
   }
 }
 
+// ─── PDF / Document attachments — separate from photos, stored in Drive ──
+function handlePlPdfSelect(files){plAddPdfs(Array.prototype.slice.call(files));}
+function plAddPdfs(files){
+  if(!PL.pdfs)PL.pdfs=[];
+  var rem=10-PL.pdfs.length,skipped=0,wrongType=0;
+  for(var i=0;i<files.length&&i<rem;i++){
+    if(files[i].type!=='application/pdf'){wrongType++;continue;}
+    if(files[i].size>15*1024*1024){skipped++;continue;}
+    PL.pdfs.push(files[i]);
+  }
+  if(wrongType)toast(wrongType+' file(s) skipped \u2014 only PDF is accepted.','info');
+  if(skipped)toast(skipped+' PDF(s) skipped \u2014 max 15MB each.','info');
+  plRenderPdfPreview();
+}
+function plRenderPdfPreview(){
+  var prev=id('plPdfPreview');if(!prev)return;
+  while(prev.firstChild)prev.removeChild(prev.firstChild);
+  for(var i=0;i<PL.pdfs.length;i++){
+    (function(idx){
+      var f=PL.pdfs[idx];
+      var row=document.createElement('div');
+      row.style.cssText='display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:8px';
+      var icon=document.createElement('span');
+      icon.className='material-icons-round';
+      icon.style.cssText='color:var(--c-red);font-size:20px;flex-shrink:0';
+      icon.textContent='picture_as_pdf';
+      var nameDiv=document.createElement('div');
+      nameDiv.style.cssText='flex:1;min-width:0;font-size:12.5px;color:var(--tx1);overflow:hidden;text-overflow:ellipsis;white-space:nowrap';
+      nameDiv.textContent=f.name+' ('+Math.round(f.size/1024)+' KB)';
+      var del=document.createElement('button');
+      del.innerHTML='<span class="material-icons-round" style="font-size:16px">close</span>';
+      del.style.cssText='background:none;border:none;color:var(--tx3);cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;width:24px;height:24px';
+      del.onclick=function(){PL.pdfs.splice(idx,1);plRenderPdfPreview();};
+      row.appendChild(icon);row.appendChild(nameDiv);row.appendChild(del);
+      prev.appendChild(row);
+    })(i);
+  }
+}
+
 // ─── SAVE: optimistic local-first ─────────────────────────────
 // 1. Build the in-memory entry + preview thumbnails from the picked
 //    files INSTANTLY (no network wait) and render it at the top of
@@ -6021,6 +6070,7 @@ function savePlEntry(){
   if(!notes.trim()){toast('Please enter notes / observations.','error');return;}
 
   var pickedFiles=(PL.photos||[]).slice();
+  var pickedPdfs=(PL.pdfs||[]).slice();
   var tempID='TEMP'+Date.now();
 
   // STEP 1 — build local preview entry immediately, no network wait
@@ -6029,6 +6079,9 @@ function savePlEntry(){
     createdBy:S.user?S.user.name:'', createdAt:new Date().toISOString(),
     photos: pickedFiles.map(function(f){
       return { photoID:'temp_'+Math.random().toString(36).slice(2), photoData:URL.createObjectURL(f), pending:true };
+    }),
+    attachments: pickedPdfs.map(function(f){
+      return { attachmentID:'temp_'+Math.random().toString(36).slice(2), fileName:f.name, driveURL:'', pending:true };
     }),
     _saving:true
   };
@@ -6130,6 +6183,55 @@ function savePlEntry(){
       });
     }
     runPool();
+
+    // STEP 4 — upload PDF attachments. These go to Drive (not Sheets cells)
+    // since signed scans are often several MB — same controlled-pool
+    // approach as photos, 3 at a time (PDFs are larger, so a slightly
+    // smaller pool keeps things smooth without overloading the upload).
+    if(!pickedPdfs.length)return;
+    var PDF_POOL_SIZE=3,pdfNextIdx=0;
+
+    function processOnePdf(idx){
+      return new Promise(function(resolve){
+        var file=pickedPdfs[idx];
+        var attachEntry=localEntry.attachments[idx];
+        var reader=new FileReader();
+        reader.onload=function(ev){
+          var b64=ev.target.result.split(',')[1];
+          gasCall('serverUploadNoteAttachment',S.token,{
+            noteID:realNoteID, fileName:file.name, mimeType:'application/pdf', base64Data:b64
+          }).then(function(pr){
+            if(pr&&pr.success){
+              attachEntry.attachmentID=pr.attachmentID;
+              attachEntry.driveURL=pr.driveURL;
+              attachEntry.pending=false;
+            } else {
+              attachEntry.pending=false;
+              attachEntry.failed=true;
+            }
+            plRenderCards(PL.entries);
+            resolve();
+          });
+        };
+        reader.onerror=function(){attachEntry.pending=false;attachEntry.failed=true;plRenderCards(PL.entries);resolve();};
+        reader.readAsDataURL(file);
+      });
+    }
+    function runPdfPool(){
+      var active=0,completed=0,total=pickedPdfs.length;
+      function launchNext(){
+        if(pdfNextIdx>=total){return;}
+        var myIdx=pdfNextIdx++;
+        active++;
+        processOnePdf(myIdx).then(function(){
+          active--;completed++;
+          if(completed<total)launchNext();
+        });
+      }
+      var startCount=Math.min(PDF_POOL_SIZE,total);
+      for(var s=0;s<startCount;s++)launchNext();
+    }
+    runPdfPool();
   });
 }
 
@@ -6142,6 +6244,7 @@ function clearPlForm(){
   var zr=id('plZoneRow');if(zr)zr.style.display='none';
   var dr=id('plDeptRow');if(dr)dr.style.display='none';
   PL.photos=[];plRenderPhotoPreview();
+  PL.pdfs=[];plRenderPdfPreview();
 }
 
 // ─── RENDER — pure DOM, no innerHTML for content, no lazy-load timers ──
@@ -6291,6 +6394,59 @@ function plMakeEntryCard(e, typeColors, months){
     content.appendChild(grid);
   }
 
+  // Document Attachments — kept visually separate from the photo gallery,
+  // since these are signed PDFs (meeting minutes, inspection reports), not
+  // field photos. Each row links directly to the file stored in Drive.
+  var attachments=e.attachments||[];
+  if(attachments.length>0){
+    var attachWrap=document.createElement('div');
+    attachWrap.style.cssText='margin-top:'+(photos.length>0?'10px':'0')+';margin-bottom:8px;border-top:1px solid var(--border);padding-top:10px';
+    var attachLabel=document.createElement('div');
+    attachLabel.style.cssText='font-size:10.5px;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;display:flex;align-items:center;gap:5px';
+    attachLabel.innerHTML='<span class="material-icons-round" style="font-size:13px">attach_file</span>Document Attachments ('+attachments.length+')';
+    attachWrap.appendChild(attachLabel);
+
+    attachments.forEach(function(att){
+      var row=document.createElement('div');
+      row.style.cssText='display:flex;align-items:center;gap:8px;padding:7px 10px;background:var(--surface2);border:1px solid '+(att.failed?'var(--c-red)':'var(--border)')+';border-radius:8px;margin-bottom:5px';
+
+      var icon=document.createElement('span');
+      icon.className='material-icons-round';
+      icon.style.cssText='font-size:18px;color:'+(att.pending?'var(--tx3)':att.failed?'var(--c-red)':'var(--c-red)')+';flex-shrink:0';
+      icon.textContent=att.pending?'sync':att.failed?'error_outline':'picture_as_pdf';
+      if(att.pending)icon.style.animation='spin 1s linear infinite';
+
+      var nameDiv=document.createElement('div');
+      nameDiv.style.cssText='flex:1;min-width:0;font-size:12.5px;color:var(--tx1);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:'+(att.driveURL?'pointer':'default');
+      nameDiv.textContent=att.fileName+(att.pending?' \u2014 uploading...':att.failed?' \u2014 upload failed':'');
+      if(att.driveURL){
+        nameDiv.onclick=function(ev){ev.stopPropagation();window.open(att.driveURL,'_blank','noopener');};
+        nameDiv.title='Tap to open this PDF';
+        nameDiv.style.color='var(--c-blue)';
+        nameDiv.style.textDecoration='underline';
+      }
+
+      row.appendChild(icon);row.appendChild(nameDiv);
+
+      if(att.driveURL){
+        var openBtn=document.createElement('button');
+        openBtn.innerHTML='<span class="material-icons-round" style="font-size:15px">open_in_new</span>';
+        openBtn.style.cssText='background:none;border:none;color:var(--c-blue);cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;width:26px;height:26px';
+        openBtn.onclick=function(ev){ev.stopPropagation();window.open(att.driveURL,'_blank','noopener');};
+        row.appendChild(openBtn);
+      }
+      if(plCheckAdmin()&&att.attachmentID&&!att.pending){
+        var delBtn=document.createElement('button');
+        delBtn.innerHTML='<span class="material-icons-round" style="font-size:15px">delete</span>';
+        delBtn.style.cssText='background:none;border:none;color:var(--c-red);cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;width:26px;height:26px';
+        delBtn.onclick=function(ev){ev.stopPropagation();plDeleteAttachment(e.noteID,att.attachmentID);};
+        row.appendChild(delBtn);
+      }
+      attachWrap.appendChild(row);
+    });
+    content.appendChild(attachWrap);
+  }
+
   if(plCheckAdmin()&&!e._saving){
     var actRow=document.createElement('div');
     actRow.style.cssText='display:flex;gap:8px;margin-top:6px;padding-top:8px;border-top:1px solid var(--border)';
@@ -6397,7 +6553,7 @@ function plOpenPhotoViewer(photoUrls, startIdx){
 }
 
 function plDeleteEntry(noteID){
-  if(!confirm('Delete this entry and all its photos? This cannot be undone.'))return;
+  if(!confirm('Delete this entry and all its photos and attachments? This cannot be undone.'))return;
   showLoader('Deleting...');
   gasCall('serverDeleteNote',S.token,noteID).then(function(r){
     hideLoader();
@@ -6409,6 +6565,24 @@ function plDeleteEntry(noteID){
   });
 }
 
+function plDeleteAttachment(noteID,attachmentID){
+  if(!confirm('Remove this document attachment? This cannot be undone.'))return;
+  showLoader('Removing document...');
+  gasCall('serverDeleteNoteAttachment',S.token,attachmentID).then(function(r){
+    hideLoader();
+    if(r&&r.success){
+      toast('Document removed.','ok');
+      for(var i=0;i<PL.entries.length;i++){
+        if(PL.entries[i].noteID===noteID){
+          PL.entries[i].attachments=(PL.entries[i].attachments||[]).filter(function(a){return a.attachmentID!==attachmentID;});
+          break;
+        }
+      }
+      plRenderCards(PL.entries);
+    } else toast((r&&r.message)||'Failed to remove document.','error');
+  });
+}
+
 function plEditEntry(noteID){
   var e=null;
   for(var i=0;i<PL.entries.length;i++){if(PL.entries[i].noteID===noteID){e=PL.entries[i];break;}}
@@ -6417,6 +6591,9 @@ function plEditEntry(noteID){
   PL.editNoteID=noteID;
   PL.editRemovedPhotoIDs=[]; // track which existing photo rows to delete on save
   PL.editExistingPhotos=(e.photos||[]).slice(); // mutable copy for the UI
+  PL.editPdfs=[];
+  PL.editRemovedAttachmentIDs=[];
+  PL.editExistingAttachments=(e.attachments||[]).slice();
 
   var html='<div style="padding:4px">'
     +'<div class="f-row">'
@@ -6437,6 +6614,15 @@ function plEditEntry(noteID){
     +'</div>'
     +'<input type="file" id="plEditPhotoInput" accept="image/*" multiple style="display:none" onchange="plEditAddPhotos(this.files)">'
     +'<div id="plEditPhotoPreview" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px"></div>'
+    +'</div>'
+    +(PL.editExistingAttachments.length>0?'<div class="f-group"><label class="f-label">Existing Document Attachments <span style="font-size:11px;color:var(--tx3)">(tap X to remove)</span></label><div id="plEditExistingAttachments" style="display:flex;flex-direction:column;gap:6px;padding:10px;background:var(--surface2);border-radius:8px"></div></div>':'')
+    +'<div class="f-group"><label class="f-label">Add More Document Attachments</label>'
+    +'<div style="border:2px dashed var(--border);border-radius:10px;padding:14px;text-align:center;cursor:pointer;background:var(--surface2)" onclick="document.getElementById(\'plEditPdfInput\').click()">'
+    +'<span class="material-icons-round mi" style="font-size:24px;color:var(--tx3)">picture_as_pdf</span>'
+    +'<div style="font-size:12px;color:var(--tx3);margin-top:4px">Tap to add signed PDF(s)</div>'
+    +'</div>'
+    +'<input type="file" id="plEditPdfInput" accept="application/pdf" multiple style="display:none" onchange="plEditAddPdfs(this.files)">'
+    +'<div id="plEditPdfPreview" style="display:flex;flex-direction:column;gap:6px;margin-top:8px"></div>'
     +'</div>'
     +'<div style="display:flex;gap:8px;margin-top:12px">'
     +'<button class="btn btn-primary" onclick="plSaveEdit(\''+noteID+'\')"><span class="material-icons-round mi">save</span> Save Changes</button>'
@@ -6461,8 +6647,76 @@ function plEditEntry(noteID){
       st.value=e.type||'Inspection';
     }
     plRenderEditExistingPhotos();
+    plRenderEditExistingAttachments();
   },50);
 }
+
+function plRenderEditExistingAttachments(){
+  var wrap=id('plEditExistingAttachments');if(!wrap)return;
+  while(wrap.firstChild)wrap.removeChild(wrap.firstChild);
+  for(var i=0;i<PL.editExistingAttachments.length;i++){
+    (function(idx){
+      var att=PL.editExistingAttachments[idx];
+      var row=document.createElement('div');
+      row.style.cssText='display:flex;align-items:center;gap:8px;padding:7px 10px;background:var(--surface);border:1px solid var(--border);border-radius:8px';
+      var icon=document.createElement('span');
+      icon.className='material-icons-round';
+      icon.style.cssText='font-size:18px;color:var(--c-red);flex-shrink:0';
+      icon.textContent='picture_as_pdf';
+      var nameDiv=document.createElement('div');
+      nameDiv.style.cssText='flex:1;min-width:0;font-size:12.5px;color:var(--tx1);overflow:hidden;text-overflow:ellipsis;white-space:nowrap';
+      nameDiv.textContent=att.fileName;
+      var del=document.createElement('button');
+      del.textContent='\u00d7';
+      del.style.cssText='background:rgba(239,68,68,.12);color:var(--c-red);border:none;border-radius:50%;width:22px;height:22px;cursor:pointer;font-size:14px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;padding:0';
+      del.title='Remove this attachment';
+      del.onclick=function(ev){
+        ev.stopPropagation();
+        PL.editRemovedAttachmentIDs.push(att.attachmentID);
+        PL.editExistingAttachments.splice(idx,1);
+        plRenderEditExistingAttachments();
+      };
+      row.appendChild(icon);row.appendChild(nameDiv);row.appendChild(del);
+      wrap.appendChild(row);
+    })(i);
+  }
+  if(!PL.editExistingAttachments.length){
+    wrap.innerHTML='<span style="color:var(--tx3);font-size:13px;padding:4px">All document attachments removed</span>';
+  }
+}
+
+function plEditAddPdfs(files){
+  if(!PL.editPdfs)PL.editPdfs=[];
+  var arr=Array.prototype.slice.call(files);
+  for(var i=0;i<arr.length&&PL.editPdfs.length<10;i++){
+    if(arr[i].type!=='application/pdf')continue;
+    if(arr[i].size>15*1024*1024)continue;
+    PL.editPdfs.push(arr[i]);
+  }
+  var prev=id('plEditPdfPreview');if(!prev)return;
+  while(prev.firstChild)prev.removeChild(prev.firstChild);
+  for(var i=0;i<PL.editPdfs.length;i++){
+    (function(idx){
+      var f=PL.editPdfs[idx];
+      var row=document.createElement('div');
+      row.style.cssText='display:flex;align-items:center;gap:8px;padding:7px 10px;background:var(--surface);border:1px solid var(--border);border-radius:8px';
+      var icon=document.createElement('span');
+      icon.className='material-icons-round';
+      icon.style.cssText='font-size:18px;color:var(--c-red);flex-shrink:0';
+      icon.textContent='picture_as_pdf';
+      var nameDiv=document.createElement('div');
+      nameDiv.style.cssText='flex:1;min-width:0;font-size:12.5px;color:var(--tx1);overflow:hidden;text-overflow:ellipsis;white-space:nowrap';
+      nameDiv.textContent=f.name+' ('+Math.round(f.size/1024)+' KB)';
+      var del=document.createElement('button');
+      del.innerHTML='<span class="material-icons-round" style="font-size:15px">close</span>';
+      del.style.cssText='background:none;border:none;color:var(--tx3);cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;width:24px;height:24px';
+      del.onclick=function(){PL.editPdfs.splice(idx,1);plEditAddPdfs([]);};
+      row.appendChild(icon);row.appendChild(nameDiv);row.appendChild(del);
+      prev.appendChild(row);
+    })(i);
+  }
+}
+
 
 function plRenderEditExistingPhotos(){
   var grid=id('plEditExistingGrid');if(!grid)return;
@@ -6546,7 +6800,7 @@ function plSaveEdit(noteID){
     // Apps Script's execution slots).
     function uploadNewPhotos(){
       var newPhotos=PL.editPhotos||[];
-      if(!newPhotos.length){finishEdit(noteID,updated);return;}
+      if(!newPhotos.length){deleteNextAttachment();return;}
       var POOL_SIZE=4,nextIdx=0,active=0,completed=0,total=newPhotos.length;
       var lm=id('loaderMsg');
 
@@ -6579,19 +6833,65 @@ function plSaveEdit(noteID){
         });
       }
       function launchNext(){
-        if(nextIdx>=total){if(active===0)finishEdit(noteID,updated);return;}
+        if(nextIdx>=total){if(active===0)deleteNextAttachment();return;}
         var myIdx=nextIdx++;
         active++;
         if(lm)lm.textContent='Uploading photo '+completed+' of '+total+'...';
         processOne(myIdx).then(function(){
           active--;completed++;
           if(lm)lm.textContent='Uploading photo '+completed+' of '+total+'...';
-          if(completed>=total)finishEdit(noteID,updated);
+          if(completed>=total)deleteNextAttachment();
           else launchNext();
         });
       }
       var startCount=Math.min(POOL_SIZE,total);
       for(var s=0;s<startCount;s++)launchNext();
+    }
+
+    // Step 4: delete any document attachments the admin removed
+    function deleteNextAttachment(){
+      var removedAttIDs=(PL.editRemovedAttachmentIDs||[]).slice();
+      if(!removedAttIDs.length){uploadNewPdfs();return;}
+      var aid=removedAttIDs.shift();
+      PL.editRemovedAttachmentIDs=removedAttIDs;
+      gasCall('serverDeleteNoteAttachment',S.token,aid).then(function(){deleteNextAttachment();});
+    }
+
+    // Step 5: upload any newly added PDF attachments (pool of 3 — PDFs are
+    // larger files than compressed photos, so a slightly smaller pool)
+    function uploadNewPdfs(){
+      var newPdfs=PL.editPdfs||[];
+      if(!newPdfs.length){finishEdit(noteID,updated);return;}
+      var PDF_POOL=3,pdfIdx=0,pdfActive=0,pdfCompleted=0,pdfTotal=newPdfs.length;
+      var lm2=id('loaderMsg');
+
+      function processOnePdf(idx){
+        return new Promise(function(resolve){
+          var reader=new FileReader();
+          reader.onload=function(ev){
+            var b64=ev.target.result.split(',')[1];
+            gasCall('serverUploadNoteAttachment',S.token,{
+              noteID:noteID, fileName:newPdfs[idx].name, mimeType:'application/pdf', base64Data:b64
+            }).then(function(){resolve();});
+          };
+          reader.onerror=function(){resolve();};
+          reader.readAsDataURL(newPdfs[idx]);
+        });
+      }
+      function launchNextPdf(){
+        if(pdfIdx>=pdfTotal){if(pdfActive===0)finishEdit(noteID,updated);return;}
+        var myIdx=pdfIdx++;
+        pdfActive++;
+        if(lm2)lm2.textContent='Uploading document '+pdfCompleted+' of '+pdfTotal+'...';
+        processOnePdf(myIdx).then(function(){
+          pdfActive--;pdfCompleted++;
+          if(lm2)lm2.textContent='Uploading document '+pdfCompleted+' of '+pdfTotal+'...';
+          if(pdfCompleted>=pdfTotal)finishEdit(noteID,updated);
+          else launchNextPdf();
+        });
+      }
+      var pdfStart=Math.min(PDF_POOL,pdfTotal);
+      for(var ps=0;ps<pdfStart;ps++)launchNextPdf();
     }
 
     deleteNext();
