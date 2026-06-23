@@ -2,6 +2,13 @@
 <html lang="en" data-theme="light">
 <head>
 <meta charset="UTF-8">
+<!-- Prevent mobile browsers and installed PWA shells from serving a stale
+     cached copy of this page. Without this, a person can keep running an
+     old version of the app's JavaScript (with old bugs already fixed in
+     later updates) until they happen to do something that forces a reload. -->
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -2338,7 +2345,7 @@ tbody tr:hover { background: var(--surface2); }
             <h2 style="font-size:23px;font-weight:800;color:#fff;margin-bottom:6px;letter-spacing:-.01em">Salem City Municipal Corporation</h2>
             <p style="font-size:13.5px;color:rgba(255,255,255,.65);margin-bottom:0">Task Management System &nbsp;&middot;&nbsp; Official Internal Portal</p>
             <div style="display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);border-radius:999px;padding:5px 14px;margin-top:16px;font-size:11.5px;font-weight:600;color:#fbbf24">
-              <span class="material-icons-round" style="font-size:13px">bolt</span> Version 68 &middot; Live &amp; Actively Maintained
+              <span class="material-icons-round" style="font-size:13px">bolt</span> Version 76 &middot; Live &amp; Actively Maintained
             </div>
           </div>
         </div>
@@ -2390,7 +2397,7 @@ tbody tr:hover { background: var(--surface2); }
           <div class="card" style="border-left:3px solid var(--c-teal)">
             <div class="card-bd" style="padding:16px">
               <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px"><span class="material-icons-round" style="font-size:16px;color:var(--c-teal)">cloud_done</span><span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--tx3)">System Version</span></div>
-              <div style="font-size:13.5px;font-weight:600;color:var(--tx1)">TMS v68</div>
+              <div style="font-size:13.5px;font-weight:600;color:var(--tx1)">TMS v76</div>
               <div style="font-size:11.5px;color:var(--tx3);margin-top:2px">Built on Google Apps Script</div>
             </div>
           </div>
@@ -3071,8 +3078,16 @@ function gasCall(fn){
   if(GAS_URL){
     return fetch(GAS_URL,{
       method:'POST',
-      headers:{'Content-Type':'application/x-www-form-urlencoded'},
-      body:'fn='+encodeURIComponent(fn)+'&payload='+encodeURIComponent(JSON.stringify(args))
+      cache:'no-store', // critical: prevents mobile browsers / carrier proxies from
+                         // silently returning a cached response for an identical-looking
+                         // POST request, which otherwise makes filters/search look "stuck"
+                         // until the user changes something enough to bypass the cache
+      headers:{
+        'Content-Type':'application/x-www-form-urlencoded',
+        'Cache-Control':'no-cache, no-store, must-revalidate',
+        'Pragma':'no-cache'
+      },
+      body:'fn='+encodeURIComponent(fn)+'&payload='+encodeURIComponent(JSON.stringify(args))+'&_ts='+Date.now()
     })
     .then(function(r){return r.json();})
     .then(function(r){return r||{success:false,message:'No response'};})
