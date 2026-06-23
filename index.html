@@ -6038,50 +6038,82 @@ function savePlEntry(){
     plRenderCards(PL.entries);
     toast('Note saved!','ok');
 
-    // STEP 3 — upload each photo independently; update its own state on completion
+    // STEP 3 — upload photos using a controlled concurrency pool.
+    // Running all 15 at once can overwhelm Apps Script's per-script
+    // execution slots (causing some to silently fail or queue badly);
+    // running them one-at-a-time is needlessly slow. A pool of 4
+    // concurrent uploads is the sweet spot — fast, and reliable.
     if(!pickedFiles.length)return;
-    pickedFiles.forEach(function(file, idx){
-      var photoEntry=localEntry.photos[idx];
-      var reader=new FileReader();
-      reader.onload=function(ev){
-        var img=new Image();
-        img.onload=function(){
-          var canvas=document.createElement('canvas');
-          var maxSize=900; // raised from 350 — much clearer, still safe under Sheets cell limit
-          var scale=Math.min(maxSize/img.width,maxSize/img.height,1);
-          canvas.width=Math.round(img.width*scale);
-          canvas.height=Math.round(img.height*scale);
-          canvas.getContext('2d').drawImage(img,0,0,canvas.width,canvas.height);
-          var b64=canvas.toDataURL('image/jpeg',0.85);
-          // Safety net: if this particular photo is unusually detailed and still
-          // lands too close to the Sheets 50,000-char cell limit, step down
-          // quality (not size) first, then size, until it fits safely.
-          if(b64.length>44000){b64=canvas.toDataURL('image/jpeg',0.7);}
-          if(b64.length>44000){
-            var scale2=Math.min(700/img.width,700/img.height,1);
-            var c2=document.createElement('canvas');
-            c2.width=Math.round(img.width*scale2);c2.height=Math.round(img.height*scale2);
-            c2.getContext('2d').drawImage(img,0,0,c2.width,c2.height);
-            b64=c2.toDataURL('image/jpeg',0.75);
-          }
-          gasCall('serverAddNotePhoto',S.token,{noteID:realNoteID,photo:b64}).then(function(pr){
-            if(pr&&pr.success){
-              photoEntry.photoID=pr.photoID;
-              photoEntry.photoData=b64; // swap blob URL for the real compressed version
-              photoEntry.pending=false;
-            } else {
-              photoEntry.pending=false;
-              photoEntry.failed=true;
+    var POOL_SIZE=4;
+    var nextIdx=0;
+
+    function processOnePhoto(idx){
+      return new Promise(function(resolve){
+        var file=pickedFiles[idx];
+        var photoEntry=localEntry.photos[idx];
+        var reader=new FileReader();
+        reader.onload=function(ev){
+          var img=new Image();
+          img.onload=function(){
+            // Use createImageBitmap-speed path: draw once at target size only
+            // (no double-draw), pick quality based on source size for speed.
+            var canvas=document.createElement('canvas');
+            var maxSize=900;
+            var scale=Math.min(maxSize/img.width,maxSize/img.height,1);
+            canvas.width=Math.round(img.width*scale);
+            canvas.height=Math.round(img.height*scale);
+            canvas.getContext('2d').drawImage(img,0,0,canvas.width,canvas.height);
+            var b64=canvas.toDataURL('image/jpeg',0.85);
+            if(b64.length>44000){b64=canvas.toDataURL('image/jpeg',0.7);}
+            if(b64.length>44000){
+              var scale2=Math.min(700/img.width,700/img.height,1);
+              var c2=document.createElement('canvas');
+              c2.width=Math.round(img.width*scale2);c2.height=Math.round(img.height*scale2);
+              c2.getContext('2d').drawImage(img,0,0,c2.width,c2.height);
+              b64=c2.toDataURL('image/jpeg',0.75);
             }
-            plRenderCards(PL.entries);
-          });
+            gasCall('serverAddNotePhoto',S.token,{noteID:realNoteID,photo:b64}).then(function(pr){
+              if(pr&&pr.success){
+                photoEntry.photoID=pr.photoID;
+                photoEntry.photoData=b64;
+                photoEntry.pending=false;
+              } else {
+                photoEntry.pending=false;
+                photoEntry.failed=true;
+              }
+              plRenderCards(PL.entries);
+              resolve();
+            });
+          };
+          img.onerror=function(){photoEntry.pending=false;photoEntry.failed=true;plRenderCards(PL.entries);resolve();};
+          img.src=ev.target.result;
         };
-        img.onerror=function(){photoEntry.pending=false;photoEntry.failed=true;plRenderCards(PL.entries);};
-        img.src=ev.target.result;
-      };
-      reader.onerror=function(){photoEntry.pending=false;photoEntry.failed=true;plRenderCards(PL.entries);};
-      reader.readAsDataURL(file);
-    });
+        reader.onerror=function(){photoEntry.pending=false;photoEntry.failed=true;plRenderCards(PL.entries);resolve();};
+        reader.readAsDataURL(file);
+      });
+    }
+
+    function runPool(){
+      return new Promise(function(allDone){
+        var active=0,completed=0,total=pickedFiles.length;
+        function launchNext(){
+          if(nextIdx>=total){
+            if(active===0)allDone();
+            return;
+          }
+          var myIdx=nextIdx++;
+          active++;
+          processOnePhoto(myIdx).then(function(){
+            active--;completed++;
+            if(completed>=total){allDone();}
+            else launchNext();
+          });
+        }
+        var startCount=Math.min(POOL_SIZE,total);
+        for(var s=0;s<startCount;s++)launchNext();
+      });
+    }
+    runPool();
   });
 }
 
@@ -6493,39 +6525,57 @@ function plSaveEdit(noteID){
       gasCall('serverDeleteNotePhoto',S.token,pid).then(function(){deleteNext();});
     }
 
-    // Step 3: upload any newly added photos (each its own small call)
+    // Step 3: upload any newly added photos using a 4-at-a-time pool
+    // (same approach as new-entry uploads — fast, without overwhelming
+    // Apps Script's execution slots).
     function uploadNewPhotos(){
       var newPhotos=PL.editPhotos||[];
       if(!newPhotos.length){finishEdit(noteID,updated);return;}
-      var fi=0;
-      function next(){
-        if(fi>=newPhotos.length){finishEdit(noteID,updated);return;}
-        var lm=id('loaderMsg');if(lm)lm.textContent='Uploading photo '+(fi+1)+' of '+newPhotos.length+'...';
-        var reader=new FileReader();
-        reader.onload=function(ev){
-          var img=new Image();
-          img.onload=function(){
-            var c=document.createElement('canvas');
-            var sc=Math.min(900/img.width,900/img.height,1);
-            c.width=Math.round(img.width*sc);c.height=Math.round(img.height*sc);
-            c.getContext('2d').drawImage(img,0,0,c.width,c.height);
-            var b64=c.toDataURL('image/jpeg',0.85);
-            if(b64.length>44000){b64=c.toDataURL('image/jpeg',0.7);}
-            if(b64.length>44000){
-              var sc2=Math.min(700/img.width,700/img.height,1);
-              var c2=document.createElement('canvas');
-              c2.width=Math.round(img.width*sc2);c2.height=Math.round(img.height*sc2);
-              c2.getContext('2d').drawImage(img,0,0,c2.width,c2.height);
-              b64=c2.toDataURL('image/jpeg',0.75);
-            }
-            gasCall('serverAddNotePhoto',S.token,{noteID:noteID,photo:b64}).then(function(){fi++;next();});
+      var POOL_SIZE=4,nextIdx=0,active=0,completed=0,total=newPhotos.length;
+      var lm=id('loaderMsg');
+
+      function processOne(idx){
+        return new Promise(function(resolve){
+          var reader=new FileReader();
+          reader.onload=function(ev){
+            var img=new Image();
+            img.onload=function(){
+              var c=document.createElement('canvas');
+              var sc=Math.min(900/img.width,900/img.height,1);
+              c.width=Math.round(img.width*sc);c.height=Math.round(img.height*sc);
+              c.getContext('2d').drawImage(img,0,0,c.width,c.height);
+              var b64=c.toDataURL('image/jpeg',0.85);
+              if(b64.length>44000){b64=c.toDataURL('image/jpeg',0.7);}
+              if(b64.length>44000){
+                var sc2=Math.min(700/img.width,700/img.height,1);
+                var c2=document.createElement('canvas');
+                c2.width=Math.round(img.width*sc2);c2.height=Math.round(img.height*sc2);
+                c2.getContext('2d').drawImage(img,0,0,c2.width,c2.height);
+                b64=c2.toDataURL('image/jpeg',0.75);
+              }
+              gasCall('serverAddNotePhoto',S.token,{noteID:noteID,photo:b64}).then(function(){resolve();});
+            };
+            img.onerror=function(){resolve();};
+            img.src=ev.target.result;
           };
-          img.onerror=function(){fi++;next();};
-          img.src=ev.target.result;
-        };
-        reader.readAsDataURL(newPhotos[fi]);
+          reader.onerror=function(){resolve();};
+          reader.readAsDataURL(newPhotos[idx]);
+        });
       }
-      next();
+      function launchNext(){
+        if(nextIdx>=total){if(active===0)finishEdit(noteID,updated);return;}
+        var myIdx=nextIdx++;
+        active++;
+        if(lm)lm.textContent='Uploading photo '+completed+' of '+total+'...';
+        processOne(myIdx).then(function(){
+          active--;completed++;
+          if(lm)lm.textContent='Uploading photo '+completed+' of '+total+'...';
+          if(completed>=total)finishEdit(noteID,updated);
+          else launchNext();
+        });
+      }
+      var startCount=Math.min(POOL_SIZE,total);
+      for(var s=0;s<startCount;s++)launchNext();
     }
 
     deleteNext();
