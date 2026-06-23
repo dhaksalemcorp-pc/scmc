@@ -7806,8 +7806,13 @@ function showUserModal(uid){
   var fields=['mu-emp','mu-name','mu-mobile','mu-email','mu-uname','mu-pass'];
   for(var i=0;i<fields.length;i++){var e=id(fields[i]);if(e)e.value='';}
   var unEl=id('mu-uname'),unNote=id('mu-uname-note');
-  if(unEl){unEl.readOnly=!!uid;unEl.style.background=uid?'var(--surface2)':'';}
-  if(unNote)unNote.style.display=uid?'block':'none';
+  var currentIsAdmin=(S.user&&S.user.role==='Admin');
+  // Username should only be locked when editing an EXISTING user AND the
+  // person doing the editing is not Admin. Admin must always be able to
+  // change any username from User Management — this previously locked
+  // the field for every edit regardless of who was logged in.
+  if(unEl){unEl.readOnly=(!!uid && !currentIsAdmin);unEl.style.background=(!!uid && !currentIsAdmin)?'var(--surface2)':'';}
+  if(unNote)unNote.style.display=(!!uid && !currentIsAdmin)?'block':'none';
   if(S.lookup){
     fillSel('mu-desig',S.lookup.designations,'DesigName','DesigName','Select');
     fillSel('mu-dept',S.lookup.departments,'DeptName','DeptName','Select');
