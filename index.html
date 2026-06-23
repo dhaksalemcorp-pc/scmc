@@ -3078,15 +3078,16 @@ function gasCall(fn){
   if(GAS_URL){
     return fetch(GAS_URL,{
       method:'POST',
-      cache:'no-store', // critical: prevents mobile browsers / carrier proxies from
-                         // silently returning a cached response for an identical-looking
-                         // POST request, which otherwise makes filters/search look "stuck"
-                         // until the user changes something enough to bypass the cache
+      cache:'no-store', // prevents stale cached responses without triggering a
+                         // CORS preflight (unlike custom Cache-Control/Pragma
+                         // headers, which Apps Script's web app cannot answer —
+                         // those broke login entirely with "Failed to fetch")
       headers:{
-        'Content-Type':'application/x-www-form-urlencoded',
-        'Cache-Control':'no-cache, no-store, must-revalidate',
-        'Pragma':'no-cache'
+        'Content-Type':'application/x-www-form-urlencoded' // must stay a "simple" header/value
       },
+      // _ts cache-buster ensures this exact URL+body is never treated as a
+      // repeat of a previous request by any intermediate cache or proxy,
+      // without needing extra headers that would trigger a preflight.
       body:'fn='+encodeURIComponent(fn)+'&payload='+encodeURIComponent(JSON.stringify(args))+'&_ts='+Date.now()
     })
     .then(function(r){return r.json();})
