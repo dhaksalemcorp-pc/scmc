@@ -517,6 +517,17 @@ body {
 .task-card-meta{display:flex;gap:10px;flex-wrap:wrap}
 .task-card-meta-item{display:flex;align-items:center;gap:4px;font-size:11.5px;color:var(--tx3)}
 .task-card-meta-item .material-icons-round{font-size:13px}
+.grv-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 16px;margin-bottom:10px;cursor:pointer;transition:all .15s}
+.grv-card:hover{border-color:var(--c-blue);box-shadow:0 3px 10px rgba(29,78,216,.08)}
+.grv-status{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:999px;font-size:11.5px;font-weight:700}
+.grv-status-Pending{background:rgba(180,83,9,.12);color:#B45309}
+.grv-status-UnderReview{background:rgba(29,78,216,.12);color:var(--c-blue)}
+.grv-status-ATRSubmitted{background:rgba(13,148,136,.12);color:var(--c-teal)}
+.grv-status-Closed{background:rgba(5,150,105,.12);color:var(--c-green)}
+.grv-priority-High{color:var(--c-red);font-weight:700}
+.grv-priority-Medium{color:#B45309;font-weight:700}
+.grv-priority-Low{color:var(--tx3);font-weight:700}
+.atr-entry{background:var(--surface2);border-radius:10px;padding:10px 12px;margin-bottom:8px;border-left:3px solid var(--c-teal)}
 .rpt-cat-section{margin-bottom:24px}
 .rpt-cat-hd{display:flex;align-items:center;gap:10px;margin-bottom:12px;padding-bottom:8px;border-bottom:2px solid var(--border)}
 .rpt-cat-title{font-size:13px;font-weight:700;color:var(--tx1);text-transform:uppercase;letter-spacing:.05em}
@@ -1404,6 +1415,7 @@ tbody tr:hover { background: var(--surface2); }
       <div class="sb-item" id="snav-photolog" data-page="photolog" onclick="go('photolog')"><span class="material-icons-round sb-i">photo_library</span> Notes</div>
       <div class="sb-item" id="snav-calendar" data-page="calendar" onclick="go('calendar')" style="display:none"><span class="material-icons-round sb-i">calendar_month</span> Calendar</div>
       <div class="sb-item" id="snav-reports" data-page="reports" onclick="go('reports')" style="display:none"><span class="material-icons-round sb-i">summarize</span> Reports</div>
+      <div class="sb-item" id="snav-grievances" data-page="grievances" onclick="go('grievances')" style="display:none"><span class="material-icons-round sb-i">gavel</span> Grievances</div>
       <div class="sb-item" data-page="about" onclick="go('about')"><span class="material-icons-round sb-i">info</span> About</div>
     </div>
     <div class="sb-footer">
@@ -1490,6 +1502,10 @@ tbody tr:hover { background: var(--surface2); }
               </table>
             </div>
           </div>
+        </div>
+        <div class="card mt16" id="offGrievanceCard" style="display:none">
+          <div class="card-hd"><span class="card-title">&#9878;&#65039; My Grievances</span></div>
+          <div class="card-bd-0" id="offGrievanceList"></div>
         </div>
       </div>
 
@@ -1594,7 +1610,7 @@ tbody tr:hover { background: var(--surface2); }
       <div class="ph"><div class="ph-left"><h1>Task Entry</h1><p>Create and assign tasks to officers</p></div></div>
       <div class="tabs mb16" id="taskTabs">
         <button class="tab active" onclick="switchTaskTab('manual',this)"><span class="material-icons-round mi">edit</span> Manual Entry</button>
-        <button class="tab" onclick="switchTaskTab('ai',this)"><span class="material-icons-round mi">auto_awesome</span> AI Extractor</button>
+        <button class="tab" id="aiExtractorTab" onclick="switchTaskTab('ai',this)"><span class="material-icons-round mi">auto_awesome</span> AI Extractor</button>
       </div>
       <!-- Manual form -->
       <div id="tab-manual">
@@ -2057,6 +2073,12 @@ tbody tr:hover { background: var(--surface2); }
               <input type="text" class="f-ctrl" id="pl-location" placeholder="e.g. Ward 12, Near Bus Stand">
             </div>
             <div class="f-group">
+              <label class="f-label">Officer Name <span style="font-size:11px;color:var(--tx3)">(owner of this note)</span></label>
+              <select class="f-sel" id="pl-officer">
+                <option value="">Select Officer (optional)</option>
+              </select>
+            </div>
+            <div class="f-group">
               <label class="f-label" id="pl-notes-label">Notes</label>
               <textarea class="f-ctrl" id="pl-notes" rows="4" placeholder="Enter your observations..."></textarea>
             </div>
@@ -2336,6 +2358,135 @@ tbody tr:hover { background: var(--surface2); }
         <div class="modal-ft">
           <button class="btn btn-ghost" onclick="closeModal('mAddReport')">Cancel</button>
           <button class="btn btn-primary" id="rptSaveBtn" onclick="saveReportLink()"><span class="material-icons-round mi">save</span> Save Report</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- GRIEVANCE MANAGEMENT PAGE -->
+    <div class="page" id="page-grievances">
+      <div class="ph">
+        <div class="ph-left"><h1>&#9878;&#65039; Grievance Management</h1><p>Track public &amp; representative grievances from receipt to closure</p></div>
+        <div class="ph-actions">
+          <button class="btn btn-ghost btn-sm" id="manageCouncilorsBtn" onclick="showCouncilorManager()" style="display:none"><span class="material-icons-round mi">groups</span> Manage Councilors</button>
+          <button class="btn btn-primary" id="newGrievanceBtn" onclick="showGrievanceModal()" style="display:none"><span class="material-icons-round mi">add</span> New Grievance</button>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px;align-items:center">
+        <div class="search-wrap" style="width:240px">
+          <span class="material-icons-round mi-prefix">search</span>
+          <input type="text" class="f-ctrl" id="grvSearch" placeholder="Search subject, name, ID..." oninput="filterGrievances()" style="font-size:13px">
+        </div>
+        <select class="f-sel filt-sel" id="grvFStatus" onchange="filterGrievances()" style="width:auto">
+          <option value="">All Status</option>
+          <option>Pending</option><option>Under Review</option><option>ATR Submitted</option><option>Closed</option>
+        </select>
+        <select class="f-sel filt-sel" id="grvFDept" onchange="filterGrievances()" style="width:auto"><option value="">All Departments</option></select>
+        <select class="f-sel filt-sel" id="grvFPriority" onchange="filterGrievances()" style="width:auto">
+          <option value="">All Priority</option><option>High</option><option>Medium</option><option>Low</option>
+        </select>
+        <button class="btn btn-ghost btn-sm" onclick="clearGrievanceFilters()"><span class="material-icons-round mi">clear</span> Clear</button>
+        <span class="c-muted" id="grvCount" style="font-size:12px;white-space:nowrap;margin-left:auto">&#8212;</span>
+      </div>
+
+      <div id="grvKPIRow" style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px">
+        <div class="card" style="border-left:3px solid var(--c-gold)"><div class="card-bd" style="padding:14px"><div style="font-size:22px;font-weight:800" id="grvKpiPending">0</div><div style="font-size:11.5px;color:var(--tx3)">Pending</div></div></div>
+        <div class="card" style="border-left:3px solid var(--c-blue)"><div class="card-bd" style="padding:14px"><div style="font-size:22px;font-weight:800" id="grvKpiReview">0</div><div style="font-size:11.5px;color:var(--tx3)">Under Review</div></div></div>
+        <div class="card" style="border-left:3px solid var(--c-teal)"><div class="card-bd" style="padding:14px"><div style="font-size:22px;font-weight:800" id="grvKpiATR">0</div><div style="font-size:11.5px;color:var(--tx3)">ATR Submitted</div></div></div>
+        <div class="card" style="border-left:3px solid var(--c-green)"><div class="card-bd" style="padding:14px"><div style="font-size:22px;font-weight:800" id="grvKpiClosed">0</div><div style="font-size:11.5px;color:var(--tx3)">Closed</div></div></div>
+      </div>
+
+      <div id="grvListWrap"></div>
+      <div id="grvEmptyState" class="card" style="display:none">
+        <div class="card-bd" style="text-align:center;padding:48px 24px">
+          <span class="material-icons-round" style="font-size:48px;color:var(--tx3)">inbox</span>
+          <h3 style="color:var(--tx2);margin:12px 0 6px">No grievances found</h3>
+          <p style="color:var(--tx3)">No records match the current filters, or none have been added yet.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- NEW / EDIT GRIEVANCE MODAL -->
+    <div class="modal-bg" id="mGrievance">
+      <div class="modal-box" style="max-width:560px">
+        <div class="modal-hd"><span class="modal-title" id="grvModalTitle">New Grievance</span><button class="modal-close" onclick="closeModal('mGrievance')"><span class="material-icons-round">close</span></button></div>
+        <div class="modal-body">
+          <input type="hidden" id="grv-id">
+          <div class="f-row">
+            <div class="f-group"><label class="f-label">Date Received <span class="req">*</span></label><input type="date" class="f-ctrl" id="grv-date"></div>
+            <div class="f-group"><label class="f-label">Priority</label>
+              <select class="f-sel" id="grv-priority"><option>Medium</option><option>High</option><option>Low</option></select>
+            </div>
+          </div>
+          <div class="f-row">
+            <div class="f-group"><label class="f-label">Zone <span style="font-size:11px;color:var(--tx3)">(optional)</span></label>
+              <select class="f-sel" id="grv-zone" onchange="grvPopulateWardOptions();grvOnZoneWardChange()"><option value="">Select Zone</option></select>
+            </div>
+            <div class="f-group"><label class="f-label">Ward No. <span style="font-size:11px;color:var(--tx3)">(optional)</span></label>
+              <select class="f-sel" id="grv-ward" onchange="grvOnZoneWardChange()"><option value="">Select Ward</option></select>
+            </div>
+          </div>
+          <div class="f-group">
+            <label class="f-label">Received From <span class="req">*</span></label>
+            <div style="display:flex;gap:6px">
+              <select class="f-sel" id="grv-receivedFrom" style="flex:1">
+                <option value="">Select...</option>
+              </select>
+              <button type="button" class="btn btn-ghost btn-sm" onclick="showAddCouncilorInline()" title="Add new entry"><span class="material-icons-round mi">add</span></button>
+            </div>
+            <div id="grvAutoFillNote" style="font-size:11px;color:var(--c-teal);margin-top:4px;display:none"><span class="material-icons-round" style="font-size:12px;vertical-align:middle">auto_awesome</span> Auto-filled from Zone + Ward selection</div>
+          </div>
+          <div class="f-group"><label class="f-label">Subject <span class="req">*</span></label><input type="text" class="f-ctrl" id="grv-subject" placeholder="Brief subject of the grievance"></div>
+          <div class="f-row">
+            <div class="f-group"><label class="f-label">Concerned Department <span class="req">*</span></label>
+              <select class="f-sel" id="grv-dept" onchange="grvFilterOfficerByDept()"><option value="">Select Department</option></select>
+            </div>
+            <div class="f-group"><label class="f-label">Concerned Officer</label>
+              <select class="f-sel" id="grv-officer"><option value="">Select Officer (optional)</option></select>
+            </div>
+          </div>
+          <div class="f-group mb0">
+            <label class="f-label">Original Letter <span style="font-size:11px;color:var(--tx3)">(PDF, optional)</span></label>
+            <div style="border:2px dashed var(--border);border-radius:10px;padding:16px;text-align:center;cursor:pointer;background:var(--surface2)" onclick="document.getElementById('grvLetterInput').click()">
+              <span class="material-icons-round mi" style="font-size:26px;color:var(--tx3)">picture_as_pdf</span>
+              <div style="font-size:12.5px;color:var(--tx3);margin-top:4px">Tap to upload the scanned letter</div>
+            </div>
+            <input type="file" id="grvLetterInput" accept="application/pdf" multiple style="display:none" onchange="grvAddLetterFiles(this.files)">
+            <div id="grvLetterPreview" style="display:flex;flex-direction:column;gap:6px;margin-top:8px"></div>
+          </div>
+        </div>
+        <div class="modal-ft">
+          <button class="btn btn-ghost" onclick="closeModal('mGrievance')">Cancel</button>
+          <button class="btn btn-primary" id="grvSaveBtn" onclick="saveGrievance()"><span class="material-icons-round mi">save</span> Save Grievance</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- GRIEVANCE DETAIL / ATR THREAD MODAL -->
+    <div class="modal-bg" id="mGrievanceDetail">
+      <div class="modal-box" style="max-width:620px">
+        <div class="modal-hd"><span class="modal-title" id="grvDetailTitle">Grievance</span><button class="modal-close" onclick="closeModal('mGrievanceDetail')"><span class="material-icons-round">close</span></button></div>
+        <div class="modal-body" id="grvDetailBody"></div>
+      </div>
+    </div>
+
+    <!-- COUNCILOR MANAGER MODAL (Admin/Commissioner) -->
+    <div class="modal-bg" id="mCouncilorManager">
+      <div class="modal-box" style="max-width:460px">
+        <div class="modal-hd"><span class="modal-title">Manage "Received From" List</span><button class="modal-close" onclick="closeModal('mCouncilorManager')"><span class="material-icons-round">close</span></button></div>
+        <div class="modal-body">
+          <div class="f-group">
+            <label class="f-label">Add New Entry</label>
+            <div style="display:flex;gap:6px">
+              <input type="text" class="f-ctrl" id="newCouncilorName" placeholder="Name">
+              <input type="text" class="f-ctrl" id="newCouncilorDesig" placeholder="Designation (optional)" style="max-width:160px">
+              <button class="btn btn-primary btn-sm" onclick="addCouncilorEntry()"><span class="material-icons-round mi">add</span></button>
+            </div>
+          </div>
+          <div id="councilorListWrap" style="max-height:320px;overflow-y:auto;border-top:1px solid var(--border);padding-top:10px"></div>
+        </div>
+        <div class="modal-ft">
+          <button class="btn btn-ghost" onclick="closeModal('mCouncilorManager')">Close</button>
         </div>
       </div>
     </div>
@@ -3330,18 +3481,20 @@ function applyRoleNav(role){
   var isSupervision=(role==='Supervision');
   var isOfficer=(role==='Officer');
 
-  show('snav-taskEntry', isAdmin);
+  show('snav-taskEntry', isAdmin||isSupervision);
   show('snav-users', isAdminOnly);
   show('snav-commview', isAdmin);
   show('snav-settings', isAdminOnly);
   show('snav-reports', isAdminOnly);
+  show('snav-grievances', isAdmin||isHOD||isSupervision);
   show('snav-chgpw', true);
   show('snav-photolog', true); // All roles can view Notes/Photo Log
   show('snav-dashboard', true);
   show('bnDashboard', true);
-  show('bnEntry', isAdmin);
+  show('bnEntry', isAdmin||isSupervision);
   show('bnCommView', isAdmin);
-  show('newTaskBtn', isAdmin);
+  show('newTaskBtn', isAdmin||isSupervision);
+  show('aiExtractorTab', isAdmin); // Supervision gets manual entry only, no AI Extractor
   var thChk=id('thChk');
   if(thChk)thChk.innerHTML=isAdmin?'<input type="checkbox" id="chkAll" onchange="toggleSelectAll(this)" style="width:16px;height:16px;cursor:pointer" title="Select all">':'';
   var thAct=id('thActions');if(thAct)thAct.style.display=(isOfficer||isSupervision)?'none':'';
@@ -3358,20 +3511,21 @@ function applyRoleNav(role){
   });
 
   if(isOfficer){
-    S.allowedPages=['dashboard','tracker','photolog','about'];
+    S.allowedPages=['dashboard','tracker','photolog','grievances','about'];
   } else if(isHOD){
-    S.allowedPages=['dashboard','tracker','photolog','about'];
+    S.allowedPages=['dashboard','tracker','photolog','grievances','about'];
   } else if(isSupervision){
     // Supervision: dedicated dashboard for monitoring individual officers,
-    // plus view + update tasks for assigned departments only.
-    // No reassignment — scoped task tracker access.
-    S.allowedPages=['dashboard','tracker','photolog','about'];
+    // view + update tasks for assigned departments only (no reassignment),
+    // manual Task Entry access (own department only — enforced server-side),
+    // and full Notes create/delete access (enforced server-side).
+    S.allowedPages=['dashboard','taskEntry','tracker','photolog','grievances','about'];
   } else if(isAdminOnly){
-    S.allowedPages=['dashboard','taskEntry','tracker','commview','users','settings','reports','photolog','about'];
+    S.allowedPages=['dashboard','taskEntry','tracker','commview','users','settings','reports','photolog','grievances','about'];
   } else {
     // Commissioner: full visibility into tasks and analytics, but
     // User Management, Settings, and Reports remain Admin-only.
-    S.allowedPages=['dashboard','taskEntry','tracker','commview','photolog','about'];
+    S.allowedPages=['dashboard','taskEntry','tracker','commview','photolog','grievances','about'];
   }
 
   var ad=id('adminDash'),od=id('officerDash'),hd=id('hodDash'),spd=id('supDash');
@@ -3385,7 +3539,7 @@ function applyRoleNav(role){
     if(ad)ad.classList.remove('dn');if(od)od.classList.add('dn');if(hd)hd.classList.add('dn');if(spd)spd.classList.add('dn');
   }
 }
-var PAGE_META={dashboard:['Dashboard','Overview & Analytics'],taskEntry:['Task Entry','Create and assign tasks'],tracker:['Task Tracker','Monitor all tasks'],commview:['Commissioner View','Executive analytics'],users:['User Management','Manage accounts'],settings:['Settings','System configuration'],photolog:['Notes','Inspection & Meeting Records'],calendar:['Calendar','Meetings & Schedule'],reports:['Reports','Dynamic Report Generator'],about:['About','Application information']};
+var PAGE_META={dashboard:['Dashboard','Overview & Analytics'],taskEntry:['Task Entry','Create and assign tasks'],tracker:['Task Tracker','Monitor all tasks'],commview:['Commissioner View','Executive analytics'],users:['User Management','Manage accounts'],settings:['Settings','System configuration'],photolog:['Notes','Inspection & Meeting Records'],calendar:['Calendar','Meetings & Schedule'],reports:['Reports','Dynamic Report Generator'],grievances:['Grievance Management','Track public & representative grievances'],about:['About','Application information']};
 function go(page){
   if(S.allowedPages&&S.allowedPages.length&&S.allowedPages.indexOf(page)===-1){toast('Access restricted.','error');return;}
   S.page=page;
@@ -3415,6 +3569,7 @@ function go(page){
   else if(page==='photolog')loadPhotoLog();
   else if(page==='calendar')loadCalendarPage();
   else if(page==='reports')loadReportsPage();
+  else if(page==='grievances')loadGrievancesPage();
 }
 function refreshPage(){
   var icon=id('globalRefreshIcon'),btn=id('globalRefreshBtn');
@@ -3463,7 +3618,16 @@ function loadLookup(){return gasCall('serverGetLookupData',S.token).then(functio
 function populateSelects(){
   var ld=S.lookup;if(!ld)return;
   fillSelZone('t-zone',ld.zones,'Select Zone');fillSelZone('fZone',ld.zones,'All Zones');fillSelZone('mu-zone',ld.zones,'Select');
-  fillSel('t-dept',ld.departments,'DeptName','DeptName','Select Department');fillSel('fDept',ld.departments,'DeptName','DeptName','All Departments');fillSel('mu-dept',ld.departments,'DeptName','DeptName','Select');fillSel('mapDept',ld.departments,'DeptName','DeptName','Select');
+  // For Supervision: restrict the Task Entry department dropdown to only
+  // their own assigned department(s) — they can't create a task outside
+  // their scope anyway (enforced server-side), so don't even show the option.
+  var isSupervisionUser=(S.user&&S.user.role==='Supervision');
+  var deptListForEntry=ld.departments;
+  if(isSupervisionUser){
+    var supDepts=(S.user.hodDepartments||'').split(',').map(function(d){return d.trim().toLowerCase();});
+    deptListForEntry=ld.departments.filter(function(d){return supDepts.indexOf(String(d.DeptName||'').trim().toLowerCase())!==-1;});
+  }
+  fillSel('t-dept',deptListForEntry,'DeptName','DeptName','Select Department');fillSel('fDept',ld.departments,'DeptName','DeptName','All Departments');fillSel('mu-dept',ld.departments,'DeptName','DeptName','Select');fillSel('mapDept',ld.departments,'DeptName','DeptName','Select');
   fillSel('mu-desig',ld.designations,'DesigName','DesigName','Select');
   fillOfficers(null);
   initAddOfficerDepts();
@@ -3894,6 +4058,39 @@ function loadOfficerDashboard(){
     if(s.overdue>0){var b=id('overdBadge');if(b){b.textContent=s.overdue;b.style.display='';}var d=id('bnDot');if(d)d.classList.add('on');}
     buildOfficerChart(s);
     buildOfficerRecentTasks(r.recentTasks||[]);
+  });
+  loadOfficerGrievances();
+}
+
+function loadOfficerGrievances(){
+  gasCall('serverGetGrievances',S.token).then(function(r){
+    var card=id('offGrievanceCard'),wrap=id('offGrievanceList');
+    if(!card||!wrap)return;
+    var list=(r&&r.success)?(r.data||[]):[];
+    if(!list.length){card.style.display='none';return;}
+    card.style.display='block';
+    while(wrap.firstChild)wrap.removeChild(wrap.firstChild);
+    for(var i=0;i<list.length;i++){
+      (function(g){
+        var statusClass='grv-status-'+g.status.replace(/\s/g,'');
+        var row=document.createElement('div');
+        row.style.cssText='display:flex;align-items:center;justify-content:space-between;gap:10px;padding:11px 16px;border-bottom:1px solid var(--border);cursor:pointer';
+        row.onclick=function(){
+          go('grievances');
+          setTimeout(function(){
+            if(typeof GRV!=='undefined'){
+              gasCall('serverGetGrievances',S.token).then(function(gr){
+                if(gr&&gr.success){GRV.list=gr.data||[];openGrievanceDetail(g.grievanceID);}
+              });
+            }
+          },500);
+        };
+        row.innerHTML='<div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:700;color:var(--tx1)">'+htmlEsc(g.subject)+'</div>'
+          +'<div style="font-size:11.5px;color:var(--tx3);margin-top:2px">'+g.grievanceID+' \u00b7 from '+htmlEsc(g.receivedFromName)+'</div></div>'
+          +'<span class="grv-status '+statusClass+'">'+g.status+'</span>';
+        wrap.appendChild(row);
+      })(list[i]);
+    }
   });
 }
 function loadTasksThenOfficerDash(){
@@ -5861,7 +6058,7 @@ function clearMultiOfficerList(){
 // ── PHOTO LOG ────────────────────────────────────────────────
 var PL={photos:[],pdfs:[],entries:[],editPhotos:[],editExistingPhotos:[],editRemovedPhotoIDs:[],editNoteID:null,editPdfs:[],editExistingAttachments:[],editRemovedAttachmentIDs:[],isAdmin:false,sortOrder:'desc'};
 function plCheckAdmin(){
-  var liveCheck = S.user && (S.user.role==='Admin'||S.user.role==='Commissioner');
+  var liveCheck = S.user && (S.user.role==='Admin'||S.user.role==='Commissioner'||S.user.role==='Supervision');
   return liveCheck && PL.isAdmin;
 }
 
@@ -5876,19 +6073,23 @@ function plCheckAdmin(){
 
 function loadPhotoLog(){
   var isAdmin=(S.user&&(S.user.role==='Admin'||S.user.role==='Commissioner'));
-  PL.isAdmin=isAdmin;
+  var canWriteNotes=(S.user&&(S.user.role==='Admin'||S.user.role==='Commissioner'||S.user.role==='Supervision'));
+  PL.isAdmin=canWriteNotes;
   var adminAct=id('plAdminActions'),viewAct=id('plViewActions');
-  if(adminAct)adminAct.style.display=isAdmin?'':'none';
-  if(viewAct)viewAct.style.display=isAdmin?'none':'';
+  if(adminAct)adminAct.style.display=canWriteNotes?'':'none';
+  if(viewAct)viewAct.style.display=canWriteNotes?'none':'';
+  // Note Type management stays Admin/Commissioner only — Supervision can
+  // add and delete notes themselves, but not edit the master Type list.
   var manageBtn=id('plManageTypesBtn');if(manageBtn)manageBtn.style.display=isAdmin?'':'none';
   // Always land on the All Entries list, regardless of role.
-  // Admin/Commissioner use the New Entry button/tab to switch to the form if needed.
+  // Admin/Commissioner/Supervision use the New Entry button/tab to switch to the form if needed.
   var fv=id('plFormView'),lv=id('plListView');
   if(fv){fv.style.display='none';}
   if(lv){lv.style.display='block';}
-  if(isAdmin){
+  if(canWriteNotes){
     var pd=id('pl-date');if(pd&&!pd.value)pd.value=new Date().toISOString().slice(0,10);
     var pt=id('pl-time');if(pt&&!pt.value){var now=new Date();pt.value=zeroPad(now.getHours(),2)+':'+zeroPad(now.getMinutes(),2);}
+    plPopulateOfficerDropdown('pl-officer');
   }
   plLoadNoteTypes();
   showLoader('Loading notes...');
@@ -5916,6 +6117,40 @@ function plLoadNoteTypes(){
     plPopulateTypeDropdowns();
   });
 }
+// Populates an Officer Name dropdown from the master officer list — used
+// in both the New Entry form (id passed as 'pl-officer') and the Edit
+// modal (id passed as 'plEdit-officer'). Officer Name on a note records
+// who the note "belongs to" — e.g. the inspecting officer or meeting
+// owner — separate from CreatedBy, which is whoever actually typed the
+// entry into the system (could be Admin entering on someone's behalf).
+function plPopulateOfficerDropdown(selectId, currentValue){
+  var sel=id(selectId);
+  if(!sel)return;
+  var officers=(S.lookup&&S.lookup.officers)||[];
+  var cur=currentValue!==undefined?currentValue:sel.value;
+  sel.innerHTML='<option value="">Select Officer (optional)</option>';
+  for(var i=0;i<officers.length;i++){
+    var o=officers[i];
+    var opt=document.createElement('option');
+    opt.value=o.name;
+    opt.textContent=o.name+(o.designation?' \u2014 '+o.designation:'');
+    sel.appendChild(opt);
+  }
+  // If the saved officer name isn't in the current active officer list
+  // (e.g. account since deactivated/renamed), still show it so historical
+  // notes display correctly rather than silently reverting to blank.
+  if(cur){
+    var found=false;
+    for(var i=0;i<sel.options.length;i++){if(sel.options[i].value===cur){found=true;break;}}
+    if(!found){
+      var opt2=document.createElement('option');
+      opt2.value=cur;opt2.textContent=cur+' (inactive)';
+      sel.appendChild(opt2);
+    }
+    sel.value=cur;
+  }
+}
+
 function plPopulateTypeDropdowns(){
   var types=S.noteTypes||['Inspection','Meeting','Site Visit'];
   // New Entry form dropdown
@@ -6185,7 +6420,8 @@ function plRenderPdfPreview(){
 //    photo never affects the others or hides the entry.
 function savePlEntry(){
   var date=V('pl-date'),time=V('pl-time'),type=V('pl-type'),zone=V('pl-zone'),
-      loc=V('pl-location'),notes=id('pl-notes')?id('pl-notes').value:'';
+      loc=V('pl-location'),notes=id('pl-notes')?id('pl-notes').value:'',
+      officerName=V('pl-officer');
   if(!date||!type){toast('Please fill Date and select a Type.','error');return;}
   if(type==='Meeting'&&!zone){
     toast('Please select at least one Department for the Meeting.','error');return;
@@ -6202,6 +6438,7 @@ function savePlEntry(){
   // STEP 1 — build local preview entry immediately, no network wait
   var localEntry={
     noteID:tempID, date:date, time:time, type:type, zone:zone, location:loc, notes:notes,
+    officerName:officerName,
     createdBy:S.user?S.user.name:'', createdAt:new Date().toISOString(),
     photos: pickedFiles.map(function(f){
       return { photoID:'temp_'+Math.random().toString(36).slice(2), photoData:URL.createObjectURL(f), pending:true };
@@ -6219,7 +6456,7 @@ function savePlEntry(){
   plRenderCards(PL.entries); // photos visible THE INSTANT save is pressed
 
   // STEP 2 — save the note text to the server in the background
-  gasCall('serverCreateNote',S.token,{date:date,time:time,type:type,zone:zone,location:loc,notes:notes}).then(function(r){
+  gasCall('serverCreateNote',S.token,{date:date,time:time,type:type,zone:zone,location:loc,notes:notes,officerName:officerName}).then(function(r){
     if(!r||!r.success){
       localEntry._saving=false;
       localEntry._failed=true;
@@ -6362,7 +6599,7 @@ function savePlEntry(){
 }
 
 function clearPlForm(){
-  var f=['pl-time','pl-type','pl-zone','pl-location','pl-notes'];
+  var f=['pl-time','pl-type','pl-zone','pl-location','pl-notes','pl-officer'];
   for(var i=0;i<f.length;i++){var e=id(f[i]);if(e)e.value='';}
   var pd=id('pl-date');if(pd)pd.value=new Date().toISOString().slice(0,10);
   var chips=document.querySelectorAll('#plZoneChips input[type=checkbox],#plDeptChips input[type=checkbox]');
@@ -6486,6 +6723,13 @@ function plMakeEntryCard(e, typeColors, months){
   }
   content.appendChild(tagRow);
 
+  if(e.officerName&&e.officerName.trim()){
+    var officerTag=document.createElement('div');
+    officerTag.style.cssText='display:inline-flex;align-items:center;gap:5px;background:linear-gradient(135deg,rgba(180,83,9,.12),rgba(180,83,9,.06));border:1px solid rgba(180,83,9,.3);border-radius:7px;padding:4px 10px;margin-bottom:8px;font-size:12.5px;font-weight:700;color:#B45309';
+    officerTag.innerHTML='<span class="material-icons-round" style="font-size:14px">badge</span>'+htmlEsc(e.officerName);
+    content.appendChild(officerTag);
+  }
+
   var notesDiv=document.createElement('div');
   notesDiv.style.cssText='font-size:13px;color:var(--tx2);line-height:1.6;white-space:pre-wrap;margin-bottom:'+(photos.length>0?'10px':'0');
   notesDiv.textContent=e.notes||'';
@@ -6573,19 +6817,23 @@ function plMakeEntryCard(e, typeColors, months){
     content.appendChild(attachWrap);
   }
 
+  var isStrictAdmin=(S.user&&(S.user.role==='Admin'||S.user.role==='Commissioner'));
   if(plCheckAdmin()&&!e._saving){
     var actRow=document.createElement('div');
     actRow.style.cssText='display:flex;gap:8px;margin-top:6px;padding-top:8px;border-top:1px solid var(--border)';
-    var editBtn=document.createElement('button');
-    editBtn.className='btn btn-ghost btn-sm';
-    editBtn.innerHTML='<span class="material-icons-round mi">edit</span> Edit';
-    editBtn.onclick=function(ev){ev.stopPropagation();plEditEntry(e.noteID);};
+    if(isStrictAdmin){
+      var editBtn=document.createElement('button');
+      editBtn.className='btn btn-ghost btn-sm';
+      editBtn.innerHTML='<span class="material-icons-round mi">edit</span> Edit';
+      editBtn.onclick=function(ev){ev.stopPropagation();plEditEntry(e.noteID);};
+      actRow.appendChild(editBtn);
+    }
     var delBtn=document.createElement('button');
     delBtn.className='btn btn-ghost btn-sm';
     delBtn.style.cssText='color:var(--c-red);border-color:var(--c-red)';
     delBtn.innerHTML='<span class="material-icons-round mi">delete</span> Delete';
     delBtn.onclick=function(ev){ev.stopPropagation();plDeleteEntry(e.noteID);};
-    actRow.appendChild(editBtn);actRow.appendChild(delBtn);
+    actRow.appendChild(delBtn);
     content.appendChild(actRow);
   }
 
@@ -6731,6 +6979,7 @@ function plEditEntry(noteID){
     +'<div class="f-group"><label class="f-label">Zone / Department</label><input type="text" class="f-ctrl" id="plEdit-zone" value="'+(e.zone||'')+'" placeholder="Zone(s) or Department(s)"></div>'
     +'</div>'
     +'<div class="f-group"><label class="f-label">Location</label><input type="text" class="f-ctrl" id="plEdit-loc" value="'+(e.location||'')+'" placeholder="Ward / Venue"></div>'
+    +'<div class="f-group"><label class="f-label">Officer Name <span style="font-size:11px;color:var(--tx3)">(owner of this note)</span></label><select class="f-sel" id="plEdit-officer"><option value="">Select Officer (optional)</option></select></div>'
     +'<div class="f-group"><label class="f-label">Notes <span class="req">*</span></label><textarea class="f-ctrl" id="plEdit-notes" rows="4">'+e.notes+'</textarea></div>'
     +(PL.editExistingPhotos.length>0?'<div class="f-group"><label class="f-label">Existing Photos <span style="font-size:11px;color:var(--tx3)">(tap X to remove)</span></label><div id="plEditExistingGrid" style="display:flex;flex-wrap:wrap;gap:8px;padding:10px;background:var(--surface2);border-radius:8px"></div></div>':'')
     +'<div class="f-group"><label class="f-label">Add More Photos</label>'
@@ -6772,6 +7021,7 @@ function plEditEntry(noteID){
       }
       st.value=e.type||'Inspection';
     }
+    plPopulateOfficerDropdown('plEdit-officer',e.officerName);
     plRenderEditExistingPhotos();
     plRenderEditExistingAttachments();
   },50);
@@ -6904,7 +7154,8 @@ function plSaveEdit(noteID){
   var updated={
     noteID:noteID,date:V('plEdit-date'),time:V('plEdit-time'),
     type:V('plEdit-type'),zone:V('plEdit-zone'),
-    location:V('plEdit-loc'),notes:id('plEdit-notes')?id('plEdit-notes').value:''
+    location:V('plEdit-loc'),notes:id('plEdit-notes')?id('plEdit-notes').value:'',
+    officerName:V('plEdit-officer')
   };
   if(!updated.notes.trim()){toast('Notes cannot be empty.','error');return;}
   showLoader('Saving...');
@@ -8232,6 +8483,480 @@ var CAL={viewDate:new Date(),events:[],configured:null,canCreate:false};
 // merging code. Admin adds reports by providing name/category/icon/URL.
 // ════════════════════════════════════════════════════════════
 var REPORTS_CACHE=[];
+
+// ════════════════════════════════════════════════════════════
+// GRIEVANCE MANAGEMENT MODULE
+// ════════════════════════════════════════════════════════════
+var GRV={list:[],wardMap:[],councilors:[],letterFiles:[],viewingID:null};
+
+function loadGrievancesPage(){
+  var isAdmin=(S.user&&(S.user.role==='Admin'||S.user.role==='Commissioner'));
+  var nb=id('newGrievanceBtn');if(nb)nb.style.display=isAdmin?'':'none';
+  var mb=id('manageCouncilorsBtn');if(mb)mb.style.display=isAdmin?'':'none';
+
+  if(S.lookup)fillSel('grvFDept',S.lookup.departments,'DeptName','DeptName','All Departments');
+
+  showLoader('Loading grievances...');
+  Promise.all([
+    gasCall('serverGetGrievances',S.token),
+    gasCall('serverGetWardCouncilorMap',S.token),
+    gasCall('serverGetCouncilors',S.token)
+  ]).then(function(results){
+    hideLoader();
+    var grvRes=results[0],wardRes=results[1],councilRes=results[2];
+    GRV.list=(grvRes&&grvRes.success)?(grvRes.data||[]):[];
+    GRV.wardMap=(wardRes&&wardRes.success)?(wardRes.data||[]):[];
+    GRV.councilors=(councilRes&&councilRes.success)?(councilRes.data||[]):[];
+    if(grvRes&&!grvRes.success)toast(grvRes.message||'Could not load grievances.','error');
+    renderGrievanceKPIs(GRV.list);
+    renderGrievanceList(GRV.list);
+  });
+}
+
+function renderGrievanceKPIs(list){
+  var c={Pending:0,'Under Review':0,'ATR Submitted':0,Closed:0};
+  for(var i=0;i<list.length;i++){if(c[list[i].status]!==undefined)c[list[i].status]++;}
+  var p=id('grvKpiPending');if(p)p.textContent=c.Pending;
+  var r=id('grvKpiReview');if(r)r.textContent=c['Under Review'];
+  var a=id('grvKpiATR');if(a)a.textContent=c['ATR Submitted'];
+  var cl=id('grvKpiClosed');if(cl)cl.textContent=c.Closed;
+}
+
+function filterGrievances(){
+  var q=V('grvSearch').toLowerCase();
+  var status=V('grvFStatus'),dept=V('grvFDept'),priority=V('grvFPriority');
+  var filtered=GRV.list.filter(function(g){
+    if(status&&g.status!==status)return false;
+    if(dept&&g.department!==dept)return false;
+    if(priority&&g.priority!==priority)return false;
+    if(q){
+      var hay=(g.grievanceID+' '+g.subject+' '+g.receivedFromName+' '+g.officerName).toLowerCase();
+      if(hay.indexOf(q)===-1)return false;
+    }
+    return true;
+  });
+  renderGrievanceList(filtered);
+}
+function clearGrievanceFilters(){
+  var ids=['grvSearch','grvFStatus','grvFDept','grvFPriority'];
+  for(var i=0;i<ids.length;i++){var e=id(ids[i]);if(e)e.value='';}
+  renderGrievanceList(GRV.list);
+}
+
+function renderGrievanceList(list){
+  var wrap=id('grvListWrap'),empty=id('grvEmptyState');
+  if(!wrap)return;
+  var cnt=id('grvCount');if(cnt)cnt.textContent=list.length+' grievance'+(list.length!==1?'s':'');
+  while(wrap.firstChild)wrap.removeChild(wrap.firstChild);
+  if(!list.length){if(empty)empty.style.display='block';return;}
+  if(empty)empty.style.display='none';
+
+  var months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  for(var i=0;i<list.length;i++){
+    (function(g){
+      var card=document.createElement('div');
+      card.className='grv-card';
+      card.onclick=function(){openGrievanceDetail(g.grievanceID);};
+      var statusClass='grv-status-'+g.status.replace(/\s/g,'');
+      var d=g.dateReceived?new Date(g.dateReceived):null;
+      var dateStr=d?(d.getDate()+' '+months[d.getMonth()]+' '+d.getFullYear()):'\u2014';
+
+      card.innerHTML=
+        '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:6px">'
+        +'<div style="flex:1;min-width:0">'
+        +'<div style="font-size:11px;color:var(--tx3);font-family:monospace">'+g.grievanceID+'</div>'
+        +'<div style="font-size:14px;font-weight:700;color:var(--tx1);margin-top:2px">'+htmlEsc(g.subject)+'</div>'
+        +'</div>'
+        +'<span class="grv-status '+statusClass+'">'+g.status+'</span>'
+        +'</div>'
+        +'<div style="display:flex;flex-wrap:wrap;gap:14px;font-size:12.5px;color:var(--tx2)">'
+        +'<span><span class="material-icons-round" style="font-size:13px;vertical-align:middle;color:var(--tx3)">person</span> '+htmlEsc(g.receivedFromName||'\u2014')+'</span>'
+        +'<span><span class="material-icons-round" style="font-size:13px;vertical-align:middle;color:var(--tx3)">business</span> '+htmlEsc(g.department||'\u2014')+'</span>'
+        +(g.officerName?'<span><span class="material-icons-round" style="font-size:13px;vertical-align:middle;color:var(--tx3)">badge</span> '+htmlEsc(g.officerName)+'</span>':'')
+        +(g.zone?'<span><span class="material-icons-round" style="font-size:13px;vertical-align:middle;color:var(--tx3)">place</span> '+htmlEsc(g.zone)+(g.wardNo?' \u2014 Ward '+g.wardNo:'')+'</span>':'')
+        +'<span><span class="material-icons-round" style="font-size:13px;vertical-align:middle;color:var(--tx3)">event</span> '+dateStr+'</span>'
+        +'<span class="grv-priority-'+g.priority+'">'+g.priority+' Priority</span>'
+        +(g.atr&&g.atr.length?'<span><span class="material-icons-round" style="font-size:13px;vertical-align:middle;color:var(--c-teal)">forum</span> '+g.atr.length+' ATR update'+(g.atr.length!==1?'s':'')+'</span>':'')
+        +'</div>';
+      wrap.appendChild(card);
+    })(list[i]);
+  }
+}
+
+// ─── ZONE/WARD → COUNCILOR AUTO-FILL ──────────────────────────
+function grvOnZoneWardChange(){
+  var zone=V('grv-zone'),ward=V('grv-ward');
+  var note=id('grvAutoFillNote');
+  if(!zone||!ward){if(note)note.style.display='none';return;}
+  var match=null;
+  for(var i=0;i<GRV.wardMap.length;i++){
+    if(GRV.wardMap[i].zone===zone&&String(GRV.wardMap[i].wardNo)===String(ward)){match=GRV.wardMap[i];break;}
+  }
+  var sel=id('grv-receivedFrom');
+  if(match&&sel){
+    var found=false;
+    for(var j=0;j<sel.options.length;j++){if(sel.options[j].value===match.councilorName){found=true;break;}}
+    if(!found){
+      var opt=document.createElement('option');
+      opt.value=match.councilorName;opt.textContent=match.councilorName+' (Councilor)';
+      sel.appendChild(opt);
+    }
+    sel.value=match.councilorName;
+    if(note)note.style.display='block';
+  } else if(note){
+    note.style.display='none';
+  }
+}
+
+function grvPopulateWardOptions(){
+  var zone=V('grv-zone');
+  var wardSel=id('grv-ward');
+  if(!wardSel)return;
+  var curWard=wardSel.value;
+  wardSel.innerHTML='<option value="">Select Ward</option>';
+  var wards=[];
+  for(var i=0;i<GRV.wardMap.length;i++){
+    if(GRV.wardMap[i].zone===zone)wards.push(GRV.wardMap[i].wardNo);
+  }
+  wards.sort(function(a,b){return Number(a)-Number(b);});
+  for(var i=0;i<wards.length;i++){
+    var opt=document.createElement('option');
+    opt.value=wards[i];opt.textContent='Ward '+wards[i];
+    wardSel.appendChild(opt);
+  }
+  var stillValid=false;
+  for(var i=0;i<wardSel.options.length;i++){if(wardSel.options[i].value===curWard){stillValid=true;break;}}
+  wardSel.value=stillValid?curWard:'';
+}
+
+function grvFilterOfficerByDept(){
+  var dept=V('grv-dept');
+  var sel=id('grv-officer');
+  if(!sel)return;
+  var cur=sel.value;
+  sel.innerHTML='<option value="">Select Officer (optional)</option>';
+  var offs=(S.lookup&&S.lookup.officers)||[];
+  for(var i=0;i<offs.length;i++){
+    if(dept&&String(offs[i].department||'').trim()!==dept)continue;
+    var opt=document.createElement('option');
+    opt.value=offs[i].userID;opt.textContent=offs[i].name+' \u2014 '+(offs[i].designation||'');
+    opt.setAttribute('data-name',offs[i].name);
+    sel.appendChild(opt);
+  }
+  var stillValid=false;
+  for(var i=0;i<sel.options.length;i++){if(sel.options[i].value===cur){stillValid=true;break;}}
+  sel.value=stillValid?cur:'';
+}
+
+function showGrievanceModal(g){
+  var ld=S.lookup;
+  if(ld){
+    fillSelZone('grv-zone',ld.zones,'Select Zone');
+    fillSel('grv-dept',ld.departments,'DeptName','DeptName','Select Department');
+  }
+  // Populate Received From with the councilor master list
+  var sel=id('grv-receivedFrom');
+  if(sel){
+    sel.innerHTML='<option value="">Select...</option>';
+    for(var i=0;i<GRV.councilors.length;i++){
+      var opt=document.createElement('option');
+      opt.value=GRV.councilors[i].name;opt.textContent=GRV.councilors[i].name+(GRV.councilors[i].designation?' \u2014 '+GRV.councilors[i].designation:'');
+      sel.appendChild(opt);
+    }
+  }
+  GRV.letterFiles=[];
+  var prev=id('grvLetterPreview');if(prev)prev.innerHTML='';
+  var note=id('grvAutoFillNote');if(note)note.style.display='none';
+
+  if(g){
+    id('grvModalTitle').textContent='Edit Grievance';
+    id('grv-id').value=g.grievanceID;
+    id('grv-date').value=g.dateReceived;
+    id('grv-priority').value=g.priority||'Medium';
+    id('grv-zone').value=g.zone||'';
+    grvPopulateWardOptions();
+    setTimeout(function(){id('grv-ward').value=g.wardNo||'';},10);
+    id('grv-subject').value=g.subject;
+    id('grv-dept').value=g.department;
+    grvFilterOfficerByDept();
+    setTimeout(function(){id('grv-officer').value=g.officerID||'';},10);
+    setTimeout(function(){
+      if(sel){
+        var found=false;
+        for(var i=0;i<sel.options.length;i++){if(sel.options[i].value===g.receivedFromName){found=true;break;}}
+        if(!found&&g.receivedFromName){var opt=document.createElement('option');opt.value=g.receivedFromName;opt.textContent=g.receivedFromName;sel.appendChild(opt);}
+        sel.value=g.receivedFromName||'';
+      }
+    },10);
+  } else {
+    id('grvModalTitle').textContent='New Grievance';
+    id('grv-id').value='';
+    var fields=['grv-date','grv-zone','grv-ward','grv-subject','grv-dept','grv-officer'];
+    for(var i=0;i<fields.length;i++){var e=id(fields[i]);if(e)e.value='';}
+    id('grv-priority').value='Medium';
+    id('grv-date').value=new Date().toISOString().slice(0,10);
+  }
+  openModal('mGrievance');
+}
+
+function grvAddLetterFiles(files){
+  var arr=Array.prototype.slice.call(files);
+  for(var i=0;i<arr.length&&GRV.letterFiles.length<5;i++){
+    if(arr[i].type!=='application/pdf')continue;
+    if(arr[i].size>15*1024*1024)continue;
+    GRV.letterFiles.push(arr[i]);
+  }
+  var prev=id('grvLetterPreview');if(!prev)return;
+  prev.innerHTML='';
+  for(var i=0;i<GRV.letterFiles.length;i++){
+    (function(idx){
+      var f=GRV.letterFiles[idx];
+      var row=document.createElement('div');
+      row.style.cssText='display:flex;align-items:center;gap:8px;padding:7px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:8px';
+      row.innerHTML='<span class="material-icons-round" style="font-size:18px;color:var(--c-red)">picture_as_pdf</span>'
+        +'<div style="flex:1;min-width:0;font-size:12.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+f.name+' ('+Math.round(f.size/1024)+' KB)</div>';
+      var del=document.createElement('button');
+      del.innerHTML='<span class="material-icons-round" style="font-size:15px">close</span>';
+      del.style.cssText='background:none;border:none;color:var(--tx3);cursor:pointer';
+      del.onclick=function(){GRV.letterFiles.splice(idx,1);grvAddLetterFiles([]);};
+      row.appendChild(del);
+      prev.appendChild(row);
+    })(i);
+  }
+}
+
+function saveGrievance(){
+  var grievanceID=V('grv-id');
+  var officerSel=id('grv-officer');
+  var officerName=officerSel&&officerSel.selectedIndex>0?officerSel.options[officerSel.selectedIndex].getAttribute('data-name'):'';
+  var payload={
+    dateReceived:V('grv-date'), priority:V('grv-priority'),
+    zone:V('grv-zone'), wardNo:V('grv-ward'),
+    receivedFromName:V('grv-receivedFrom'), receivedFromType:'',
+    subject:V('grv-subject'), department:V('grv-dept'),
+    officerID:V('grv-officer'), officerName:officerName||''
+  };
+  if(!payload.dateReceived){toast('Please select Date Received.','error');return;}
+  if(!payload.receivedFromName){toast('Please select or add a Received From entry.','error');return;}
+  if(!payload.subject.trim()){toast('Please enter a Subject.','error');return;}
+  if(!payload.department){toast('Please select the Concerned Department.','error');return;}
+
+  var btn=id('grvSaveBtn');if(btn)btn.disabled=true;
+  showLoader(grievanceID?'Updating grievance...':'Saving grievance...');
+
+  var call=grievanceID
+    ? gasCall('serverUpdateGrievance',S.token,Object.assign({grievanceID:grievanceID},payload))
+    : gasCall('serverCreateGrievance',S.token,payload);
+
+  call.then(function(r){
+    if(btn)btn.disabled=false;
+    if(!r||!r.success){hideLoader();toast((r&&r.message)||'Failed to save grievance.','error');return;}
+    var newID=grievanceID||r.grievanceID;
+    if(!GRV.letterFiles.length){
+      hideLoader();closeModal('mGrievance');
+      toast(grievanceID?'Grievance updated!':'Grievance created!','ok');
+      loadGrievancesPage();
+      return;
+    }
+    // Upload letter PDFs in a small pool, same pattern as Notes attachments
+    var idx=0,total=GRV.letterFiles.length;
+    function uploadNext(){
+      if(idx>=total){
+        hideLoader();closeModal('mGrievance');
+        toast('Grievance saved with '+total+' attachment'+(total!==1?'s':'')+'!','ok');
+        loadGrievancesPage();
+        return;
+      }
+      var file=GRV.letterFiles[idx];
+      var reader=new FileReader();
+      reader.onload=function(ev){
+        var b64=ev.target.result.split(',')[1];
+        gasCall('serverUploadGrievanceAttachment',S.token,{grievanceID:newID,fileName:file.name,mimeType:'application/pdf',base64Data:b64}).then(function(){
+          idx++;uploadNext();
+        });
+      };
+      reader.onerror=function(){idx++;uploadNext();};
+      reader.readAsDataURL(file);
+    }
+    uploadNext();
+  });
+}
+
+// ─── DETAIL VIEW + ATR THREAD ─────────────────────────────────
+function openGrievanceDetail(grievanceID){
+  var g=null;
+  for(var i=0;i<GRV.list.length;i++){if(GRV.list[i].grievanceID===grievanceID){g=GRV.list[i];break;}}
+  if(!g)return;
+  GRV.viewingID=grievanceID;
+  var isAdmin=(S.user&&(S.user.role==='Admin'||S.user.role==='Commissioner'));
+
+  id('grvDetailTitle').textContent=g.grievanceID;
+  var statusClass='grv-status-'+g.status.replace(/\s/g,'');
+
+  var html='<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px">'
+    +'<div><div style="font-size:16px;font-weight:700">'+htmlEsc(g.subject)+'</div>'
+    +'<div style="font-size:12.5px;color:var(--tx3);margin-top:2px">Received from <strong>'+htmlEsc(g.receivedFromName)+'</strong> on '+fDateShort(g.dateReceived)+'</div></div>'
+    +'<span class="grv-status '+statusClass+'">'+g.status+'</span>'
+    +'</div>'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">'
+    +'<div style="background:var(--surface2);border-radius:8px;padding:10px"><div style="font-size:10.5px;color:var(--tx3);text-transform:uppercase">Department</div><div style="font-size:13px;font-weight:600">'+htmlEsc(g.department)+'</div></div>'
+    +'<div style="background:var(--surface2);border-radius:8px;padding:10px"><div style="font-size:10.5px;color:var(--tx3);text-transform:uppercase">Concerned Officer</div><div style="font-size:13px;font-weight:600">'+htmlEsc(g.officerName||'Not assigned')+'</div></div>'
+    +(g.zone?'<div style="background:var(--surface2);border-radius:8px;padding:10px"><div style="font-size:10.5px;color:var(--tx3);text-transform:uppercase">Zone / Ward</div><div style="font-size:13px;font-weight:600">'+htmlEsc(g.zone)+(g.wardNo?' \u2014 Ward '+g.wardNo:'')+'</div></div>':'')
+    +'<div style="background:var(--surface2);border-radius:8px;padding:10px"><div style="font-size:10.5px;color:var(--tx3);text-transform:uppercase">Priority</div><div class="grv-priority-'+g.priority+'" style="font-size:13px">'+g.priority+'</div></div>'
+    +'</div>';
+
+  if(g.letterAttachments&&g.letterAttachments.length){
+    html+='<div style="margin-bottom:14px"><div style="font-size:11px;font-weight:700;color:var(--tx3);text-transform:uppercase;margin-bottom:6px">Original Letter</div>';
+    for(var i=0;i<g.letterAttachments.length;i++){
+      var att=g.letterAttachments[i];
+      html+='<div style="display:flex;align-items:center;gap:8px;padding:7px 10px;background:var(--surface2);border-radius:8px;margin-bottom:5px;cursor:pointer" onclick="window.open(\''+att.driveURL+'\',\'_blank\')">'
+        +'<span class="material-icons-round" style="font-size:18px;color:var(--c-red)">picture_as_pdf</span>'
+        +'<div style="flex:1;font-size:12.5px;color:var(--c-blue);text-decoration:underline">'+htmlEsc(att.fileName)+'</div>'
+        +'<span class="material-icons-round" style="font-size:15px;color:var(--c-blue)">open_in_new</span></div>';
+    }
+    html+='</div>';
+  }
+
+  html+='<div style="margin-bottom:10px"><div style="font-size:11px;font-weight:700;color:var(--tx3);text-transform:uppercase;margin-bottom:6px">Action Taken Report (ATR) Thread</div><div id="grvATRThread"></div></div>';
+
+  html+='<div class="f-group"><label class="f-label">Add ATR / Remarks</label><textarea class="f-ctrl" id="grvNewATR" rows="3" placeholder="Describe action taken or current status..."></textarea></div>'
+    +'<div style="display:flex;gap:8px;margin-bottom:14px"><button class="btn btn-primary btn-sm" onclick="submitGrievanceATR()"><span class="material-icons-round mi">send</span> Add ATR</button></div>';
+
+  if(isAdmin){
+    html+='<div style="border-top:1px solid var(--border);padding-top:12px;display:flex;gap:8px;flex-wrap:wrap">'
+      +'<select class="f-sel" id="grvStatusChange" style="max-width:180px">'
+      +['Pending','Under Review','ATR Submitted','Closed'].map(function(s){return '<option'+(s===g.status?' selected':'')+'>'+s+'</option>';}).join('')
+      +'</select>'
+      +'<button class="btn btn-ghost btn-sm" onclick="grvChangeStatus(\''+g.grievanceID+'\')"><span class="material-icons-round mi">update</span> Update Status</button>'
+      +'<button class="btn btn-ghost btn-sm" onclick="closeModal(\'mGrievanceDetail\');showGrievanceModal(GRV._curG)"><span class="material-icons-round mi">edit</span> Edit</button>'
+      +'<button class="btn btn-ghost btn-sm" style="color:var(--c-red);border-color:var(--c-red)" onclick="grvDeleteGrievance(\''+g.grievanceID+'\')"><span class="material-icons-round mi">delete</span> Delete</button>'
+      +'</div>';
+  }
+
+  id('grvDetailBody').innerHTML=html;
+  GRV._curG=g;
+  renderATRThread(g.atr||[]);
+  openModal('mGrievanceDetail');
+}
+
+function renderATRThread(atrList){
+  var wrap=id('grvATRThread');if(!wrap)return;
+  if(!atrList.length){wrap.innerHTML='<div style="color:var(--tx3);font-size:12.5px;padding:8px 0">No ATR entries yet.</div>';return;}
+  var html='';
+  for(var i=0;i<atrList.length;i++){
+    var a=atrList[i];
+    html+='<div class="atr-entry">'
+      +'<div style="font-size:12px;font-weight:700;color:var(--c-teal);margin-bottom:3px">'+htmlEsc(a.addedBy)+' <span style="color:var(--tx3);font-weight:400">\u2014 '+fDate(a.addedAt)+'</span></div>'
+      +'<div style="font-size:13px;color:var(--tx1);white-space:pre-wrap">'+htmlEsc(a.remarks)+'</div>';
+    if(a.attachments&&a.attachments.length){
+      for(var j=0;j<a.attachments.length;j++){
+        html+='<div style="margin-top:6px;display:flex;align-items:center;gap:6px;cursor:pointer" onclick="window.open(\''+a.attachments[j].driveURL+'\',\'_blank\')">'
+          +'<span class="material-icons-round" style="font-size:15px;color:var(--c-red)">picture_as_pdf</span>'
+          +'<span style="font-size:12px;color:var(--c-blue);text-decoration:underline">'+htmlEsc(a.attachments[j].fileName)+'</span></div>';
+      }
+    }
+    html+='</div>';
+  }
+  wrap.innerHTML=html;
+}
+
+function submitGrievanceATR(){
+  var remarks=id('grvNewATR')?id('grvNewATR').value.trim():'';
+  if(!remarks){toast('Please enter remarks before submitting.','error');return;}
+  showLoader('Adding ATR entry...');
+  gasCall('serverAddGrievanceATR',S.token,{grievanceID:GRV.viewingID,remarks:remarks}).then(function(r){
+    hideLoader();
+    if(r&&r.success){
+      toast('ATR entry added!','ok');
+      closeModal('mGrievanceDetail');
+      loadGrievancesPage();
+    } else {
+      toast((r&&r.message)||'Failed to add ATR entry.','error');
+    }
+  });
+}
+
+function grvChangeStatus(grievanceID){
+  var status=V('grvStatusChange');
+  showLoader('Updating status...');
+  gasCall('serverUpdateGrievanceStatus',S.token,grievanceID,status).then(function(r){
+    hideLoader();
+    if(r&&r.success){
+      toast('Status updated to '+status+'.','ok');
+      closeModal('mGrievanceDetail');
+      loadGrievancesPage();
+    } else {
+      toast((r&&r.message)||'Failed to update status.','error');
+    }
+  });
+}
+
+function grvDeleteGrievance(grievanceID){
+  if(!confirm('Delete this grievance permanently, including its ATR history and attachments? This cannot be undone.'))return;
+  showLoader('Deleting...');
+  gasCall('serverDeleteGrievance',S.token,grievanceID).then(function(r){
+    hideLoader();
+    if(r&&r.success){
+      toast('Grievance deleted.','ok');
+      closeModal('mGrievanceDetail');
+      loadGrievancesPage();
+    } else {
+      toast((r&&r.message)||'Failed to delete.','error');
+    }
+  });
+}
+
+// ─── COUNCILOR MANAGER (Admin only) ───────────────────────────
+function showCouncilorManager(){
+  renderCouncilorList();
+  openModal('mCouncilorManager');
+}
+function renderCouncilorList(){
+  var wrap=id('councilorListWrap');if(!wrap)return;
+  if(!GRV.councilors.length){wrap.innerHTML='<div style="color:var(--tx3);font-size:13px;padding:8px 0">No entries yet.</div>';return;}
+  var html='';
+  for(var i=0;i<GRV.councilors.length;i++){
+    var c=GRV.councilors[i];
+    html+='<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--border)">'
+      +'<div style="flex:1"><div style="font-size:13px;font-weight:600">'+htmlEsc(c.name)+'</div>'+(c.designation?'<div style="font-size:11px;color:var(--tx3)">'+htmlEsc(c.designation)+'</div>':'')+'</div>'
+      +'<button onclick="deleteCouncilorEntry(\''+c.id+'\')" style="background:none;border:none;color:var(--c-red);cursor:pointer"><span class="material-icons-round" style="font-size:17px">delete</span></button>'
+      +'</div>';
+  }
+  wrap.innerHTML=html;
+}
+function addCouncilorEntry(){
+  var name=V('newCouncilorName').trim(),desig=V('newCouncilorDesig').trim();
+  if(!name){toast('Please enter a name.','error');return;}
+  showLoader('Adding...');
+  gasCall('serverAddCouncilor',S.token,{name:name,designation:desig}).then(function(r){
+    hideLoader();
+    if(r&&r.success){
+      toast('Added!','ok');
+      id('newCouncilorName').value='';id('newCouncilorDesig').value='';
+      gasCall('serverGetCouncilors',S.token).then(function(r2){
+        if(r2&&r2.success){GRV.councilors=r2.data||[];renderCouncilorList();}
+      });
+    } else {
+      toast((r&&r.message)||'Failed to add.','error');
+    }
+  });
+}
+function deleteCouncilorEntry(id_){
+  if(!confirm('Remove this entry from the list?'))return;
+  showLoader('Removing...');
+  gasCall('serverDeleteCouncilor',S.token,id_).then(function(r){
+    hideLoader();
+    if(r&&r.success){
+      GRV.councilors=GRV.councilors.filter(function(c){return c.id!==id_;});
+      renderCouncilorList();
+    } else {
+      toast((r&&r.message)||'Failed to remove.','error');
+    }
+  });
+}
+function showAddCouncilorInline(){
+  showCouncilorManager();
+}
 
 function loadReportsPage(){
   showLoader('Loading reports...');
