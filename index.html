@@ -1420,7 +1420,7 @@ tbody tr:hover { background: var(--surface2); }
     </div>
     <div class="sb-footer">
       <button class="sb-logout" onclick="doLogout()"><span class="material-icons-round sb-i">logout</span> Sign Out</button>
-      <div style="text-align:center;font-size:9.5px;color:rgba(255,255,255,.25);padding-top:6px;letter-spacing:.03em">Build v79.1 &middot; <span id="sbBuildDate"></span></div>
+      <div style="text-align:center;font-size:11px;color:#fbbf24;font-weight:700;padding-top:8px;letter-spacing:.03em;background:rgba(251,191,36,.1);border-radius:6px;margin:6px 8px 0;padding:6px">Build v87 &middot; <span id="sbBuildDate"></span></div>
     </div>
   </nav>
 
@@ -3459,7 +3459,7 @@ function showApp(){
     var av=id('sbAvatarTxt');if(av)av.textContent=u.name.charAt(0).toUpperCase();
     var sn=id('sbName');if(sn)sn.textContent=u.name;
     var sr=id('sbRole');if(sr)sr.textContent=u.role;
-    var bd=id('sbBuildDate');if(bd)bd.textContent='2026-06-23'; // bumped every time this file is regenerated — check this against what you see live to confirm deployment
+    var bd=id('sbBuildDate');if(bd)bd.textContent='2026-06-26 (v87)'; // bumped every time this file is regenerated — check this against what you see live to confirm deployment
     applyRoleNav(u.role);
     go('dashboard');
     loadLookup();
