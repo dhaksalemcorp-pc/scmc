@@ -8634,11 +8634,12 @@ function renderGrievanceList(list){
 // ─── ZONE/WARD → COUNCILOR AUTO-FILL ──────────────────────────
 function grvOnZoneWardChange(){
   var zone=V('grv-zone'),ward=V('grv-ward');
+  var zoneNorm=grvNormZone(zone);
   var note=id('grvAutoFillNote');
   if(!zone||!ward){if(note)note.style.display='none';return;}
   var match=null;
   for(var i=0;i<GRV.wardMap.length;i++){
-    if(GRV.wardMap[i].zone===zone&&String(GRV.wardMap[i].wardNo)===String(ward)){match=GRV.wardMap[i];break;}
+    if(grvNormZone(GRV.wardMap[i].zone)===zoneNorm&&String(GRV.wardMap[i].wardNo)===String(ward)){match=GRV.wardMap[i];break;}
   }
   var sel=id('grv-receivedFrom');
   if(match&&sel){
@@ -8656,15 +8657,24 @@ function grvOnZoneWardChange(){
   }
 }
 
+// Normalizes a zone name for comparison purposes — strips extra spaces
+// and ignores case, so "Suramangalam Zone-1", "SURAMANGALAM ZONE-1", and
+// " suramangalam zone-1 " are all treated as the same zone. This guards
+// against the live Zones master sheet using different capitalization or
+// spacing than the seeded ward/councilor list.
+function grvNormZone(z){
+  return String(z||'').trim().toLowerCase().replace(/\s+/g,' ');
+}
 function grvPopulateWardOptions(){
   var zone=V('grv-zone');
+  var zoneNorm=grvNormZone(zone);
   var wardSel=id('grv-ward');
   if(!wardSel)return;
   var curWard=wardSel.value;
   wardSel.innerHTML='<option value="">Select Ward</option>';
   var wards=[];
   for(var i=0;i<GRV.wardMap.length;i++){
-    if(GRV.wardMap[i].zone===zone)wards.push(GRV.wardMap[i].wardNo);
+    if(grvNormZone(GRV.wardMap[i].zone)===zoneNorm)wards.push(GRV.wardMap[i].wardNo);
   }
   wards.sort(function(a,b){return Number(a)-Number(b);});
   for(var i=0;i<wards.length;i++){
