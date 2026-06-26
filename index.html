@@ -8505,7 +8505,20 @@ var REPORTS_CACHE=[];
 // ════════════════════════════════════════════════════════════
 // GRIEVANCE MANAGEMENT MODULE
 // ════════════════════════════════════════════════════════════
-var GRV={list:[],wardMap:[],councilors:[],letterFiles:[],viewingID:null};
+// Hardcoded fallback for the Zone/Ward -> Councilor mapping. This guarantees
+// the dropdown works immediately even if the backend call is slow, fails, or
+// the deployed Apps Script hasn't been updated yet -- the real backend data
+// (if it loads successfully) always overwrites this default.
+var GRV_WARDMAP_FALLBACK=[{zone:'Suramangalam Zone-1',wardNo:1,councilorName:'Tamilarasan'},{zone:'Suramangalam Zone-1',wardNo:2,councilorName:'Panneerselvam'},{zone:'Suramangalam Zone-1',wardNo:3,councilorName:'Kumaravel'},{zone:'Suramangalam Zone-1',wardNo:18,councilorName:'Saravanan'},{zone:'Suramangalam Zone-1',wardNo:19,councilorName:'Thenmozhi'},{zone:'Suramangalam Zone-1',wardNo:20,councilorName:'Pradeep'},{zone:'Suramangalam Zone-1',wardNo:21,councilorName:'Janarthanan'},{zone:'Suramangalam Zone-1',wardNo:22,councilorName:'Selvaraj'},{zone:'Suramangalam Zone-1',wardNo:23,councilorName:'Sivagami'},{zone:'Suramangalam Zone-1',wardNo:24,councilorName:'Chandra'},{zone:'Suramangalam Zone-1',wardNo:25,councilorName:'Sasikala'},{zone:'Suramangalam Zone-1',wardNo:26,councilorName:'Kalaiamudhan'},{zone:'Suramangalam Zone-1',wardNo:27,councilorName:'Savita'},{zone:'Suramangalam Zone-1',wardNo:28,councilorName:'Jayakumar'},{zone:'Hasthampatti Zone-2',wardNo:4,councilorName:'Maheshwari'},{zone:'Hasthampatti Zone-2',wardNo:5,councilorName:'Dhanalakshmi'},{zone:'Hasthampatti Zone-2',wardNo:6,councilorName:'Ramachandran'},{zone:'Hasthampatti Zone-2',wardNo:7,councilorName:'Saradha'},{zone:'Hasthampatti Zone-2',wardNo:8,councilorName:'Moorthy'},{zone:'Hasthampatti Zone-2',wardNo:12,councilorName:'Sangeetha'},{zone:'Hasthampatti Zone-2',wardNo:13,councilorName:'Srirajkumar'},{zone:'Hasthampatti Zone-2',wardNo:14,councilorName:'Chandamoorthy'},{zone:'Hasthampatti Zone-2',wardNo:15,councilorName:'Umarani'},{zone:'Hasthampatti Zone-2',wardNo:16,councilorName:'Vasantha'},{zone:'Hasthampatti Zone-2',wardNo:17,councilorName:'Rajeswari'},{zone:'Hasthampatti Zone-2',wardNo:29,councilorName:'Girija'},{zone:'Hasthampatti Zone-2',wardNo:30,councilorName:'Amsa'},{zone:'Hasthampatti Zone-2',wardNo:31,councilorName:'Syed'},{zone:'Ammapet Zone-3',wardNo:9,councilorName:'Dheivalingam'},{zone:'Ammapet Zone-3',wardNo:10,councilorName:'Shanthi'},{zone:'Ammapet Zone-3',wardNo:11,councilorName:'Induja'},{zone:'Ammapet Zone-3',wardNo:32,councilorName:'Paumika'},{zone:'Ammapet Zone-3',wardNo:33,councilorName:'Jayashree'},{zone:'Ammapet Zone-3',wardNo:34,councilorName:'Elango'},{zone:'Ammapet Zone-3',wardNo:35,councilorName:'Pachaiyammal'},{zone:'Ammapet Zone-3',wardNo:36,councilorName:'Yadhava'},{zone:'Ammapet Zone-3',wardNo:37,councilorName:'Thirugnanam'},{zone:'Ammapet Zone-3',wardNo:38,councilorName:'Dhanasekar'},{zone:'Ammapet Zone-3',wardNo:39,councilorName:'Jayanthi'},{zone:'Ammapet Zone-3',wardNo:40,councilorName:'Manjula'},{zone:'Ammapet Zone-3',wardNo:41,councilorName:'Poongodi'},{zone:'Ammapet Zone-3',wardNo:42,councilorName:'Manjula'},{zone:'Ammapet Zone-3',wardNo:43,councilorName:'Gunasekaran'},{zone:'Ammapet Zone-3',wardNo:44,councilorName:'Imayavarman'},{zone:'Kondalampatti Zone-4',wardNo:45,councilorName:'Sugasini'},{zone:'Kondalampatti Zone-4',wardNo:46,councilorName:'Mohanapriya'},{zone:'Kondalampatti Zone-4',wardNo:47,councilorName:'Punitha'},{zone:'Kondalampatti Zone-4',wardNo:48,councilorName:'Vijaya'},{zone:'Kondalampatti Zone-4',wardNo:49,councilorName:'Mohanapriya'},{zone:'Kondalampatti Zone-4',wardNo:50,councilorName:'Palanisamy'},{zone:'Kondalampatti Zone-4',wardNo:51,councilorName:'Palanisamy'},{zone:'Kondalampatti Zone-4',wardNo:52,councilorName:'Asokan'},{zone:'Kondalampatti Zone-4',wardNo:53,councilorName:'Shadaj'},{zone:'Kondalampatti Zone-4',wardNo:54,councilorName:'Kanimozhi'},{zone:'Kondalampatti Zone-4',wardNo:55,councilorName:'Dhanalakshmi'},{zone:'Kondalampatti Zone-4',wardNo:56,councilorName:'Saravanan'},{zone:'Kondalampatti Zone-4',wardNo:57,councilorName:'Sinivasan'},{zone:'Kondalampatti Zone-4',wardNo:58,councilorName:'Gopal'},{zone:'Kondalampatti Zone-4',wardNo:59,councilorName:'Murugan'},{zone:'Kondalampatti Zone-4',wardNo:60,councilorName:'Varadharaj'}];
+var GRV_COUNCILORS_FALLBACK=(function(){
+  var seen={},out=[{id:'CNCL_PUBLIC',name:'Public / General Public',designation:''},{id:'CNCL_MLA',name:'MLA Representation',designation:''},{id:'CNCL_MP',name:'MP Representation',designation:''}];
+  for(var i=0;i<GRV_WARDMAP_FALLBACK.length;i++){
+    var n=GRV_WARDMAP_FALLBACK[i].councilorName;
+    if(!seen[n]){seen[n]=true;out.push({id:'CNCL_'+n.replace(/\s/g,'_').toUpperCase(),name:n,designation:'Councilor \u2014 Ward '+GRV_WARDMAP_FALLBACK[i].wardNo});}
+  }
+  return out;
+})();
+var GRV={list:[],wardMap:GRV_WARDMAP_FALLBACK.slice(),councilors:GRV_COUNCILORS_FALLBACK.slice(),letterFiles:[],viewingID:null};
 
 function loadGrievancesPage(){
   var isAdmin=(S.user&&(S.user.role==='Admin'||S.user.role==='Commissioner'));
@@ -8523,9 +8536,26 @@ function loadGrievancesPage(){
     hideLoader();
     var grvRes=results[0],wardRes=results[1],councilRes=results[2];
     GRV.list=(grvRes&&grvRes.success)?(grvRes.data||[]):[];
-    GRV.wardMap=(wardRes&&wardRes.success)?(wardRes.data||[]):[];
-    GRV.councilors=(councilRes&&councilRes.success)?(councilRes.data||[]):[];
+    // Only replace the built-in fallback ward map if the backend call
+    // actually succeeded AND returned real rows — never overwrite a
+    // working fallback with an empty result just because of a transient
+    // backend hiccup or an old not-yet-redeployed Apps Script version.
+    if(wardRes&&wardRes.success&&wardRes.data&&wardRes.data.length){
+      GRV.wardMap=wardRes.data;
+    }
+    GRV.councilors=(councilRes&&councilRes.success&&councilRes.data&&councilRes.data.length)?councilRes.data:GRV.councilors;
     if(grvRes&&!grvRes.success)toast(grvRes.message||'Could not load grievances.','error');
+    // Surface ward/councilor load failures clearly instead of silently
+    // defaulting to an empty list — this was previously invisible, making
+    // it impossible to tell "no data" apart from "failed to load".
+    if(!wardRes||!wardRes.success){
+      console.error('serverGetWardCouncilorMap failed:',wardRes);
+      toast('Ward/Councilor data failed to load: '+((wardRes&&wardRes.message)||'unknown error'),'error');
+    }
+    if(!councilRes||!councilRes.success){
+      console.error('serverGetCouncilors failed:',councilRes);
+      toast('Councilor list failed to load: '+((councilRes&&councilRes.message)||'unknown error'),'error');
+    }
     renderGrievanceKPIs(GRV.list);
     renderGrievanceList(GRV.list);
   });
