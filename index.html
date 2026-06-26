@@ -3333,6 +3333,8 @@ function demoFn(fn,args){
   if(fn==='serverValidateSession')return{valid:false};
   if(fn==='serverLogout')return{success:true};
   if(fn==='serverGetLookupData')return buildLookupData();
+  if(fn==='serverGetWardCouncilorMap')return{success:true,data:DEMO.wardMap||[]};
+  if(fn==='serverGetCouncilors')return{success:true,data:DEMO.councilors||[{id:'CNCL_PUBLIC',name:'Public / General Public',designation:''}]};
   if(fn==='serverGetUsers')return{success:true,data:DEMO.users};
   if(fn==='serverGetTasks')return{success:true,data:DEMO.tasks};
   if(fn==='serverGetDashboardStats'){
@@ -4789,6 +4791,22 @@ function viewTask(taskID){
   id('mTaskTitle').textContent=taskID;id('mTaskBody').innerHTML=taskDetailHTML(t);
   id('mTaskFt').innerHTML=isAdmin?'<button class="btn btn-ghost" onclick="closeModal(\'mTask\')">Close</button><button class="btn btn-primary" onclick="closeModal(\'mTask\');editTask(\''+taskID+'\')">Edit All Fields</button>':'<button class="btn btn-ghost" onclick="closeModal(\'mTask\')">Close</button><button class="btn btn-primary" onclick="closeModal(\'mTask\');officerUpdate(\''+taskID+'\')">Update Progress</button>';
   openModal('mTask');
+
+  // Fetch this task's fast-format photos on demand — only when actually
+  // opening its detail view, not for every task on every list load. This
+  // is the single biggest fix for slow Task Tracker loading: previously
+  // every photo for every task was being fetched on every page load.
+  if(!t.newPhotos){
+    gasCall('serverGetTaskPhotos',S.token,taskID).then(function(r){
+      if(r&&r.success){
+        t.newPhotos=r.data||[];
+        // Only re-render if the modal for THIS task is still open
+        if(id('mTaskTitle')&&id('mTaskTitle').textContent===taskID){
+          id('mTaskBody').innerHTML=taskDetailHTML(t);
+        }
+      }
+    });
+  }
 }
 function taskDetailHTML(t){
   var rows=[
