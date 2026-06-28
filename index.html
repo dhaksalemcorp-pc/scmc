@@ -4909,6 +4909,7 @@ function taskDetailHTML(t){
 
   return html;
 }
+var EDIT_TASK={newPhotos:[],newDocs:[],taskID:null};
 function editTask(taskID){
   var t=null;for(var i=0;i<S.tasks.length;i++)if(S.tasks[i].taskID===taskID){t=S.tasks[i];break;}if(!t)return;
   var ld=S.lookup;
@@ -4958,7 +4959,6 @@ function editTask(taskID){
 }
 
 // ─── Document management inside the Admin Edit Task form ──────
-EDIT_TASK.newDocs=[];
 function editTaskLoadDocs(taskID){
   var list=id('editTaskDocList');if(!list)return;
   gasCall('serverGetTaskAttachments',S.token,taskID).then(function(r){
@@ -5025,7 +5025,6 @@ function editTaskAddDocs(files){
     prev.appendChild(row);
   });
 }
-var EDIT_TASK={newPhotos:[],taskID:null};
 function editTaskLoadPhotos(taskID,t){
   EDIT_TASK.taskID=taskID;
   var grid=id('editTaskPhotoGrid');
