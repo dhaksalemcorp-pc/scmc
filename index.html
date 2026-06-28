@@ -2838,8 +2838,8 @@ tbody tr:hover { background: var(--surface2); }
         </div>
       </div>
       <div class="f-group"><label class="f-label">Progress Remarks</label><textarea class="f-ctrl" id="pu-remarks" rows="3" placeholder="Describe progress, actions taken, or observations..."></textarea></div>
-      <div class="f-group mb0">
-        <label class="f-label">Attach Photos / Files <span style="font-size:10px;color:var(--tx3)">(Optional — max 5, 10MB each)</span></label>
+      <div class="f-group">
+        <label class="f-label">Attach Photos <span style="font-size:10px;color:var(--tx3)">(Optional — max 5, 10MB each)</span></label>
         <!-- Source selection -->
         <div class="flex-c gap8 mb8">
           <button type="button" class="btn btn-ghost btn-sm" onclick="document.getElementById('photoInput').click()"><span class="material-icons-round mi">upload</span> From Device</button>
@@ -2849,9 +2849,9 @@ tbody tr:hover { background: var(--surface2); }
         <div id="photoDropZone" style="border:2px dashed var(--border);border-radius:10px;padding:20px;text-align:center;cursor:pointer;background:var(--surface2);transition:border-color .2s" onclick="document.getElementById('photoInput').click()" ondragover="event.preventDefault();this.style.borderColor='var(--c-blue)'" ondragleave="this.style.borderColor='var(--border)'" ondrop="handlePhotoDrop(event)">
           <span class="material-icons-round mi" style="font-size:32px;color:var(--tx3);display:block;margin-bottom:6px">add_photo_alternate</span>
           <div style="font-size:12.5px;font-weight:600;color:var(--tx2)">Tap to select or drag &amp; drop</div>
-          <div style="font-size:11px;color:var(--tx3);margin-top:3px">JPG, PNG, WEBP, PDF · Max 5 files · 10MB each</div>
+          <div style="font-size:11px;color:var(--tx3);margin-top:3px">JPG, PNG, WEBP &middot; Max 5 photos &middot; 10MB each</div>
         </div>
-        <input type="file" id="photoInput" accept="image/*,.pdf" multiple style="display:none" onchange="handlePhotoSelect(this.files)">
+        <input type="file" id="photoInput" accept="image/*" multiple style="display:none" onchange="handlePhotoSelect(this.files)">
         <!-- Drive link input -->
         <div id="driveLinkRow" class="dn mt8" style="display:flex;gap:8px;align-items:center">
           <input type="url" class="f-ctrl" id="driveLinkInput" placeholder="https://drive.google.com/file/d/...">
@@ -2863,6 +2863,15 @@ tbody tr:hover { background: var(--surface2); }
           <div style="font-size:12px;color:var(--tx2);margin-bottom:5px" id="photoProgressText">Uploading...</div>
           <div style="background:var(--surface2);border-radius:999px;height:6px;overflow:hidden"><div id="photoProgressBar" style="height:100%;background:var(--c-blue);border-radius:999px;transition:width .3s;width:0%"></div></div>
         </div>
+      </div>
+      <div class="f-group mb0">
+        <label class="f-label">Attach Documents <span style="font-size:10px;color:var(--tx3)">(Optional &mdash; PDF only, max 5, 15MB each)</span></label>
+        <div style="border:2px dashed var(--border);border-radius:10px;padding:16px;text-align:center;cursor:pointer;background:var(--surface2)" onclick="document.getElementById('puDocInput').click()">
+          <span class="material-icons-round mi" style="font-size:28px;color:var(--tx3)">picture_as_pdf</span>
+          <div style="font-size:12.5px;font-weight:600;color:var(--tx2);margin-top:4px">Tap to attach a PDF report or document</div>
+        </div>
+        <input type="file" id="puDocInput" accept="application/pdf" multiple style="display:none" onchange="handlePuDocSelect(this.files)">
+        <div id="puDocPreview" style="display:flex;flex-direction:column;gap:6px;margin-top:8px"></div>
       </div>
     </div>
     <div class="modal-ft">
@@ -3220,7 +3229,7 @@ tbody tr:hover { background: var(--surface2); }
 <div id="toasts"></div>
 <script>
 var LS={get:function(k){try{return localStorage.getItem(k);}catch(e){return null;}},set:function(k,v){try{localStorage.setItem(k,v);}catch(e){}},del:function(k){try{localStorage.removeItem(k);}catch(e){}}};
-var S={token:null,user:null,lookup:null,tasks:[],users:[],filtered:[],drillFilter:'',page:'dashboard',allowedPages:[],theme:LS.get('sc-theme')||'light',charts:{},exportCtx:'tracker',aiTasks:[],selPhotos:[],driveLinks:[],sortCol:'dateAssigned',sortDir:1};
+var S={token:null,user:null,lookup:null,tasks:[],users:[],filtered:[],drillFilter:'',page:'dashboard',allowedPages:[],theme:LS.get('sc-theme')||'light',charts:{},exportCtx:'tracker',aiTasks:[],selPhotos:[],driveLinks:[],puDocs:[],sortCol:'dateAssigned',sortDir:1};
 // ── GAS URL for GitHub Pages hosting ─────────────────────────
 // When hosted on GitHub Pages, set this to your GAS /exec URL
 // When hosted on GAS itself, leave as empty string ''
@@ -4807,6 +4816,22 @@ function viewTask(taskID){
       }
     });
   }
+  // Fetch this task's documents on demand, same lazy pattern as photos.
+  // Populates the docs section directly (not a full re-render) so it
+  // doesn't fight with the photo-loading re-render above.
+  gasCall('serverGetTaskAttachments',S.token,taskID).then(function(r){
+    var docs=(r&&r.success)?(r.data||[]):[];
+    var list=id('taskDetailDocsList');
+    if(!list)return; // modal may have been closed already
+    if(!docs.length){list.innerHTML='<span style="color:var(--tx3)">No documents attached.</span>';return;}
+    var html='';
+    docs.forEach(function(d){
+      html+='<div style="display:flex;align-items:center;gap:6px;padding:6px 0;cursor:pointer" onclick="window.open(\''+d.driveURL+'\',\'_blank\')">'
+        +'<span class="material-icons-round" style="font-size:16px;color:var(--c-red)">picture_as_pdf</span>'
+        +'<span style="color:var(--c-blue);text-decoration:underline;font-size:12.5px">'+htmlEsc(d.fileName)+'</span></div>';
+    });
+    list.innerHTML=html;
+  });
 }
 function taskDetailHTML(t){
   var rows=[
@@ -4874,6 +4899,13 @@ function taskDetailHTML(t){
       +'<span class="material-icons-round mi" style="font-size:16px">attachment</span>View Attachment'
       +'</a></div>';
   }
+
+  // Documents — fetched on demand (same lazy pattern as photos), shown
+  // in their own section so they're not confused with field photos.
+  html+='<div style="margin-top:12px" id="taskDetailDocsSection">'
+    +'<div style="font-size:10px;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">&#128196; Documents</div>'
+    +'<div id="taskDetailDocsList" style="font-size:12px;color:var(--tx3)">Loading documents...</div>'
+    +'</div>';
 
   return html;
 }
@@ -5382,11 +5414,86 @@ function officerUpdate(taskID){
   var pprev=id('photoPreview');if(pprev)pprev.innerHTML='';
   var pi=id('photoInput');if(pi)pi.value='';
   var dlr=id('driveLinkRow');if(dlr)dlr.classList.add('dn');
-  S.selPhotos=[];S.driveLinks=[];
+  S.selPhotos=[];S.driveLinks=[];S.puDocs=[];
+  var dprev=id('puDocPreview');if(dprev)dprev.innerHTML='';
+  loadPuExistingDocs(taskID);
   // Show Reassign button for HOD's own tasks
   var rBtn=id('pu-reassignBtn');
   if(rBtn)rBtn.style.display=isHOD?'':'none';
   closeModal('mTask');openModal('mPhotoUpload');
+}
+
+// ─── Document attachments inside the Update Task modal ─────────
+function loadPuExistingDocs(taskID){
+  var dprev=id('puDocPreview');if(!dprev)return;
+  dprev.innerHTML='<span style="color:var(--tx3);font-size:12px">Loading existing documents...</span>';
+  gasCall('serverGetTaskAttachments',S.token,taskID).then(function(r){
+    var docs=(r&&r.success)?(r.data||[]):[];
+    renderPuExistingDocs(docs,taskID);
+  });
+}
+function renderPuExistingDocs(docs,taskID){
+  var dprev=id('puDocPreview');if(!dprev)return;
+  dprev.innerHTML='';
+  docs.forEach(function(d){
+    var row=document.createElement('div');
+    row.style.cssText='display:flex;align-items:center;gap:8px;padding:7px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:8px';
+    var icon=document.createElement('span');
+    icon.className='material-icons-round';
+    icon.style.cssText='font-size:18px;color:var(--c-red);flex-shrink:0;cursor:pointer';
+    icon.textContent='picture_as_pdf';
+    var nameDiv=document.createElement('div');
+    nameDiv.style.cssText='flex:1;min-width:0;font-size:12.5px;color:var(--c-blue);text-decoration:underline;cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap';
+    nameDiv.textContent=d.fileName;
+    var openIt=function(){window.open(d.driveURL,'_blank','noopener');};
+    icon.onclick=openIt;nameDiv.onclick=openIt;
+    var del=document.createElement('button');
+    del.innerHTML='<span class="material-icons-round" style="font-size:15px">close</span>';
+    del.style.cssText='background:none;border:none;color:var(--tx3);cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;width:24px;height:24px';
+    del.title='Delete this document';
+    del.onclick=function(){
+      if(!confirm('Delete this document? This cannot be undone.'))return;
+      gasCall('serverDeleteTaskAttachment',S.token,d.attachmentID).then(function(r2){
+        if(r2&&r2.success){toast('Document removed.','ok');loadPuExistingDocs(taskID);}
+        else toast((r2&&r2.message)||'Failed to remove document.','error');
+      });
+    };
+    row.appendChild(icon);row.appendChild(nameDiv);row.appendChild(del);
+    dprev.appendChild(row);
+  });
+  renderPuNewDocPreviews();
+}
+function handlePuDocSelect(files){
+  var arr=Array.prototype.slice.call(files);
+  var rem=5-S.puDocs.length,skipped=0,wrongType=0;
+  for(var i=0;i<arr.length&&i<rem;i++){
+    if(arr[i].type!=='application/pdf'){wrongType++;continue;}
+    if(arr[i].size>15*1024*1024){skipped++;continue;}
+    S.puDocs.push(arr[i]);
+  }
+  if(wrongType)toast(wrongType+' file(s) skipped \u2014 only PDF is accepted.','info');
+  if(skipped)toast(skipped+' file(s) skipped \u2014 max 15MB each.','info');
+  renderPuNewDocPreviews();
+}
+function renderPuNewDocPreviews(){
+  var dprev=id('puDocPreview');if(!dprev)return;
+  // Remove only the "new, not yet uploaded" rows (tagged via data-newdoc),
+  // keep the already-rendered existing-document rows above them intact.
+  var existingNew=dprev.querySelectorAll('[data-newdoc]');
+  for(var i=0;i<existingNew.length;i++)existingNew[i].remove();
+  S.puDocs.forEach(function(f,idx){
+    var row=document.createElement('div');
+    row.setAttribute('data-newdoc','1');
+    row.style.cssText='display:flex;align-items:center;gap:8px;padding:7px 10px;background:var(--surface2);border:1px dashed var(--c-blue);border-radius:8px';
+    row.innerHTML='<span class="material-icons-round" style="font-size:18px;color:var(--c-red)">picture_as_pdf</span>'
+      +'<div style="flex:1;min-width:0;font-size:12.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+f.name+' ('+Math.round(f.size/1024)+' KB) <span style="color:var(--c-blue)">\u2014 will upload on save</span></div>';
+    var del=document.createElement('button');
+    del.innerHTML='<span class="material-icons-round" style="font-size:15px">close</span>';
+    del.style.cssText='background:none;border:none;color:var(--tx3);cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;width:24px;height:24px';
+    del.onclick=function(){S.puDocs.splice(idx,1);renderPuNewDocPreviews();};
+    row.appendChild(del);
+    dprev.appendChild(row);
+  });
 }
 
 // HOD: reassign a task to a subordinate in their department
@@ -5480,6 +5587,7 @@ function submitPhotoUpdate(){
   var btn=id('pu-saveBtn');if(btn)btn.disabled=true;
 
   var pickedPhotos=S.selPhotos.slice();
+  var pickedDocs=S.puDocs.slice();
 
   // STEP 1 — close the modal and update the task card in the list IMMEDIATELY
   // using the status/remarks/priority just entered, with local blob-URL photo
@@ -5503,7 +5611,34 @@ function submitPhotoUpdate(){
     localTask.newPhotos=localTask.newPhotos.concat(localPhotoEntries);
     if(typeof renderCards==='function'&&S.filtered)renderCards(S.filtered);
   }
-  toast('Task updated'+(pickedPhotos.length?' \u2014 uploading photos...':'!'),'ok');
+  toast('Task updated'+((pickedPhotos.length||pickedDocs.length)?' \u2014 uploading attachments...':'!'),'ok');
+
+  function uploadPendingDocs(){
+    if(!pickedDocs.length)return;
+    var docIdx=0,docTotal=pickedDocs.length,docCompleted=0;
+    function processOneDoc(idx){
+      return new Promise(function(resolve){
+        var reader=new FileReader();
+        reader.onload=function(ev){
+          var b64=ev.target.result.split(',')[1];
+          gasCall('serverUploadTaskAttachment',S.token,{taskID:taskID,fileName:pickedDocs[idx].name,mimeType:'application/pdf',base64Data:b64}).then(function(){resolve();});
+        };
+        reader.onerror=function(){resolve();};
+        reader.readAsDataURL(pickedDocs[idx]);
+      });
+    }
+    function launchNextDoc(){
+      if(docIdx>=docTotal)return;
+      var myIdx=docIdx++;
+      processOneDoc(myIdx).then(function(){
+        docCompleted++;
+        if(docCompleted>=docTotal)toast('Document'+(docTotal!==1?'s':'')+' uploaded!','ok');
+        else launchNextDoc();
+      });
+    }
+    var docStart=Math.min(3,docTotal); // smaller pool — PDFs are larger files than compressed photos
+    for(var ds=0;ds<docStart;ds++)launchNextDoc();
+  }
 
   // STEP 2 — save status/remarks/priority to the server in the background
   gasCall('serverUpdateTask',S.token,taskID,{status:status,officerRemarks:remarks,priority:priority}).then(function(r){
@@ -5511,6 +5646,7 @@ function submitPhotoUpdate(){
       toast((r&&r.message)||'Update failed to save. Please retry from the task card.','error');
       return;
     }
+    uploadPendingDocs();
     if(!pickedPhotos.length){
       if(localTask)localTask._photosSaving=false;
       return; // no need to reload — status/remarks already reflected locally
