@@ -4930,7 +4930,16 @@ function editTask(taskID){
     +'<div class="f-group"><label class="f-label">Due Date <span style="font-size:10px;color:var(--tx3)">(Optional)</span></label><input type="date" class="f-ctrl" id="e-due" value="'+(t.dueDate||'')+'"></div></div>'
     +'<div class="f-group"><label class="f-label">Task Description</label><textarea class="f-ctrl" id="e-desc" rows="3">'+(t.description||'')+'</textarea></div>'
     +'<div class="f-group"><label class="f-label">Officer Remarks / Admin Notes</label><textarea class="f-ctrl" id="e-rem" rows="2">'+(t.officerRemarks||'')+'</textarea></div>'
-    +'<div class="f-group"><label class="f-label">Attachment URL</label><input type="url" class="f-ctrl" id="e-attach" value="'+(t.attachmentURL||'')+'" placeholder="https://drive.google.com/..."></div>'
+    +'<div class="f-group">'
+    +'<label class="f-label">Documents <span style="font-size:11px;color:var(--tx3)">(view, delete, or add new \u2014 PDF only)</span></label>'
+    +'<div id="editTaskDocList" style="display:flex;flex-direction:column;gap:6px;margin-bottom:8px">Loading documents...</div>'
+    +'<div style="border:2px dashed var(--border);border-radius:10px;padding:14px;text-align:center;cursor:pointer;background:var(--surface2)" onclick="document.getElementById(\'editTaskDocInput\').click()">'
+    +'<span class="material-icons-round mi" style="font-size:24px;color:var(--tx3)">picture_as_pdf</span>'
+    +'<div style="font-size:12px;color:var(--tx3);margin-top:4px">Tap to add a PDF document</div>'
+    +'</div>'
+    +'<input type="file" id="editTaskDocInput" accept="application/pdf" multiple style="display:none" onchange="editTaskAddDocs(this.files)">'
+    +'<div id="editTaskNewDocPreview" style="display:flex;flex-direction:column;gap:6px;margin-top:8px"></div>'
+    +'</div>'
     +'<div class="f-group mb0">'
     +'<label class="f-label">Photos <span style="font-size:11px;color:var(--tx3)">(view, delete, or add new)</span></label>'
     +'<div id="editTaskPhotoGrid" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px">Loading photos...</div>'
@@ -4945,9 +4954,77 @@ function editTask(taskID){
   id('mTaskFt').innerHTML='<button class="btn btn-ghost" onclick="closeModal(\'mTask\')">Cancel</button><button class="btn btn-primary" onclick="submitEdit(\''+taskID+'\')">Save All Changes</button>';
   openModal('mTask');
   editTaskLoadPhotos(taskID,t);
+  editTaskLoadDocs(taskID);
 }
 
-// ─── Photo management inside the Admin Edit Task form ─────────
+// ─── Document management inside the Admin Edit Task form ──────
+EDIT_TASK.newDocs=[];
+function editTaskLoadDocs(taskID){
+  var list=id('editTaskDocList');if(!list)return;
+  gasCall('serverGetTaskAttachments',S.token,taskID).then(function(r){
+    var docs=(r&&r.success)?(r.data||[]):[];
+    editTaskRenderDocList(docs,taskID);
+  });
+}
+function editTaskRenderDocList(docs,taskID){
+  var list=id('editTaskDocList');if(!list)return;
+  if(!docs.length){
+    list.innerHTML='<span style="color:var(--tx3);font-size:12.5px">No documents attached.</span>';
+    return;
+  }
+  list.innerHTML='';
+  docs.forEach(function(d){
+    var row=document.createElement('div');
+    row.style.cssText='display:flex;align-items:center;gap:8px;padding:7px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:8px';
+    var icon=document.createElement('span');
+    icon.className='material-icons-round';
+    icon.style.cssText='font-size:18px;color:var(--c-red);flex-shrink:0;cursor:pointer';
+    icon.textContent='picture_as_pdf';
+    var nameDiv=document.createElement('div');
+    nameDiv.style.cssText='flex:1;min-width:0;font-size:12.5px;color:var(--c-blue);text-decoration:underline;cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap';
+    nameDiv.textContent=d.fileName;
+    var openIt=function(){window.open(d.driveURL,'_blank','noopener');};
+    icon.onclick=openIt;nameDiv.onclick=openIt;
+    var del=document.createElement('button');
+    del.innerHTML='<span class="material-icons-round" style="font-size:15px">close</span>';
+    del.title='Delete this document';
+    del.style.cssText='background:none;border:none;color:var(--c-red);cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;width:24px;height:24px';
+    del.onclick=function(){
+      if(!confirm('Delete this document? This cannot be undone.'))return;
+      gasCall('serverDeleteTaskAttachment',S.token,d.attachmentID).then(function(r){
+        if(r&&r.success){toast('Document removed.','ok');editTaskLoadDocs(taskID);}
+        else toast((r&&r.message)||'Failed to remove document.','error');
+      });
+    };
+    row.appendChild(icon);row.appendChild(nameDiv);row.appendChild(del);
+    list.appendChild(row);
+  });
+}
+function editTaskAddDocs(files){
+  var arr=Array.prototype.slice.call(files);
+  var rem=5-EDIT_TASK.newDocs.length,skipped=0,wrongType=0;
+  for(var i=0;i<arr.length&&i<rem;i++){
+    if(arr[i].type!=='application/pdf'){wrongType++;continue;}
+    if(arr[i].size>15*1024*1024){skipped++;continue;}
+    EDIT_TASK.newDocs.push(arr[i]);
+  }
+  if(wrongType)toast(wrongType+' file(s) skipped \u2014 only PDF is accepted.','info');
+  if(skipped)toast(skipped+' file(s) skipped \u2014 max 15MB each.','info');
+  var prev=id('editTaskNewDocPreview');if(!prev)return;
+  prev.innerHTML='';
+  EDIT_TASK.newDocs.forEach(function(f,idx){
+    var row=document.createElement('div');
+    row.style.cssText='display:flex;align-items:center;gap:8px;padding:7px 10px;background:var(--surface2);border:1px dashed var(--c-blue);border-radius:8px';
+    row.innerHTML='<span class="material-icons-round" style="font-size:18px;color:var(--c-red)">picture_as_pdf</span>'
+      +'<div style="flex:1;min-width:0;font-size:12.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+f.name+' ('+Math.round(f.size/1024)+' KB) <span style="color:var(--c-blue)">\u2014 will upload on save</span></div>';
+    var del=document.createElement('button');
+    del.innerHTML='<span class="material-icons-round" style="font-size:15px">close</span>';
+    del.style.cssText='background:none;border:none;color:var(--tx3);cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;width:24px;height:24px';
+    del.onclick=function(){EDIT_TASK.newDocs.splice(idx,1);editTaskAddDocs([]);};
+    row.appendChild(del);
+    prev.appendChild(row);
+  });
+}
 var EDIT_TASK={newPhotos:[],taskID:null};
 function editTaskLoadPhotos(taskID,t){
   EDIT_TASK.taskID=taskID;
@@ -5072,8 +5149,9 @@ function getTaskByID(taskID){
 function submitEdit(taskID){
   var offEl=id('e-officer'),offName='';
   if(offEl&&offEl.selectedOptions&&offEl.selectedOptions[0])offName=offEl.selectedOptions[0].text.split(' \u2014 ')[0];
-  var u={taskType:V('e-type'),zone:V('e-zone'),department:V('e-dept'),designation:V('e-desig'),officerID:offEl?offEl.value:'',officerName:offName,priority:V('e-priority'),status:V('e-status'),dateAssigned:V('e-date'),dueDate:V('e-due'),description:V('e-desc'),officerRemarks:V('e-rem'),attachmentURL:V('e-attach')};
+  var u={taskType:V('e-type'),zone:V('e-zone'),department:V('e-dept'),designation:V('e-desig'),officerID:offEl?offEl.value:'',officerName:offName,priority:V('e-priority'),status:V('e-status'),dateAssigned:V('e-date'),dueDate:V('e-due'),description:V('e-desc'),officerRemarks:V('e-rem')};
   var newPhotos=(EDIT_TASK.newPhotos||[]).slice();
+  var newDocs=(EDIT_TASK.newDocs||[]).slice();
   showLoader('Saving changes...');
   gasCall('serverUpdateTask',S.token,taskID,u).then(function(r){
     if(!r||!r.success){
@@ -5081,10 +5159,42 @@ function submitEdit(taskID){
       toast((r&&r.message)||'Update failed.','error');
       return;
     }
-    if(!newPhotos.length){
+
+    function finishUp(uploadedSomething){
       hideLoader();closeModal('mTask');
-      toast('Task updated!','ok');
+      toast(uploadedSomething?'Task and attachments updated!':'Task updated!','ok');
       loadTasks();
+    }
+
+    function uploadDocs(){
+      if(!newDocs.length){finishUp(newPhotos.length>0);return;}
+      var docIdx=0,docCompleted=0,docTotal=newDocs.length;
+      function processOneDoc(idx){
+        return new Promise(function(resolve){
+          var reader=new FileReader();
+          reader.onload=function(ev){
+            var b64=ev.target.result.split(',')[1];
+            gasCall('serverUploadTaskAttachment',S.token,{taskID:taskID,fileName:newDocs[idx].name,mimeType:'application/pdf',base64Data:b64}).then(function(){resolve();});
+          };
+          reader.onerror=function(){resolve();};
+          reader.readAsDataURL(newDocs[idx]);
+        });
+      }
+      function launchNextDoc(){
+        if(docIdx>=docTotal){return;}
+        var myIdx=docIdx++;
+        processOneDoc(myIdx).then(function(){
+          docCompleted++;
+          if(docCompleted>=docTotal)finishUp(true);
+          else launchNextDoc();
+        });
+      }
+      var docStart=Math.min(3,docTotal); // smaller pool — PDFs are larger than compressed photos
+      for(var ds=0;ds<docStart;ds++)launchNextDoc();
+    }
+
+    if(!newPhotos.length){
+      uploadDocs();
       return;
     }
     // Upload any newly added photos with the same fast 4-at-a-time pool
@@ -5117,9 +5227,7 @@ function submitEdit(taskID){
       processOne(myIdx).then(function(){
         completed++;
         if(completed>=total){
-          hideLoader();closeModal('mTask');
-          toast('Task and photos updated!','ok');
-          loadTasks();
+          uploadDocs(); // chain documents after photos finish
         } else launchNext();
       });
     }
