@@ -497,6 +497,9 @@ body {
   color: #fff; font-size: 15px; font-weight: 700;
 }
 @keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(.8)}}
+.about-stat-card:hover{transform:translateY(-3px);box-shadow:0 8px 18px rgba(0,0,0,.08);border-color:var(--c-blue)!important}
+.about-feat-card:hover{transform:translateY(-2px);box-shadow:0 6px 14px rgba(0,0,0,.1)}
 .pl-zone-chip{display:inline-flex;align-items:center;gap:5px;padding:5px 10px;border-radius:999px;border:1.5px solid var(--border);background:var(--surface);cursor:pointer;font-size:12px;font-weight:500;transition:all .15s;user-select:none}
 .pl-zone-chip:hover{border-color:var(--c-blue);color:var(--c-blue)}
 .pl-zone-chip input{display:none}
@@ -1470,7 +1473,40 @@ tbody tr:hover { background: var(--surface2); }
         </div>
         <div class="g2">
           <div class="card"><div class="card-hd"><span class="card-title">Department Breakdown</span></div><div class="card-bd" id="deptBreakdown" style="max-height:280px;overflow-y:auto"></div></div>
-          <div class="card"><div class="card-hd"><span class="card-title">Recent Activity</span></div><div class="card-bd" id="recentAct" style="max-height:280px;overflow-y:auto"></div></div>
+          <div class="card"><div class="card-hd"><span class="card-title">Recent Activity</span><span style="font-size:11px;color:var(--tx3);font-weight:500" id="recentActMeta"></span></div><div class="card-bd" id="recentAct" style="max-height:280px;overflow-y:auto"></div></div>
+        </div>
+        <div class="card mt16" id="usageAnalyticsCard" style="display:none">
+          <div class="card-hd">
+            <span class="card-title">&#128202; Usage Analytics</span>
+            <div style="display:flex;gap:6px;align-items:center">
+              <select class="f-sel" id="usageWindowSel" onchange="loadUsageAnalytics()" style="font-size:12px;padding:4px 8px;width:auto">
+                <option value="7">Last 7 days</option>
+                <option value="30" selected>Last 30 days</option>
+                <option value="90">Last 90 days</option>
+              </select>
+            </div>
+          </div>
+          <div class="card-bd">
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px">
+              <div style="background:var(--surface2);border-radius:10px;padding:14px;text-align:center">
+                <div style="font-size:22px;font-weight:800;color:var(--c-blue)" id="ua-totalLogins">&#8212;</div>
+                <div style="font-size:11px;color:var(--tx3);margin-top:2px">Total Logins</div>
+              </div>
+              <div style="background:var(--surface2);border-radius:10px;padding:14px;text-align:center">
+                <div style="font-size:22px;font-weight:800;color:var(--c-green)" id="ua-activeToday">&#8212;</div>
+                <div style="font-size:11px;color:var(--tx3);margin-top:2px">Active Today</div>
+              </div>
+              <div style="background:var(--surface2);border-radius:10px;padding:14px;text-align:center">
+                <div style="font-size:22px;font-weight:800;color:#7c3aed" id="ua-totalUsers">&#8212;</div>
+                <div style="font-size:11px;color:var(--tx3);margin-top:2px">Officials Tracked</div>
+              </div>
+            </div>
+            <div id="usageAnalyticsList"></div>
+            <div style="font-size:10.5px;color:var(--tx3);margin-top:10px;padding-top:10px;border-top:1px solid var(--border)">
+              <span class="material-icons-round" style="font-size:11px;vertical-align:middle">info</span>
+              "Time spent" is estimated from login-to-last-action gaps, not exact continuous tracking.
+            </div>
+          </div>
         </div>
       </div>
       <!-- Officer-specific dashboard -->
@@ -2497,37 +2533,42 @@ tbody tr:hover { background: var(--surface2); }
       <div style="max-width:760px;margin:0 auto">
 
         <!-- HERO BANNER -->
-        <div style="position:relative;border-radius:20px;overflow:hidden;margin-bottom:20px;background:linear-gradient(135deg,#0b1f45 0%,#1a3a6b 45%,#1d4ed8 100%);padding:40px 32px;text-align:center;box-shadow:0 12px 32px rgba(11,31,69,.25)">
+        <div id="aboutHero" style="position:relative;border-radius:20px;overflow:hidden;margin-bottom:20px;background:linear-gradient(135deg,#0b1f45 0%,#1a3a6b 45%,#1d4ed8 100%);padding:40px 32px;text-align:center;box-shadow:0 12px 32px rgba(11,31,69,.25);transition:transform .3s,box-shadow .3s;cursor:default" onmousemove="aboutHeroTilt(event)" onmouseleave="aboutHeroReset()">
           <div style="position:absolute;top:-40px;right:-40px;width:160px;height:160px;background:radial-gradient(circle,rgba(245,158,11,.25),transparent 70%);border-radius:50%"></div>
           <div style="position:absolute;bottom:-50px;left:-30px;width:180px;height:180px;background:radial-gradient(circle,rgba(14,165,233,.2),transparent 70%);border-radius:50%"></div>
           <div style="position:relative;z-index:1">
-            <div style="width:72px;height:72px;background:linear-gradient(135deg,#f59e0b,#d97706);border-radius:18px;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;box-shadow:0 10px 24px rgba(245,158,11,.4);transform:rotate(-3deg)">
+            <div id="aboutHeroIcon" style="width:72px;height:72px;background:linear-gradient(135deg,#f59e0b,#d97706);border-radius:18px;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;box-shadow:0 10px 24px rgba(245,158,11,.4);transform:rotate(-3deg);transition:transform .3s;cursor:pointer" onclick="aboutHeroIconClick(this)">
               <span class="material-icons-round mi" style="font-size:36px;color:#fff">account_balance</span>
             </div>
             <h2 style="font-size:23px;font-weight:800;color:#fff;margin-bottom:6px;letter-spacing:-.01em">Salem City Municipal Corporation</h2>
             <p style="font-size:13.5px;color:rgba(255,255,255,.65);margin-bottom:0">Task Management System &nbsp;&middot;&nbsp; Official Internal Portal</p>
-            <div style="display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);border-radius:999px;padding:5px 14px;margin-top:16px;font-size:11.5px;font-weight:600;color:#fbbf24">
-              <span class="material-icons-round" style="font-size:13px">bolt</span> Version 76 &middot; Live &amp; Actively Maintained
+            <div style="display:flex;align-items:center;justify-content:center;gap:8px;margin-top:16px;flex-wrap:wrap">
+              <div style="display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);border-radius:999px;padding:5px 14px;font-size:11.5px;font-weight:600;color:#fbbf24">
+                <span class="material-icons-round" style="font-size:13px">bolt</span> Version 93 &middot; Live &amp; Actively Maintained
+              </div>
+              <div id="aboutLiveStatus" style="display:inline-flex;align-items:center;gap:6px;background:rgba(16,185,129,.15);border:1px solid rgba(16,185,129,.3);border-radius:999px;padding:5px 14px;font-size:11.5px;font-weight:600;color:#34d399">
+                <span style="width:7px;height:7px;border-radius:50%;background:#34d399;display:inline-block;animation:pulse 1.6s ease-in-out infinite"></span> Checking status...
+              </div>
             </div>
           </div>
         </div>
 
-        <!-- QUICK STATS STRIP -->
+        <!-- QUICK STATS STRIP (animated count-up) -->
         <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:20px">
-          <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px 10px;text-align:center">
-            <div style="font-size:22px;font-weight:800;color:var(--c-blue)">5</div>
+          <div class="about-stat-card" style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px 10px;text-align:center;cursor:pointer;transition:transform .2s,box-shadow .2s" onclick="go('settings')">
+            <div class="about-stat-num" data-target="5" style="font-size:22px;font-weight:800;color:var(--c-blue)">0</div>
             <div style="font-size:10.5px;color:var(--tx3);font-weight:600;margin-top:2px">ZONES</div>
           </div>
-          <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px 10px;text-align:center">
-            <div style="font-size:22px;font-weight:800;color:var(--c-teal)">8+</div>
+          <div class="about-stat-card" style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px 10px;text-align:center;cursor:pointer;transition:transform .2s,box-shadow .2s" onclick="go('settings')">
+            <div class="about-stat-num" data-target="8" style="font-size:22px;font-weight:800;color:var(--c-teal)">0</div>
             <div style="font-size:10.5px;color:var(--tx3);font-weight:600;margin-top:2px">DEPARTMENTS</div>
           </div>
-          <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px 10px;text-align:center">
-            <div style="font-size:22px;font-weight:800;color:#7c3aed">5</div>
+          <div class="about-stat-card" style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px 10px;text-align:center;cursor:pointer;transition:transform .2s,box-shadow .2s" onclick="go('users')">
+            <div class="about-stat-num" data-target="5" style="font-size:22px;font-weight:800;color:#7c3aed">0</div>
             <div style="font-size:10.5px;color:var(--tx3);font-weight:600;margin-top:2px">USER ROLES</div>
           </div>
-          <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px 10px;text-align:center">
-            <div style="font-size:22px;font-weight:800;color:#d97706">68</div>
+          <div class="about-stat-card" style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px 10px;text-align:center;cursor:pointer;transition:transform .2s,box-shadow .2s">
+            <div class="about-stat-num" data-target="93" style="font-size:22px;font-weight:800;color:#d97706">0</div>
             <div style="font-size:10.5px;color:var(--tx3);font-weight:600;margin-top:2px">VERSIONS BUILT</div>
           </div>
         </div>
@@ -2559,7 +2600,7 @@ tbody tr:hover { background: var(--surface2); }
           <div class="card" style="border-left:3px solid var(--c-teal)">
             <div class="card-bd" style="padding:16px">
               <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px"><span class="material-icons-round" style="font-size:16px;color:var(--c-teal)">cloud_done</span><span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--tx3)">System Version</span></div>
-              <div style="font-size:13.5px;font-weight:600;color:var(--tx1)">TMS v76</div>
+              <div style="font-size:13.5px;font-weight:600;color:var(--tx1)">TMS v93</div>
               <div style="font-size:11.5px;color:var(--tx3);margin-top:2px">Built on Google Apps Script</div>
             </div>
           </div>
@@ -2582,39 +2623,83 @@ tbody tr:hover { background: var(--surface2); }
         <!-- FEATURE SHOWCASE -->
         <div class="card mb16">
           <div class="card-bd" style="padding:22px">
-            <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px"><span class="material-icons-round" style="font-size:18px;color:var(--c-blue)">auto_awesome</span><span style="font-size:13.5px;font-weight:700;color:var(--tx1)">What This System Can Do</span></div>
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px"><span class="material-icons-round" style="font-size:18px;color:var(--c-blue)">auto_awesome</span><span style="font-size:13.5px;font-weight:700;color:var(--tx1)">What This System Can Do</span><span style="font-size:10.5px;color:var(--tx3);margin-left:auto">Tap any card to explore</span></div>
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-              <div style="display:flex;align-items:flex-start;gap:10px;padding:10px;border-radius:10px;background:var(--surface2)">
+              <div class="about-feat-card" onclick="go('taskEntry')" style="display:flex;align-items:flex-start;gap:10px;padding:10px;border-radius:10px;background:var(--surface2);cursor:pointer;transition:transform .15s,box-shadow .15s">
                 <span class="material-icons-round" style="font-size:18px;color:var(--c-blue);flex-shrink:0">assignment_turned_in</span>
                 <div><div style="font-size:12.5px;font-weight:700;color:var(--tx1)">Task Assignment</div><div style="font-size:11px;color:var(--tx3)">Multi-officer, zone-wise tracking</div></div>
               </div>
-              <div style="display:flex;align-items:flex-start;gap:10px;padding:10px;border-radius:10px;background:var(--surface2)">
+              <div class="about-feat-card" onclick="go('taskEntry')" style="display:flex;align-items:flex-start;gap:10px;padding:10px;border-radius:10px;background:var(--surface2);cursor:pointer;transition:transform .15s,box-shadow .15s">
                 <span class="material-icons-round" style="font-size:18px;color:#7c3aed;flex-shrink:0">smart_toy</span>
                 <div><div style="font-size:12.5px;font-weight:700;color:var(--tx1)">AI Notes Extractor</div><div style="font-size:11px;color:var(--tx3)">Auto-generates tasks from notes</div></div>
               </div>
-              <div style="display:flex;align-items:flex-start;gap:10px;padding:10px;border-radius:10px;background:var(--surface2)">
+              <div class="about-feat-card" onclick="go('users')" style="display:flex;align-items:flex-start;gap:10px;padding:10px;border-radius:10px;background:var(--surface2);cursor:pointer;transition:transform .15s,box-shadow .15s">
                 <span class="material-icons-round" style="font-size:18px;color:var(--c-teal);flex-shrink:0">security</span>
                 <div><div style="font-size:12.5px;font-weight:700;color:var(--tx1)">Role-Based Access</div><div style="font-size:11px;color:var(--tx3)">5 distinct permission levels</div></div>
               </div>
-              <div style="display:flex;align-items:flex-start;gap:10px;padding:10px;border-radius:10px;background:var(--surface2)">
+              <div class="about-feat-card" onclick="go('commview')" style="display:flex;align-items:flex-start;gap:10px;padding:10px;border-radius:10px;background:var(--surface2);cursor:pointer;transition:transform .15s,box-shadow .15s">
                 <span class="material-icons-round" style="font-size:18px;color:#d97706;flex-shrink:0">insights</span>
                 <div><div style="font-size:12.5px;font-weight:700;color:var(--tx1)">Commissioner Dashboard</div><div style="font-size:11px;color:var(--tx3)">Real-time zone &amp; dept analytics</div></div>
               </div>
-              <div style="display:flex;align-items:flex-start;gap:10px;padding:10px;border-radius:10px;background:var(--surface2)">
+              <div class="about-feat-card" onclick="go('reports')" style="display:flex;align-items:flex-start;gap:10px;padding:10px;border-radius:10px;background:var(--surface2);cursor:pointer;transition:transform .15s,box-shadow .15s">
                 <span class="material-icons-round" style="font-size:18px;color:#dc2626;flex-shrink:0">picture_as_pdf</span>
                 <div><div style="font-size:12.5px;font-weight:700;color:var(--tx1)">PDF &amp; Excel Export</div><div style="font-size:11px;color:var(--tx3)">Date-wise detailed reports</div></div>
               </div>
-              <div style="display:flex;align-items:flex-start;gap:10px;padding:10px;border-radius:10px;background:var(--surface2)">
+              <div class="about-feat-card" onclick="go('tracker')" style="display:flex;align-items:flex-start;gap:10px;padding:10px;border-radius:10px;background:var(--surface2);cursor:pointer;transition:transform .15s,box-shadow .15s">
                 <span class="material-icons-round" style="font-size:18px;color:#059669;flex-shrink:0">photo_camera</span>
-                <div><div style="font-size:12.5px;font-weight:700;color:var(--tx1)">Photo Attachments</div><div style="font-size:11px;color:var(--tx3)">Instant inspection evidence</div></div>
+                <div><div style="font-size:12.5px;font-weight:700;color:var(--tx1)">Photos &amp; Documents</div><div style="font-size:11px;color:var(--tx3)">Instant evidence, PDF attachments</div></div>
               </div>
-              <div style="display:flex;align-items:flex-start;gap:10px;padding:10px;border-radius:10px;background:var(--surface2)">
+              <div class="about-feat-card" onclick="go('calendar')" style="display:flex;align-items:flex-start;gap:10px;padding:10px;border-radius:10px;background:var(--surface2);cursor:pointer;transition:transform .15s,box-shadow .15s">
                 <span class="material-icons-round" style="font-size:18px;color:#0ea5e9;flex-shrink:0">event</span>
                 <div><div style="font-size:12.5px;font-weight:700;color:var(--tx1)">Google Calendar Sync</div><div style="font-size:11px;color:var(--tx3)">Two-way meeting scheduling</div></div>
               </div>
-              <div style="display:flex;align-items:flex-start;gap:10px;padding:10px;border-radius:10px;background:var(--surface2)">
+              <div class="about-feat-card" onclick="go('grievances')" style="display:flex;align-items:flex-start;gap:10px;padding:10px;border-radius:10px;background:var(--surface2);cursor:pointer;transition:transform .15s,box-shadow .15s">
+                <span class="material-icons-round" style="font-size:18px;color:#B45309;flex-shrink:0">gavel</span>
+                <div><div style="font-size:12.5px;font-weight:700;color:var(--tx1)">Grievance Management</div><div style="font-size:11px;color:var(--tx3)">Councilor letters, ATR tracking</div></div>
+              </div>
+              <div class="about-feat-card" onclick="go('dashboard')" style="display:flex;align-items:flex-start;gap:10px;padding:10px;border-radius:10px;background:var(--surface2);cursor:pointer;transition:transform .15s,box-shadow .15s">
+                <span class="material-icons-round" style="font-size:18px;color:#7c3aed;flex-shrink:0">query_stats</span>
+                <div><div style="font-size:12.5px;font-weight:700;color:var(--tx1)">Usage Analytics</div><div style="font-size:11px;color:var(--tx3)">Login frequency &amp; activity tracking</div></div>
+              </div>
+              <div class="about-feat-card" onclick="go('photolog')" style="display:flex;align-items:flex-start;gap:10px;padding:10px;border-radius:10px;background:var(--surface2);cursor:pointer;transition:transform .15s,box-shadow .15s">
                 <span class="material-icons-round" style="font-size:18px;color:#f59e0b;flex-shrink:0">mail</span>
                 <div><div style="font-size:12.5px;font-weight:700;color:var(--tx1)">Email Notifications</div><div style="font-size:11px;color:var(--tx3)">Opt-in task assignment alerts</div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- WHAT'S NEW / CHANGELOG (expandable) -->
+        <div class="card mb16">
+          <div class="card-bd" style="padding:0">
+            <div onclick="aboutToggleChangelog()" style="display:flex;align-items:center;gap:8px;padding:18px 22px;cursor:pointer">
+              <span class="material-icons-round" style="font-size:18px;color:var(--c-teal)">new_releases</span>
+              <span style="font-size:13.5px;font-weight:700;color:var(--tx1);flex:1">What's New</span>
+              <span class="material-icons-round" id="aboutChangelogChevron" style="font-size:20px;color:var(--tx3);transition:transform .25s">expand_more</span>
+            </div>
+            <div id="aboutChangelogBody" style="display:none;padding:0 22px 20px">
+              <div style="border-left:2px solid var(--border);padding-left:16px;display:flex;flex-direction:column;gap:16px">
+                <div style="position:relative">
+                  <div style="position:absolute;left:-21px;top:2px;width:10px;height:10px;border-radius:50%;background:var(--c-teal)"></div>
+                  <div style="font-size:11px;font-weight:700;color:var(--c-teal);text-transform:uppercase">Latest</div>
+                  <div style="font-size:13px;font-weight:600;color:var(--tx1);margin-top:2px">Usage Analytics &amp; Activity Insights</div>
+                  <div style="font-size:11.5px;color:var(--tx3);margin-top:2px">Track login frequency and estimated active time per official, right from the Dashboard.</div>
+                </div>
+                <div style="position:relative">
+                  <div style="position:absolute;left:-21px;top:2px;width:10px;height:10px;border-radius:50%;background:var(--c-blue)"></div>
+                  <div style="font-size:13px;font-weight:600;color:var(--tx1)">Grievance Management Module</div>
+                  <div style="font-size:11.5px;color:var(--tx3);margin-top:2px">Track Councilor &amp; representative letters with zone/ward-based auto-fill and full ATR follow-up threads.</div>
+                </div>
+                <div style="position:relative">
+                  <div style="position:absolute;left:-21px;top:2px;width:10px;height:10px;border-radius:50%;background:#7c3aed"></div>
+                  <div style="font-size:13px;font-weight:600;color:var(--tx1)">Document Attachments for Tasks</div>
+                  <div style="font-size:11.5px;color:var(--tx3);margin-top:2px">Upload, view, and manage PDF reports directly from Task Tracker &mdash; no more manual link-pasting.</div>
+                </div>
+                <div style="position:relative">
+                  <div style="position:absolute;left:-21px;top:2px;width:10px;height:10px;border-radius:50%;background:#d97706"></div>
+                  <div style="font-size:13px;font-weight:600;color:var(--tx1)">Faster Everywhere</div>
+                  <div style="font-size:11.5px;color:var(--tx3);margin-top:2px">Session caching and smarter data loading cut page load times significantly across the app.</div>
+                </div>
               </div>
             </div>
           </div>
@@ -3581,6 +3666,7 @@ function go(page){
   else if(page==='calendar')loadCalendarPage();
   else if(page==='reports')loadReportsPage();
   else if(page==='grievances')loadGrievancesPage();
+  else if(page==='about')loadAboutPage();
 }
 function refreshPage(){
   var icon=id('globalRefreshIcon'),btn=id('globalRefreshBtn');
@@ -3745,7 +3831,7 @@ function loadDashboard(){
     var kv={'k-total':s.total,'k-pending':s.pending,'k-progress':s.inProgress,'k-done':s.completed,'k-overdue':s.overdue,'k-today':s.dueToday,'k-high':s.highPriority,'k-rate':r.completionRate+'%'};
     for(var k in kv){var el=id(k);if(el)el.textContent=kv[k];}
     if(s.overdue>0){var b=id('overdBadge');if(b){b.textContent=s.overdue;b.style.display='';}var d=id('bnDot');if(d)d.classList.add('on');}
-    buildStatusChart(s);buildZoneChart(r.zoneStats);buildDeptBreakdown(r.deptStats);loadActivityLog();
+    buildStatusChart(s);buildZoneChart(r.zoneStats);buildDeptBreakdown(r.deptStats);loadActivityLog();loadUsageAnalytics();
   });
 }
 function loadHODDashboard(){
@@ -4187,23 +4273,102 @@ function buildDeptBreakdown(ds){
 }
 function loadActivityLog(){
   var el=id('recentAct');if(!el)return;
-  gasCall('serverGetActivityLogs',S.token,10).then(function(r){
+  gasCall('serverGetActivityLogs',S.token,12).then(function(r){
+    var meta=id('recentActMeta');
     if(!r||!r.success||!r.data||!r.data.length){
-      el.innerHTML='<div class="empty" style="padding:16px"><span class="material-icons-round mi" style="font-size:28px">history</span><p style="font-size:12px;margin-top:4px">No recent activity</p></div>';return;
+      el.innerHTML='<div class="empty" style="padding:16px"><span class="material-icons-round mi" style="font-size:28px">history</span><p style="font-size:12px;margin-top:4px">No recent activity</p></div>';
+      if(meta)meta.textContent='';
+      return;
     }
+    if(meta)meta.textContent=r.data.length+' recent event'+(r.data.length!==1?'s':'');
+    var actionMeta={
+      'LOGIN':       {icon:'login',          color:'var(--c-teal)',  bg:'rgba(13,148,136,.1)'},
+      'CREATE_TASK': {icon:'add_task',        color:'var(--c-blue)',  bg:'rgba(29,78,216,.1)'},
+      'UPDATE_TASK': {icon:'edit_note',       color:'var(--c-blue)',  bg:'rgba(29,78,216,.1)'},
+      'DELETE_TASK': {icon:'delete',          color:'var(--c-red)',   bg:'rgba(220,38,38,.1)'},
+      'UPLOAD_PHOTO':{icon:'photo_camera',    color:'#7c3aed',        bg:'rgba(124,58,237,.1)'},
+      'CREATE_GRIEVANCE':{icon:'gavel',       color:'#B45309',        bg:'rgba(180,83,9,.1)'},
+      'ADD_ATR':     {icon:'forum',           color:'#B45309',        bg:'rgba(180,83,9,.1)'},
+      'UPDATE_USER': {icon:'manage_accounts', color:'#7c3aed',        bg:'rgba(124,58,237,.1)'}
+    };
     var html='';
     for(var i=0;i<r.data.length;i++){
       var l=r.data[i];
-      var actionColors={'LOGIN':'var(--c-teal)','CREATE_TASK':'var(--c-blue)','UPDATE_TASK':'var(--c-blue)','DELETE_TASK':'var(--c-red)'};
-      var dot=actionColors[l.action]||'var(--c-blue)';
-      html+='<div style="display:flex;gap:9px;padding:8px 0;border-bottom:1px solid var(--border)">'
-        +'<div style="width:7px;height:7px;border-radius:50%;background:'+dot+';margin-top:6px;flex-shrink:0"></div>'
-        +'<div><div style="font-size:12.5px;font-weight:600">'+l.details+'</div>'
-        +'<div class="c-muted">'+l.username+' \u00b7 '+fDateShort(l.timestamp)+'</div></div></div>';
+      var am=actionMeta[l.action]||{icon:'circle_notifications',color:'var(--tx3)',bg:'var(--surface2)'};
+      html+='<div style="display:flex;gap:10px;padding:9px 0;border-bottom:1px solid var(--border)">'
+        +'<div style="width:28px;height:28px;border-radius:8px;background:'+am.bg+';display:flex;align-items:center;justify-content:center;flex-shrink:0">'
+        +'<span class="material-icons-round" style="font-size:15px;color:'+am.color+'">'+am.icon+'</span></div>'
+        +'<div style="flex:1;min-width:0"><div style="font-size:12.5px;font-weight:600;color:var(--tx1)">'+htmlEsc(l.details)+'</div>'
+        +'<div class="c-muted" style="margin-top:1px">'+htmlEsc(l.username)+' \u00b7 '+fRelativeTime(l.timestamp)+'</div></div></div>';
     }
     el.innerHTML=html;
   });
 }
+
+// Converts a timestamp into a short relative phrase ("5m ago", "3h ago",
+// "Yesterday", or a plain date for anything older) — much more useful
+// at a glance than a full date/time on every single row.
+function fRelativeTime(ts){
+  if(!ts)return'\u2014';
+  var d=new Date(ts);
+  if(isNaN(d.getTime()))return String(ts);
+  var diffMs=Date.now()-d.getTime();
+  var mins=Math.floor(diffMs/60000);
+  if(mins<1)return'Just now';
+  if(mins<60)return mins+'m ago';
+  var hrs=Math.floor(mins/60);
+  if(hrs<24)return hrs+'h ago';
+  var days=Math.floor(hrs/24);
+  if(days===1)return'Yesterday';
+  if(days<7)return days+'d ago';
+  return fDateShort(ts);
+}
+
+// ─── USAGE ANALYTICS — how often & how long officials use the app ──
+function loadUsageAnalytics(){
+  var card=id('usageAnalyticsCard');
+  if(!card)return;
+  var isAdminLike=(S.user&&(S.user.role==='Admin'||S.user.role==='Commissioner'));
+  card.style.display=isAdminLike?'block':'none';
+  if(!isAdminLike)return;
+
+  var windowDays=V('usageWindowSel')||30;
+  gasCall('serverGetUsageAnalytics',S.token,parseInt(windowDays,10)).then(function(r){
+    if(!r||!r.success){
+      var list=id('usageAnalyticsList');
+      if(list)list.innerHTML='<div class="empty" style="padding:16px"><p style="font-size:12px">'+((r&&r.message)||'Could not load usage analytics.')+'</p></div>';
+      return;
+    }
+    var d=r.data;
+    var tl=id('ua-totalLogins');if(tl)tl.textContent=d.totalLogins;
+    var at=id('ua-activeToday');if(at)at.textContent=d.activeToday;
+    var tu=id('ua-totalUsers');if(tu)tu.textContent=d.users.length;
+
+    var list=id('usageAnalyticsList');if(!list)return;
+    if(!d.users.length){
+      list.innerHTML='<div class="empty" style="padding:16px"><span class="material-icons-round mi">group_off</span><p style="font-size:12px">No login activity recorded yet in this window.</p></div>';
+      return;
+    }
+    var html='<div class="tbl-wrap"><table><thead><tr>'
+      +'<th>Official</th><th>Logins</th><th>Est. Time Active</th><th>Avg. Session</th><th>Last Seen</th>'
+      +'</tr></thead><tbody>';
+    for(var i=0;i<d.users.length;i++){
+      var u=d.users[i];
+      var hrs=Math.floor(u.totalActiveMinutes/60),mins=u.totalActiveMinutes%60;
+      var activeStr=hrs>0?(hrs+'h '+mins+'m'):(mins+'m');
+      html+='<tr>'
+        +'<td><strong>'+htmlEsc(u.username)+'</strong></td>'
+        +'<td>'+u.loginCount+'</td>'
+        +'<td>'+activeStr+'</td>'
+        +'<td>'+u.avgSessionMinutes+'m</td>'
+        +'<td class="c-muted">'+fRelativeTime(u.lastSeen)+'</td>'
+        +'</tr>';
+    }
+    html+='</tbody></table></div>';
+    list.innerHTML=html;
+  });
+}
+
 function loadTasks(){
   var role=S.user?S.user.role:'';
   var fn,args;
@@ -9440,6 +9605,83 @@ function deleteCouncilorEntry(id_){
 }
 function showAddCouncilorInline(){
   showCouncilorManager();
+}
+
+// ════════════════════════════════════════════════════════════
+// ABOUT PAGE — interactive elements
+// ════════════════════════════════════════════════════════════
+var ABOUT_INITED=false;
+function loadAboutPage(){
+  // Animate the stat counters only once per visit (not every time the
+  // user navigates back here) so it still feels intentional, not gimmicky.
+  animateAboutStats();
+  checkAboutLiveStatus();
+}
+function animateAboutStats(){
+  var nums=document.querySelectorAll('.about-stat-num');
+  nums.forEach(function(el){
+    var target=parseInt(el.getAttribute('data-target'),10)||0;
+    var start=0;
+    var duration=900;
+    var startTime=null;
+    function step(ts){
+      if(!startTime)startTime=ts;
+      var progress=Math.min((ts-startTime)/duration,1);
+      var eased=1-Math.pow(1-progress,3); // ease-out cubic
+      var current=Math.round(start+(target-start)*eased);
+      el.textContent=current+(target===8&&progress>=1?'+':'');
+      if(progress<1)requestAnimationFrame(step);
+    }
+    requestAnimationFrame(step);
+  });
+}
+function checkAboutLiveStatus(){
+  var el=id('aboutLiveStatus');if(!el)return;
+  var startTs=Date.now();
+  // A genuine round-trip to the backend — confirms the connection is
+  // actually live right now, not just a hardcoded "all good" badge.
+  gasCall('serverGetLookupData',S.token).then(function(r){
+    var ms=Date.now()-startTs;
+    if(r&&r.success){
+      el.innerHTML='<span style="width:7px;height:7px;border-radius:50%;background:#34d399;display:inline-block"></span> Connected &middot; '+ms+'ms';
+      el.style.background='rgba(16,185,129,.15)';el.style.borderColor='rgba(16,185,129,.3)';el.style.color='#34d399';
+    } else {
+      el.innerHTML='<span style="width:7px;height:7px;border-radius:50%;background:#f87171;display:inline-block"></span> Connection issue';
+      el.style.background='rgba(248,113,113,.15)';el.style.borderColor='rgba(248,113,113,.3)';el.style.color='#f87171';
+    }
+  }).catch(function(){
+    el.innerHTML='<span style="width:7px;height:7px;border-radius:50%;background:#f87171;display:inline-block"></span> Offline';
+    el.style.background='rgba(248,113,113,.15)';el.style.borderColor='rgba(248,113,113,.3)';el.style.color='#f87171';
+  });
+}
+function aboutHeroTilt(ev){
+  var hero=id('aboutHero');if(!hero)return;
+  var rect=hero.getBoundingClientRect();
+  var x=(ev.clientX-rect.left)/rect.width-0.5;
+  var y=(ev.clientY-rect.top)/rect.height-0.5;
+  hero.style.transform='perspective(800px) rotateY('+(x*4)+'deg) rotateX('+(-y*4)+'deg) scale(1.01)';
+  hero.style.boxShadow='0 18px 40px rgba(11,31,69,.35)';
+}
+function aboutHeroReset(){
+  var hero=id('aboutHero');if(!hero)return;
+  hero.style.transform='perspective(800px) rotateY(0) rotateX(0) scale(1)';
+  hero.style.boxShadow='0 12px 32px rgba(11,31,69,.25)';
+}
+function aboutHeroIconClick(el){
+  // A small playful touch — the icon does a full spin when tapped.
+  el.style.transition='transform .6s cubic-bezier(.34,1.56,.64,1)';
+  el.style.transform='rotate(357deg) scale(1.1)';
+  setTimeout(function(){
+    el.style.transition='transform .3s';
+    el.style.transform='rotate(-3deg) scale(1)';
+  },650);
+}
+function aboutToggleChangelog(){
+  var body=id('aboutChangelogBody'),chev=id('aboutChangelogChevron');
+  if(!body)return;
+  var isOpen=body.style.display==='block';
+  body.style.display=isOpen?'none':'block';
+  if(chev)chev.style.transform=isOpen?'rotate(0deg)':'rotate(180deg)';
 }
 
 function loadReportsPage(){
