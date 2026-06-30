@@ -1775,6 +1775,7 @@ tbody tr:hover { background: var(--surface2); }
       <div class="ph">
         <div class="ph-left"><h1>Task Tracker</h1><p>Monitor and manage all tasks</p></div>
         <div class="ph-actions">
+          <button class="btn btn-ghost btn-sm" id="findDupBtn" onclick="openDuplicateFinder()" style="display:none"><span class="material-icons-round mi">content_copy</span> <span class="nowrap">Find Duplicates</span></button>
           <button class="btn btn-ghost btn-sm" id="advFilterBtn" onclick="toggleAdvFilter()"><span class="material-icons-round mi">tune</span> <span class="nowrap">Filters</span></button>
           <button class="btn btn-success btn-sm" onclick="showExportChoice('tracker')"><span class="material-icons-round mi">ios_share</span> <span class="nowrap">Export</span></button>
           <button class="btn btn-primary btn-sm" id="newTaskBtn" onclick="go('taskEntry')"><span class="material-icons-round mi">add</span> <span class="nowrap">New Task</span></button>
@@ -1793,6 +1794,33 @@ tbody tr:hover { background: var(--surface2); }
         <button class="btn btn-ghost btn-sm" onclick="clearSelection()" style="background:rgba(255,255,255,.12);border-color:rgba(255,255,255,.2);color:#fff">
           <span class="material-icons-round mi">close</span> Clear Selection
         </button>
+      </div>
+
+      <!-- DUPLICATE FINDER MODAL -->
+      <div class="modal-bg" id="mDuplicateFinder">
+        <div class="modal-box" style="max-width:700px">
+          <div class="modal-hd">
+            <span class="modal-title">&#128203; Find &amp; Remove Duplicate Tasks</span>
+            <button class="modal-close" onclick="closeModal('mDuplicateFinder')"><span class="material-icons-round">close</span></button>
+          </div>
+          <div class="modal-body">
+            <div id="dupFinderIntro" style="font-size:12.5px;color:var(--tx3);margin-bottom:14px">
+              Scanning for tasks with the same officer, date, and description &mdash; the usual signs of an accidental
+              double-save (e.g. from a slow AI extraction or clicking Save more than once).
+            </div>
+            <div id="dupFinderLoading" style="text-align:center;padding:30px"><span class="material-icons-round" style="font-size:32px;color:var(--tx3);animation:spin 1.1s linear infinite">sync</span></div>
+            <div id="dupFinderEmpty" class="dn" style="text-align:center;padding:30px">
+              <span class="material-icons-round" style="font-size:40px;color:var(--c-green)">verified</span>
+              <h3 style="color:var(--tx2);margin:10px 0 4px">No duplicates found</h3>
+              <p style="color:var(--tx3);font-size:12.5px">Your Task Tracker looks clean &mdash; no repeated entries detected.</p>
+            </div>
+            <div id="dupFinderResults"></div>
+          </div>
+          <div class="modal-ft" id="dupFinderFooter" style="display:none">
+            <button class="btn btn-ghost" onclick="closeModal('mDuplicateFinder')">Close</button>
+            <button class="btn btn-danger" id="dupDeleteAllBtn" onclick="deleteAllSelectedDuplicates()"><span class="material-icons-round mi">delete_forever</span> Delete <span id="dupDeleteCount">0</span> Selected</button>
+          </div>
+        </div>
       </div>
       <!-- Advanced Filter Panel - redesigned -->
       <div id="advFilterPanel" class="dn">
@@ -3428,6 +3456,23 @@ function demoFn(fn,args){
   if(fn==='serverLogout')return{success:true};
   if(fn==='serverGetLookupData')return buildLookupData();
   if(fn==='serverGetWardCouncilorMap')return{success:true,data:DEMO.wardMap||[]};
+  if(fn==='serverFindDuplicateTasks'){
+    var groups={};
+    for(var i=0;i<DEMO.tasks.length;i++){
+      var t=DEMO.tasks[i];
+      var sig=(t.officerID||'')+'||'+(t.dateAssigned||'')+'||'+(t.description||'').trim().toLowerCase();
+      if(!groups[sig])groups[sig]=[];
+      groups[sig].push(t);
+    }
+    var sets=[];
+    for(var k in groups){if(groups[k].length>1){groups[k].sort(function(a,b){return new Date(a.createdAt)-new Date(b.createdAt);});sets.push(groups[k]);}}
+    return{success:true,data:sets};
+  }
+  if(fn==='serverBulkDeleteTasks'){
+    var idsToDelete=args[1]||[];
+    DEMO.tasks=DEMO.tasks.filter(function(t){return idsToDelete.indexOf(t.taskID)===-1;});
+    return{success:true,deletedCount:idsToDelete.length};
+  }
   if(fn==='serverGetCouncilors')return{success:true,data:DEMO.councilors||[{id:'CNCL_PUBLIC',name:'Public / General Public',designation:''}]};
   if(fn==='serverGetUsers')return{success:true,data:DEMO.users};
   if(fn==='serverGetTasks')return{success:true,data:DEMO.tasks};
@@ -3590,6 +3635,7 @@ function applyRoleNav(role){
   show('bnEntry', isAdmin||isSupervision);
   show('bnCommView', isAdmin);
   show('newTaskBtn', isAdmin||isSupervision);
+  show('findDupBtn', isAdmin);
   show('aiExtractorTab', isAdmin); // Supervision gets manual entry only, no AI Extractor
   var thChk=id('thChk');
   if(thChk)thChk.innerHTML=isAdmin?'<input type="checkbox" id="chkAll" onchange="toggleSelectAll(this)" style="width:16px;height:16px;cursor:pointer" title="Select all">':'';
@@ -4935,9 +4981,14 @@ function saveTask(){
   var d=getTaskForm();
   if(!d.taskType||!d.zone||!d.priority||!d.description){toast('Please fill all required fields.','error');return;}
   if(!d.officerID){toast('Please add at least one officer.','error');return;}
+  // Guard against a double-click (or a slow connection causing a repeat
+  // click) creating two copies of the same task.
+  var btn=id('singleSaveBtn');
+  if(btn){if(btn.disabled)return;btn.disabled=true;btn.style.opacity='.6';}
   showLoader('Saving task...');
   gasCall('serverCreateTask',S.token,d).then(function(r){
     hideLoader();
+    if(btn){btn.disabled=false;btn.style.opacity='1';}
     if(r&&r.success){toast('Task '+r.taskID+' created!','ok');clearTaskForm();}
     else toast((r&&r.message)||'Failed to create task.','error');
   });
@@ -5491,7 +5542,122 @@ function bulkDeleteSelected(){
   }
   deleteNext(0);
 }
-// Admin quick update with photo upload — same modal as officer (Issue #3)
+
+// ════════════════════════════════════════════════════════════
+// DUPLICATE TASK FINDER — detects and removes accidental repeated
+// task entries (same officer + date + description), the typical
+// result of a slow AI extraction or a double-click on Save.
+// ════════════════════════════════════════════════════════════
+var DUP_FINDER={sets:[],selectedIDs:{}};
+
+function openDuplicateFinder(){
+  openModal('mDuplicateFinder');
+  id('dupFinderLoading').classList.remove('dn');
+  id('dupFinderEmpty').classList.add('dn');
+  id('dupFinderResults').innerHTML='';
+  id('dupFinderFooter').style.display='none';
+  DUP_FINDER.selectedIDs={};
+
+  gasCall('serverFindDuplicateTasks',S.token).then(function(r){
+    id('dupFinderLoading').classList.add('dn');
+    if(!r||!r.success){
+      toast((r&&r.message)||'Could not scan for duplicates.','error');
+      closeModal('mDuplicateFinder');
+      return;
+    }
+    DUP_FINDER.sets=r.data||[];
+    if(!DUP_FINDER.sets.length){
+      id('dupFinderEmpty').classList.remove('dn');
+      return;
+    }
+    renderDuplicateSets(DUP_FINDER.sets);
+  });
+}
+
+function renderDuplicateSets(sets){
+  var wrap=id('dupFinderResults');
+  wrap.innerHTML='';
+  var totalDuplicateTasks=0;
+  sets.forEach(function(t){totalDuplicateTasks+=t.length;});
+
+  var summary=document.createElement('div');
+  summary.style.cssText='background:var(--surface2);border-radius:10px;padding:12px 14px;margin-bottom:14px;font-size:13px';
+  summary.innerHTML='<strong>'+sets.length+'</strong> duplicate set'+(sets.length!==1?'s':'')+' found, covering <strong>'+totalDuplicateTasks+'</strong> tasks total. '
+    +'The <span style="color:var(--c-green);font-weight:700">oldest entry</span> in each set is kept by default &mdash; later copies are pre-selected for deletion. Review and adjust before confirming.';
+  wrap.appendChild(summary);
+
+  sets.forEach(function(set,setIdx){
+    var card=document.createElement('div');
+    card.style.cssText='border:1px solid var(--border);border-radius:10px;margin-bottom:12px;overflow:hidden';
+
+    var header=document.createElement('div');
+    header.style.cssText='background:var(--surface2);padding:9px 14px;font-size:12px;font-weight:700;color:var(--tx2);display:flex;align-items:center;justify-content:space-between';
+    header.innerHTML='<span>Duplicate Set '+(setIdx+1)+' &mdash; '+set.length+' copies</span><span style="font-size:11px;font-weight:500;color:var(--tx3)">'+htmlEsc(set[0].officerName||'Unassigned')+'</span>';
+    card.appendChild(header);
+
+    set.forEach(function(t,i){
+      var isOriginal=(i===0); // oldest, since sets arrive sorted oldest-first from the backend
+      var row=document.createElement('div');
+      row.style.cssText='display:flex;align-items:flex-start;gap:10px;padding:10px 14px;border-top:1px solid var(--border)'+(isOriginal?';background:rgba(5,150,105,.04)':'');
+
+      var cb=document.createElement('input');
+      cb.type='checkbox';
+      cb.style.cssText='margin-top:3px;width:16px;height:16px;cursor:pointer;flex-shrink:0';
+      cb.checked=!isOriginal; // pre-select every copy EXCEPT the original to keep
+      cb.disabled=isOriginal;
+      cb.onchange=function(){
+        if(cb.checked)DUP_FINDER.selectedIDs[t.taskID]=true;
+        else delete DUP_FINDER.selectedIDs[t.taskID];
+        updateDupDeleteCount();
+      };
+      if(cb.checked)DUP_FINDER.selectedIDs[t.taskID]=true;
+
+      var info=document.createElement('div');
+      info.style.cssText='flex:1;min-width:0';
+      info.innerHTML='<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">'
+        +'<span style="font-family:monospace;font-size:11.5px;color:var(--tx3)">'+t.taskID+'</span>'
+        +(isOriginal?'<span style="background:rgba(5,150,105,.15);color:var(--c-green);font-size:10px;font-weight:700;padding:1px 7px;border-radius:999px">KEEP &middot; OLDEST</span>':'<span style="background:rgba(220,38,38,.1);color:var(--c-red);font-size:10px;font-weight:700;padding:1px 7px;border-radius:999px">LIKELY DUPLICATE</span>')
+        +'<span style="font-size:10.5px;color:var(--tx3)">'+(t.source||'Manual')+' &middot; '+t.status+'</span>'
+        +'</div>'
+        +'<div style="font-size:12.5px;color:var(--tx1);margin-top:3px">'+htmlEsc(t.description)+'</div>'
+        +'<div style="font-size:11px;color:var(--tx3);margin-top:2px">'+htmlEsc(t.department)+' &middot; '+htmlEsc(t.zone)+' &middot; Created '+fDateShort(t.createdAt)+'</div>';
+
+      row.appendChild(cb);row.appendChild(info);
+      card.appendChild(row);
+    });
+
+    wrap.appendChild(card);
+  });
+
+  id('dupFinderFooter').style.display='flex';
+  updateDupDeleteCount();
+}
+
+function updateDupDeleteCount(){
+  var count=Object.keys(DUP_FINDER.selectedIDs).length;
+  var el=id('dupDeleteCount');if(el)el.textContent=count;
+  var btn=id('dupDeleteAllBtn');if(btn)btn.disabled=(count===0);
+}
+
+function deleteAllSelectedDuplicates(){
+  var ids=Object.keys(DUP_FINDER.selectedIDs);
+  if(!ids.length){toast('No duplicates selected.','info');return;}
+  if(!confirm('Delete '+ids.length+' duplicate task'+(ids.length!==1?'s':'')+'? This cannot be undone.'))return;
+
+  showLoader('Removing '+ids.length+' duplicate task'+(ids.length!==1?'s':'')+'...');
+  gasCall('serverBulkDeleteTasks',S.token,ids).then(function(r){
+    hideLoader();
+    if(r&&r.success){
+      toast('Removed '+r.deletedCount+' duplicate task'+(r.deletedCount!==1?'s':'')+'!','ok');
+      closeModal('mDuplicateFinder');
+      loadTasks();
+    } else {
+      toast((r&&r.message)||'Failed to delete duplicates.','error');
+    }
+  });
+}
+
+
 function adminUpdate(taskID){
   var t=null;for(var i=0;i<S.tasks.length;i++)if(S.tasks[i].taskID===taskID){t=S.tasks[i];break;}if(!t)return;
   var pu=id('pu-taskid');if(pu)pu.value=taskID;
@@ -6214,11 +6380,25 @@ function updateAITaskOfficer(idx, uid){
 }
 function saveAllAI(){
   if(!S.aiTasks.length)return;
+  // Guard against rapid double-clicks (or a slow connection making someone
+  // click again thinking the first click didn't register) — this is the
+  // actual root cause of AI-extraction duplicate tasks. The button is
+  // disabled the instant Save is clicked and only re-enabled if validation
+  // fails before any save actually starts.
+  var saveBtn=document.querySelector('button[onclick="saveAllAI()"]');
+  if(saveBtn){
+    if(saveBtn.disabled)return; // already mid-save — ignore the extra click entirely
+    saveBtn.disabled=true;
+    saveBtn.style.opacity='.6';
+  }
+  function reEnableOnValidationFail(){
+    if(saveBtn){saveBtn.disabled=false;saveBtn.style.opacity='1';}
+  }
   // Validate
   for(var i=0;i<S.aiTasks.length;i++){
     var t=S.aiTasks[i];
-    if(!t.description.trim()){toast('Task '+(i+1)+': Description is empty.','error');return;}
-    if(!t.department){toast('Task '+(i+1)+': Please select a Department.','error');return;}
+    if(!t.description.trim()){toast('Task '+(i+1)+': Description is empty.','error');reEnableOnValidationFail();return;}
+    if(!t.department){toast('Task '+(i+1)+': Please select a Department.','error');reEnableOnValidationFail();return;}
   }
   // Build officer lookup map once for quick name resolution
   var offs=(S.lookup&&S.lookup.officers)||[];
@@ -6639,6 +6819,8 @@ function saveTaskMultiOfficer(){
     toast('Task Type, Zone, Priority and Description are required.','error');return;
   }
   if(!MO.officers.length){saveTask();return;}
+  var btn=id('multiSaveBtn');
+  if(btn){if(btn.disabled)return;btn.disabled=true;btn.style.opacity='.6';}
   var tasks=[];
   for(var i=0;i<MO.officers.length;i++){
     var t={};for(var k in baseForm)t[k]=baseForm[k];
@@ -6651,6 +6833,7 @@ function saveTaskMultiOfficer(){
   showLoader('Creating '+tasks.length+' tasks...');
   gasCall('serverBulkCreateTasks',S.token,tasks).then(function(r){
     hideLoader();
+    if(btn){btn.disabled=false;btn.style.opacity='1';}
     if(r&&r.success){
       toast('Task assigned to '+r.count+' officers!','ok');
       clearTaskForm();
