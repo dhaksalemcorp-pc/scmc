@@ -1423,7 +1423,6 @@ tbody tr:hover { background: var(--surface2); }
     </div>
     <div class="sb-footer">
       <button class="sb-logout" onclick="doLogout()"><span class="material-icons-round sb-i">logout</span> Sign Out</button>
-      <div style="text-align:center;font-size:11px;color:#fbbf24;font-weight:700;padding-top:8px;letter-spacing:.03em;background:rgba(251,191,36,.1);border-radius:6px;margin:6px 8px 0;padding:6px">Build v87 &middot; <span id="sbBuildDate"></span></div>
     </div>
   </nav>
 
@@ -2938,7 +2937,7 @@ tbody tr:hover { background: var(--surface2); }
 <!-- Task Update + Photo Upload Modal -->
 <div class="modal-bg" id="mPhotoUpload">
   <div class="modal-box" style="max-width:580px">
-    <div class="modal-hd"><span class="modal-title" id="mPhotoTitle">Update Task</span><button class="modal-close" onclick="closeModal('mPhotoUpload')"><span class="material-icons-round">close</span></button></div>
+    <div class="modal-hd"><span class="modal-title" id="mPhotoTitle">Update Task</span><button class="modal-close" id="pu-xCloseBtn" onclick="closeModal('mPhotoUpload')"><span class="material-icons-round">close</span></button></div>
     <div class="modal-body">
       <input type="hidden" id="pu-taskid">
       <div style="background:var(--surface2);padding:10px;border-radius:8px;font-size:13px;margin-bottom:14px;line-height:1.5;color:var(--tx2)" id="pu-desc"></div>
@@ -2988,7 +2987,7 @@ tbody tr:hover { background: var(--surface2); }
       </div>
     </div>
     <div class="modal-ft">
-      <button class="btn btn-ghost" onclick="closeModal('mPhotoUpload')">Cancel</button>
+      <button class="btn btn-ghost" id="pu-cancelBtn" onclick="closeModal('mPhotoUpload')">Cancel</button>
       <button class="btn btn-ghost" id="pu-reassignBtn" style="display:none" onclick="hodReassignFromUpdate()"><span class="material-icons-round mi">swap_horiz</span> Reassign</button>
       <button class="btn btn-primary" id="pu-saveBtn" onclick="submitPhotoUpdate()"><span class="material-icons-round mi">save</span> Save Update</button>
     </div>
@@ -3354,29 +3353,76 @@ var IS_GAS=(function(){try{return(typeof google!=='undefined')&&google!==null&&t
 // When GAS_URL is set, use fetch API (works from any host including GitHub Pages)
 // When empty and IS_GAS is true, use google.script.run (GAS native)
 // When empty and IS_GAS is false, use demo mode
+// Detects whether a failure message looks like a transient connection
+// drop (mobile network blip, momentary signal loss) rather than a genuine
+// server-side rejection (validation error, permission denied, etc). Used
+// to decide whether to offer a one-tap Retry instead of a plain error.
+function isLikelyConnectionDrop(msg){
+  if(!msg)return false;
+  var m=String(msg).toLowerCase();
+  return m.indexOf('network error')!==-1
+    || m.indexOf('failed to fetch')!==-1
+    || m.indexOf('unexpected page instead of data')!==-1
+    || m.indexOf('load failed')!==-1 // Safari's equivalent of "Failed to fetch"
+    || m.indexOf('networkerror')!==-1;
+}
+
 function gasCall(fn){
   var args=[];
   for(var i=1;i<arguments.length;i++)args.push(arguments[i]);
 
   // ── GitHub Pages mode: call GAS as a web API via fetch ──
   if(GAS_URL){
-    return fetch(GAS_URL,{
-      method:'POST',
-      cache:'no-store', // prevents stale cached responses without triggering a
-                         // CORS preflight (unlike custom Cache-Control/Pragma
-                         // headers, which Apps Script's web app cannot answer —
-                         // those broke login entirely with "Failed to fetch")
-      headers:{
-        'Content-Type':'application/x-www-form-urlencoded' // must stay a "simple" header/value
-      },
-      // _ts cache-buster ensures this exact URL+body is never treated as a
-      // repeat of a previous request by any intermediate cache or proxy,
-      // without needing extra headers that would trigger a preflight.
-      body:'fn='+encodeURIComponent(fn)+'&payload='+encodeURIComponent(JSON.stringify(args))+'&_ts='+Date.now()
-    })
-    .then(function(r){return r.json();})
-    .then(function(r){return r||{success:false,message:'No response'};})
-    .catch(function(e){return{success:false,message:'Network error: '+e.message};});
+    function attempt(retriesLeft){
+      return fetch(GAS_URL,{
+        method:'POST',
+        cache:'no-store', // prevents stale cached responses without triggering a
+                           // CORS preflight (unlike custom Cache-Control/Pragma
+                           // headers, which Apps Script's web app cannot answer —
+                           // those broke login entirely with "Failed to fetch")
+        headers:{
+          'Content-Type':'application/x-www-form-urlencoded' // must stay a "simple" header/value
+        },
+        // _ts cache-buster ensures this exact URL+body is never treated as a
+        // repeat of a previous request by any intermediate cache or proxy,
+        // without needing extra headers that would trigger a preflight.
+        body:'fn='+encodeURIComponent(fn)+'&payload='+encodeURIComponent(JSON.stringify(args))+'&_ts='+Date.now()
+      })
+      .then(function(r){
+        return r.text().then(function(txt){
+          try{
+            return JSON.parse(txt);
+          }catch(parseErr){
+            // The server returned something that isn't JSON at all — almost
+            // always Google serving its own HTML (an error page, a sign-in
+            // redirect, or a quota-throttling page) instead of running the
+            // script. This is a deployment/quota problem, not a bug in this
+            // page, so say that plainly instead of showing a confusing raw
+            // parse error.
+            var looksLikeHTML=txt.trim().indexOf('<')===0;
+            if(looksLikeHTML){
+              return{success:false,message:'The server returned an unexpected page instead of data. This usually means the Apps Script deployment needs to be re-published, or today\'s Google quota has been reached. Please try again shortly, or ask your Admin to check Apps Script → Deployments.'};
+            }
+            return{success:false,message:'Unexpected server response: '+txt.slice(0,120)};
+          }
+        });
+      })
+      .then(function(r){return r||{success:false,message:'No response'};})
+      .catch(function(e){
+        // Genuine network-level failures (DNS hiccup, momentary drop, a
+        // slow mobile connection timing out) are often transient — retry
+        // once automatically before surfacing an error, since a silent
+        // recovery is much better than making the user notice and retry
+        // manually every time.
+        if(retriesLeft>0){
+          return new Promise(function(resolve){
+            setTimeout(function(){resolve(attempt(retriesLeft-1));},800);
+          });
+        }
+        return{success:false,message:'Network error: '+e.message};
+      });
+    }
+    return attempt(1);
   }
 
   return new Promise(function(resolve){
@@ -3577,7 +3623,18 @@ function doLogin(){
       S.token=r.token;S.user=r.user;
       var rem=id('rememberMe');if(rem&&rem.checked){LS.set('sc-tok',r.token);LS.set('sc-usr',JSON.stringify(r.user));}
       showApp();
-    }else{errEl.textContent=(r&&r.message)?r.message:'Login failed. Check your credentials.';errEl.style.display='block';}
+    }else{
+      var failMsg=(r&&r.message)?r.message:'Login failed. Check your credentials.';
+      // A connection drop at login looks identical to a real credential
+      // error unless we say otherwise — make it clear this isn't a wrong
+      // password, just a network hiccup worth simply trying again.
+      if(isLikelyConnectionDrop(failMsg)){
+        errEl.textContent='Connection trouble \u2014 this is usually just a weak signal. Please tap "Sign In" again.';
+      } else {
+        errEl.textContent=failMsg;
+      }
+      errEl.style.display='block';
+    }
   });
 }
 function doLogout(){
@@ -3598,7 +3655,7 @@ function showApp(){
     var av=id('sbAvatarTxt');if(av)av.textContent=u.name.charAt(0).toUpperCase();
     var sn=id('sbName');if(sn)sn.textContent=u.name;
     var sr=id('sbRole');if(sr)sr.textContent=u.role;
-    var bd=id('sbBuildDate');if(bd)bd.textContent='2026-06-26 (v87)'; // bumped every time this file is regenerated — check this against what you see live to confirm deployment
+    var bd=id('sbBuildDate');if(bd)bd.textContent=''; // legacy element no longer in the DOM — safe no-op
     applyRoleNav(u.role);
     go('dashboard');
     loadLookup();
@@ -6022,16 +6079,71 @@ function renderPhotoPreview(){
 function submitPhotoUpdate(){
   var taskID=V('pu-taskid'),status=V('pu-status'),remarks=V('pu-remarks'),priority=V('pu-priority');
   if(!taskID||!status){toast('Please select a status.','error');return;}
-  var btn=id('pu-saveBtn');if(btn)btn.disabled=true;
 
   var pickedPhotos=S.selPhotos.slice();
   var pickedDocs=S.puDocs.slice();
+  var hasAttachments=(pickedPhotos.length+pickedDocs.length)>0;
 
-  // STEP 1 — close the modal and update the task card in the list IMMEDIATELY
-  // using the status/remarks/priority just entered, with local blob-URL photo
-  // previews. No waiting on network for the UI to reflect the change.
-  closeModal('mPhotoUpload');
-  if(btn)btn.disabled=false;
+  // If there's nothing to upload, the old instant-close behaviour is fine —
+  // there's no upload to wait for, so no risk of someone re-clicking.
+  if(!hasAttachments){
+    var btn=id('pu-saveBtn');if(btn)btn.disabled=true;
+    gasCall('serverUpdateTask',S.token,taskID,{status:status,officerRemarks:remarks,priority:priority}).then(function(r){
+      if(btn)btn.disabled=false;
+      if(r&&r.success){
+        closeModal('mPhotoUpload');
+        var t=null;for(var i=0;i<S.tasks.length;i++){if(S.tasks[i].taskID===taskID){t=S.tasks[i];break;}}
+        if(t){t.status=status;t.officerRemarks=remarks;t.priority=priority;}
+        if(typeof renderCards==='function'&&S.filtered)renderCards(S.filtered);
+        toast('Task updated!','ok');
+      } else {
+        var failMsg=(r&&r.message)||'Update failed.';
+        if(isLikelyConnectionDrop(failMsg)){
+          // Keep the modal open so the person doesn't lose what they typed —
+          // closing it here was exactly the kind of thing that made people
+          // think their update vanished and try again from scratch.
+          toastWithRetry('Connection lost. Your changes are still here \u2014 tap Retry to save them.',submitPhotoUpdate);
+        } else {
+          closeModal('mPhotoUpload');
+          toast(failMsg,'error');
+        }
+      }
+    });
+    return;
+  }
+
+  // STEP 1 — there ARE photos/documents to upload. This is exactly the
+  // situation that was causing duplicate uploads: the modal used to close
+  // immediately and the person had no visible confirmation anything was
+  // happening, so they'd reopen the form and attach the same photo again.
+  // Now the modal stays open with a real, visible progress indicator, and
+  // every control that could trigger a second upload is disabled until
+  // the whole thing genuinely finishes.
+  var totalItems=pickedPhotos.length+pickedDocs.length;
+  var doneItems=0;
+  var saveBtn=id('pu-saveBtn');
+  var cancelBtn=id('pu-cancelBtn');
+  var photoInputEl=id('photoInput');
+  var docInputEl=id('puDocInput');
+
+  function setUploadingUI(uploading){
+    if(saveBtn){saveBtn.disabled=uploading;saveBtn.style.opacity=uploading?'.6':'1';}
+    if(cancelBtn)cancelBtn.disabled=uploading;
+    var xBtn=id('pu-xCloseBtn');if(xBtn)xBtn.style.visibility=uploading?'hidden':'visible';
+    if(photoInputEl)photoInputEl.disabled=uploading;
+    if(docInputEl)docInputEl.disabled=uploading;
+    var prog=id('photoProgress');
+    if(prog)prog.classList.toggle('dn',!uploading);
+  }
+  function updateProgress(){
+    var pct=totalItems?Math.round((doneItems/totalItems)*100):100;
+    var pt=id('photoProgressText');
+    if(pt)pt.textContent='Uploading '+doneItems+' of '+totalItems+'... please wait, do not close this or tap Save again.';
+    var pb=id('photoProgressBar');
+    if(pb)pb.style.width=pct+'%';
+  }
+  setUploadingUI(true);
+  updateProgress();
 
   var localTask=null;
   for(var i=0;i<S.tasks.length;i++){if(S.tasks[i].taskID===taskID){localTask=S.tasks[i];break;}}
@@ -6041,36 +6153,67 @@ function submitPhotoUpdate(){
     localTask.priority=priority;
     localTask._photosSaving=pickedPhotos.length>0;
     if(!localTask.newPhotos)localTask.newPhotos=[];
-    // Build instant local previews — same pattern Notes uses — so photos
-    // are visible the moment Save is tapped, not after any network call.
-    var localPhotoEntries=pickedPhotos.map(function(f){
-      return { photoID:'temp_'+Math.random().toString(36).slice(2), photoData:URL.createObjectURL(f), pending:true };
-    });
+  }
+  var localPhotoEntries=pickedPhotos.map(function(f){
+    return { photoID:'temp_'+Math.random().toString(36).slice(2), photoData:URL.createObjectURL(f), pending:true };
+  });
+  if(localTask){
     localTask.newPhotos=localTask.newPhotos.concat(localPhotoEntries);
     if(typeof renderCards==='function'&&S.filtered)renderCards(S.filtered);
   }
-  toast('Task updated'+((pickedPhotos.length||pickedDocs.length)?' \u2014 uploading attachments...':'!'),'ok');
+
+  function allFinished(){
+    setUploadingUI(false);
+    closeModal('mPhotoUpload');
+    toast('Task updated with '+totalItems+' attachment'+(totalItems!==1?'s':'')+'!','ok');
+  }
 
   function uploadPendingDocs(){
-    if(!pickedDocs.length)return;
+    if(!pickedDocs.length){allFinished();return;}
+    var docFailed=pickedDocs.map(function(){return false;});
     var docIdx=0,docTotal=pickedDocs.length,docCompleted=0;
     function processOneDoc(idx){
       return new Promise(function(resolve){
         var reader=new FileReader();
         reader.onload=function(ev){
           var b64=ev.target.result.split(',')[1];
-          gasCall('serverUploadTaskAttachment',S.token,{taskID:taskID,fileName:pickedDocs[idx].name,mimeType:'application/pdf',base64Data:b64}).then(function(){resolve();});
+          gasCall('serverUploadTaskAttachment',S.token,{taskID:taskID,fileName:pickedDocs[idx].name,mimeType:'application/pdf',base64Data:b64}).then(function(dr){
+            docFailed[idx]=!(dr&&dr.success);
+            resolve();
+          });
         };
-        reader.onerror=function(){resolve();};
+        reader.onerror=function(){docFailed[idx]=true;resolve();};
         reader.readAsDataURL(pickedDocs[idx]);
       });
     }
+    function onAllDocsSettled(){
+      var anyFailed=docFailed.some(function(f){return f;});
+      if(anyFailed){
+        setUploadingUI(false);
+        toastWithRetry('One or more documents could not be uploaded \u2014 likely a dropped connection. Tap Retry to try the failed ones again.',retryFailedDocsOnly);
+      } else {
+        allFinished();
+      }
+    }
+    function retryFailedDocsOnly(){
+      setUploadingUI(true);
+      var failedIdx=[];
+      for(var fi=0;fi<docFailed.length;fi++){if(docFailed[fi])failedIdx.push(fi);}
+      if(!failedIdx.length){allFinished();return;}
+      var fNext=0;
+      function launchFailedRetry(){
+        if(fNext>=failedIdx.length){onAllDocsSettled();return;}
+        var idx=failedIdx[fNext++];
+        processOneDoc(idx).then(function(){doneItems++;updateProgress();launchFailedRetry();});
+      }
+      launchFailedRetry();
+    }
     function launchNextDoc(){
-      if(docIdx>=docTotal)return;
+      if(docIdx>=docTotal){return;}
       var myIdx=docIdx++;
       processOneDoc(myIdx).then(function(){
-        docCompleted++;
-        if(docCompleted>=docTotal)toast('Document'+(docTotal!==1?'s':'')+' uploaded!','ok');
+        docCompleted++;doneItems++;updateProgress();
+        if(docCompleted>=docTotal)onAllDocsSettled();
         else launchNextDoc();
       });
     }
@@ -6078,17 +6221,25 @@ function submitPhotoUpdate(){
     for(var ds=0;ds<docStart;ds++)launchNextDoc();
   }
 
-  // STEP 2 — save status/remarks/priority to the server in the background
+  // STEP 2 — save status/remarks/priority to the server
   gasCall('serverUpdateTask',S.token,taskID,{status:status,officerRemarks:remarks,priority:priority}).then(function(r){
     if(!r||!r.success){
-      toast((r&&r.message)||'Update failed to save. Please retry from the task card.','error');
+      setUploadingUI(false);
+      var failMsg=(r&&r.message)||'Update failed to save.';
+      if(isLikelyConnectionDrop(failMsg)){
+        toastWithRetry('Connection lost while saving. Tap Retry to try again \u2014 nothing has been uploaded twice.',function(){
+          submitPhotoUpdate();
+        });
+      } else {
+        toast(failMsg+' Please try again.','error');
+      }
       return;
     }
-    uploadPendingDocs();
     if(!pickedPhotos.length){
-      if(localTask)localTask._photosSaving=false;
-      return; // no need to reload — status/remarks already reflected locally
+      uploadPendingDocs();
+      return;
     }
+    runPool();
 
     // STEP 3 — upload photos using a 4-at-a-time pool: compressed, stored
     // directly (no Drive, no proxy fetch needed to view them later), and
@@ -6122,9 +6273,11 @@ function submitPhotoUpdate(){
                 photoEntry.photoID=pr.photoID;
                 photoEntry.photoData=b64;
                 photoEntry.pending=false;
+                photoEntry.failed=false;
               } else {
                 photoEntry.pending=false;
                 photoEntry.failed=true;
+                photoEntry.failMessage=(pr&&pr.message)||'';
               }
               if(typeof renderCards==='function'&&S.filtered)renderCards(S.filtered);
               resolve();
@@ -6137,25 +6290,64 @@ function submitPhotoUpdate(){
         reader.readAsDataURL(file);
       });
     }
+    function onAllPhotosSettled(){
+      if(localTask)localTask._photosSaving=false;
+      var anyFailed=localPhotoEntries.some(function(p){return p.failed;});
+      if(anyFailed){
+        setUploadingUI(false);
+        toastWithRetry('One or more photos could not be uploaded \u2014 likely a dropped connection. Tap Retry to try just the failed ones again.',retryFailedPhotosOnly);
+      } else {
+        uploadPendingDocs();
+      }
+    }
     function runPool(){
       var active=0,completed=0,total=pickedPhotos.length;
       function launchNext(){
         if(nextIdx>=total){
-          if(active===0){if(localTask)localTask._photosSaving=false;toast('Photos uploaded successfully!','ok');}
+          if(active===0)onAllPhotosSettled();
           return;
         }
         var myIdx=nextIdx++;
         active++;
         processOnePhoto(myIdx).then(function(){
-          active--;completed++;
-          if(completed>=total){if(localTask)localTask._photosSaving=false;toast('Photos uploaded successfully!','ok');}
+          active--;completed++;doneItems++;updateProgress();
+          if(completed>=total)onAllPhotosSettled();
           else launchNext();
         });
       }
       var startCount=Math.min(POOL_SIZE,total);
       for(var s=0;s<startCount;s++)launchNext();
     }
-    runPool();
+
+    // Re-attempts only the photos that genuinely failed (not the ones that
+    // already succeeded) — avoids ever re-uploading a photo that's already
+    // safely saved, which is exactly the duplication problem this whole
+    // feature exists to prevent.
+    function retryFailedPhotosOnly(){
+      setUploadingUI(true);
+      var failedIndexes=[];
+      for(var fi=0;fi<localPhotoEntries.length;fi++){if(localPhotoEntries[fi].failed)failedIndexes.push(fi);}
+      if(!failedIndexes.length){uploadPendingDocs();return;}
+      var fNext=0;
+      function launchFailedRetry(){
+        if(fNext>=failedIndexes.length){
+          var stillFailed=localPhotoEntries.some(function(p){return p.failed;});
+          if(stillFailed){
+            setUploadingUI(false);
+            toastWithRetry('Still having trouble uploading. Check your connection and tap Retry.',retryFailedPhotosOnly);
+          } else {
+            uploadPendingDocs();
+          }
+          return;
+        }
+        var idx=failedIndexes[fNext++];
+        localPhotoEntries[idx].failed=false;
+        localPhotoEntries[idx].pending=true;
+        if(typeof renderCards==='function'&&S.filtered)renderCards(S.filtered);
+        processOnePhoto(idx).then(function(){doneItems++;updateProgress();launchFailedRetry();});
+      }
+      launchFailedRetry();
+    }
   });
 }
 function uploadPhotosSeq(taskID,photos,idx,urls,done){
@@ -9875,7 +10067,12 @@ function loadReportsPage(){
       REPORTS_CACHE=r.data||[];
     } else {
       REPORTS_CACHE=[];
-      if(r&&r.message)toast(r.message,'error');
+      var failMsg=(r&&r.message)||'';
+      if(isLikelyConnectionDrop(failMsg)){
+        toastWithRetry('Connection trouble loading Reports. Tap Retry.',loadReportsPage);
+      } else if(failMsg){
+        toast(failMsg,'error');
+      }
     }
     renderReportsGroups(REPORTS_CACHE);
   });
@@ -10396,6 +10593,35 @@ function toast(msg,type){
   el.innerHTML='<span class="material-icons-round mi">'+(icons[type]||'info')+'</span><span>'+msg+'</span>';
   c.appendChild(el);
   setTimeout(function(){el.style.opacity='0';el.style.transform='translateX(20px)';setTimeout(function(){if(el.parentNode)el.parentNode.removeChild(el);},280);},3600);
+}
+
+// A toast that stays on screen until the person acts on it, with a clear
+// "Retry" button — used specifically for connection drops (e.g. mobile
+// network blips), which are common and largely outside the app's control.
+// Unlike the normal toast, this does NOT auto-dismiss, since the whole
+// point is giving the person a deliberate, obvious next step rather than
+// a message that might vanish before they've even read it.
+function toastWithRetry(msg,onRetry){
+  var c=id('toasts');if(!c)return;
+  var el=document.createElement('div');
+  el.className='toast toast-err';
+  el.style.cursor='default';
+  var msgSpan=document.createElement('span');msgSpan.textContent=msg;
+  var icon=document.createElement('span');icon.className='material-icons-round mi';icon.textContent='wifi_off';
+  var retryBtn=document.createElement('button');
+  retryBtn.textContent='Retry';
+  retryBtn.style.cssText='margin-left:10px;background:#fff;color:var(--c-red);border:none;border-radius:6px;padding:4px 12px;font-weight:700;font-size:12px;cursor:pointer;flex-shrink:0';
+  var dismissBtn=document.createElement('button');
+  dismissBtn.innerHTML='<span class="material-icons-round" style="font-size:15px">close</span>';
+  dismissBtn.style.cssText='margin-left:6px;background:none;border:none;color:inherit;opacity:.7;cursor:pointer;display:flex;align-items:center;flex-shrink:0';
+  function remove(){el.style.opacity='0';el.style.transform='translateX(20px)';setTimeout(function(){if(el.parentNode)el.parentNode.removeChild(el);},280);}
+  retryBtn.onclick=function(){remove();if(onRetry)onRetry();};
+  dismissBtn.onclick=remove;
+  el.appendChild(icon);el.appendChild(msgSpan);el.appendChild(retryBtn);el.appendChild(dismissBtn);
+  c.appendChild(el);
+  // Still auto-dismisses eventually (60s) so a forgotten/ignored one
+  // doesn't sit on screen forever, but far longer than a normal toast.
+  setTimeout(remove,60000);
 }
 function showLoader(msg){var l=id('loader'),lm=id('loaderMsg');if(l)l.classList.add('on');if(lm)lm.textContent=msg||'Loading...';}
 function hideLoader(){var l=id('loader');if(l)l.classList.remove('on');}
