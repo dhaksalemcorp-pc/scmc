@@ -3524,9 +3524,10 @@ function buildLookupData(){
 }
 function demoFn(fn,args){
   if(fn==='serverLogin'){
-    if(args[0]==='admin'&&args[1]==='admin123')return{success:true,token:'tok-admin',user:{userID:'USR001',name:'Admin User',designation:'Deputy Commissioner',department:'General',zone:'Main Office',role:'Admin',username:'admin'}};
-    if(args[0]==='commissioner'&&args[1]==='comm123')return{success:true,token:'tok-comm',user:{userID:'USR002',name:'Commissioner Raj',designation:'Deputy Commissioner',department:'General',zone:'Main Office',role:'Commissioner',username:'commissioner'}};
-    if(args[0]==='priya.nair'&&args[1]==='officer123')return{success:true,token:'tok-off',user:{userID:'USR003',name:'Priya Nair',designation:'City Health Officer',department:'Public Health',zone:'Ammapet Zone-3',role:'Officer',username:'priya.nair'}};
+    var lu=buildLookupData(); // bundle lookup just like the real backend now does
+    if(args[0]==='admin'&&args[1]==='admin123')return{success:true,token:'tok-admin',lookup:lu,user:{userID:'USR001',name:'Admin User',designation:'Deputy Commissioner',department:'General',zone:'Main Office',role:'Admin',username:'admin'}};
+    if(args[0]==='commissioner'&&args[1]==='comm123')return{success:true,token:'tok-comm',lookup:lu,user:{userID:'USR002',name:'Commissioner Raj',designation:'Deputy Commissioner',department:'General',zone:'Main Office',role:'Commissioner',username:'commissioner'}};
+    if(args[0]==='priya.nair'&&args[1]==='officer123')return{success:true,token:'tok-off',lookup:lu,user:{userID:'USR003',name:'Priya Nair',designation:'City Health Officer',department:'Public Health',zone:'Ammapet Zone-3',role:'Officer',username:'priya.nair'}};
     return{success:false,message:'Invalid credentials.'};
   }
   if(fn==='serverValidateSession')return{valid:false};
@@ -3652,6 +3653,9 @@ function doLogin(){
     btn.disabled=false;btn.textContent='Sign In to System';
     if(r&&r.success){
       S.token=r.token;S.user=r.user;
+      // Lookup data is now bundled in the login response (since v103) —
+      // no separate serverGetLookupData call needed after login.
+      if(r.lookup&&r.lookup.success){S.lookup=r.lookup;populateSelects();}
       var rem=id('rememberMe');if(rem&&rem.checked){LS.set('sc-tok',r.token);LS.set('sc-usr',JSON.stringify(r.user));}
       showApp();
     }else{
@@ -3689,7 +3693,13 @@ function showApp(){
     var bd=id('sbBuildDate');if(bd)bd.textContent=''; // legacy element no longer in the DOM — safe no-op
     applyRoleNav(u.role);
     go('dashboard');
-    loadLookup();
+    // If lookup wasn't bundled in the login response (e.g. auto-login
+    // from remembered token path), fetch it now as a fallback.
+    if(!S.lookup||!S.lookup.departments){
+      loadLookup();
+    }
+    // Profile photo is cosmetic — load it last, non-blocking,
+    // so it never delays the dashboard appearing.
     loadProfilePhoto();
   }catch(e){
     var lp=id('loginPage');if(lp)lp.style.display='flex';
