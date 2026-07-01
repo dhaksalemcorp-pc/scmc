@@ -1472,7 +1472,7 @@ tbody tr:hover { background: var(--surface2); }
         </div>
         <div class="g2">
           <div class="card"><div class="card-hd"><span class="card-title">Department Breakdown</span></div><div class="card-bd" id="deptBreakdown" style="max-height:280px;overflow-y:auto"></div></div>
-          <div class="card"><div class="card-hd"><span class="card-title">Recent Activity</span><span style="font-size:11px;color:var(--tx3);font-weight:500" id="recentActMeta"></span></div><div class="card-bd" id="recentAct" style="max-height:280px;overflow-y:auto"></div></div>
+          <div class="card"><div class="card-hd"><span class="card-title">Recent Activity</span><span style="font-size:11px;color:var(--tx3);font-weight:500" id="recentActMeta"></span><button class="btn btn-ghost btn-sm" id="recentActLoadBtn" onclick="loadActivityLog()" style="margin-left:auto;display:none"><span class="material-icons-round mi">refresh</span></button></div><div class="card-bd" id="recentAct" style="max-height:280px;overflow-y:auto"></div></div>
         </div>
         <div class="card mt16" id="usageAnalyticsCard" style="display:none">
           <div class="card-hd">
@@ -1539,7 +1539,7 @@ tbody tr:hover { background: var(--surface2); }
           </div>
         </div>
         <div class="card mt16" id="offGrievanceCard" style="display:none">
-          <div class="card-hd"><span class="card-title">&#9878;&#65039; My Grievances</span></div>
+          <div class="card-hd"><span class="card-title">&#9878;&#65039; My Grievances</span><button class="btn btn-ghost btn-sm" id="offGrvLoadBtn" onclick="loadOfficerGrievances()" style="margin-left:auto;display:none"><span class="material-icons-round mi">refresh</span></button></div>
           <div class="card-bd-0" id="offGrievanceList"></div>
         </div>
       </div>
@@ -2573,8 +2573,8 @@ tbody tr:hover { background: var(--surface2); }
               <div style="display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);border-radius:999px;padding:5px 14px;font-size:11.5px;font-weight:600;color:#fbbf24">
                 <span class="material-icons-round" style="font-size:13px">bolt</span> Version 93 &middot; Live &amp; Actively Maintained
               </div>
-              <div id="aboutLiveStatus" style="display:inline-flex;align-items:center;gap:6px;background:rgba(16,185,129,.15);border:1px solid rgba(16,185,129,.3);border-radius:999px;padding:5px 14px;font-size:11.5px;font-weight:600;color:#34d399">
-                <span style="width:7px;height:7px;border-radius:50%;background:#34d399;display:inline-block;animation:pulse 1.6s ease-in-out infinite"></span> Checking status...
+              <div id="aboutLiveStatus" style="display:inline-flex;align-items:center;gap:6px;background:rgba(156,163,175,.15);border:1px solid rgba(156,163,175,.3);border-radius:999px;padding:5px 14px;font-size:11.5px;font-weight:600;color:#9ca3af;cursor:pointer" onclick="checkAboutLiveStatus()">
+                <span style="width:7px;height:7px;border-radius:50%;background:#9ca3af;display:inline-block"></span> Tap to check connection
               </div>
             </div>
           </div>
@@ -3699,15 +3699,20 @@ function applyRoleNav(role){
   var thAct=id('thActions');if(thAct)thAct.style.display=(isOfficer||isSupervision)?'none':'';
   if(!isAdmin&&!isHOD){var bb=id('bulkBar');if(bb)bb.classList.add('dn');}
 
-  // Calendar tab — visible only to roles Admin has enabled in Settings
-  gasCall('serverGetCalendarSettings',S.token).then(function(r){
-    var rolesEnabled=(r&&r.success)?(r.rolesEnabled||[]):[];
-    var calVisible=rolesEnabled.indexOf(role)!==-1;
-    show('snav-calendar', calVisible);
+  // Calendar tab — use calendar settings already bundled in S.lookup
+  // (included in serverGetLookupData since v99) so no extra network call needed.
+  // If lookup isn't loaded yet for some reason, fall back to hiding the tab.
+  (function(){
+    var rolesEnabled=(S.lookup&&S.lookup.calRolesEnabled)||[];
+    var calOwnerEmail=(S.lookup&&S.lookup.calOwnerEmail)||'';
+    // Hide Calendar entirely if no email is configured — calling the Google
+    // Calendar API with no account set serves no purpose and wastes a call.
+    var calVisible=calOwnerEmail&&rolesEnabled.indexOf(role)!==-1;
+    show('snav-calendar', !!calVisible);
     if(calVisible&&S.allowedPages&&S.allowedPages.indexOf('calendar')===-1){
       S.allowedPages.push('calendar');
     }
-  });
+  })();
 
   if(isOfficer){
     S.allowedPages=['dashboard','tracker','photolog','grievances','about'];
@@ -3934,7 +3939,7 @@ function loadDashboard(){
     var kv={'k-total':s.total,'k-pending':s.pending,'k-progress':s.inProgress,'k-done':s.completed,'k-overdue':s.overdue,'k-today':s.dueToday,'k-high':s.highPriority,'k-rate':r.completionRate+'%'};
     for(var k in kv){var el=id(k);if(el)el.textContent=kv[k];}
     if(s.overdue>0){var b=id('overdBadge');if(b){b.textContent=s.overdue;b.style.display='';}var d=id('bnDot');if(d)d.classList.add('on');}
-    buildStatusChart(s);buildZoneChart(r.zoneStats);buildDeptBreakdown(r.deptStats);loadActivityLog();loadUsageAnalytics();
+    buildStatusChart(s);buildZoneChart(r.zoneStats);buildDeptBreakdown(r.deptStats);renderActivityPlaceholder();renderUsageAnalyticsPlaceholder();
   });
 }
 function loadHODDashboard(){
@@ -4259,16 +4264,38 @@ function loadOfficerDashboard(){
     buildOfficerChart(s);
     buildOfficerRecentTasks(r.recentTasks||[]);
   });
-  loadOfficerGrievances();
+  // Grievances NOT loaded automatically — most officers have no mapped
+  // grievances and loading all of them on every login was the single
+  // biggest unnecessary call for Officers. Show a placeholder instead;
+  // the card appears and offers a Load button.
+  renderOfficerGrievancesPlaceholder();
+}
+
+function renderOfficerGrievancesPlaceholder(){
+  var card=id('offGrievanceCard'),wrap=id('offGrievanceList');
+  if(!card||!wrap)return;
+  card.style.display='block';
+  wrap.innerHTML='<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:18px;gap:8px">'
+    +'<span class="material-icons-round" style="font-size:24px;color:var(--tx3)">gavel</span>'
+    +'<span style="font-size:12px;color:var(--tx3)">Tap to check for grievances mapped to you</span>'
+    +'<button class="btn btn-ghost btn-sm" onclick="loadOfficerGrievances()" style="margin-top:2px">'
+    +'<span class="material-icons-round mi">arrow_downward</span> Load Grievances</button>'
+    +'</div>';
 }
 
 function loadOfficerGrievances(){
+  var card=id('offGrievanceCard'),wrap=id('offGrievanceList');
+  var loadBtn=id('offGrvLoadBtn');
+  if(!card||!wrap)return;
+  card.style.display='block';
+  wrap.innerHTML='<div style="text-align:center;padding:16px"><span class="material-icons-round" style="font-size:22px;color:var(--tx3);animation:spin 1s linear infinite">sync</span></div>';
   gasCall('serverGetGrievances',S.token).then(function(r){
-    var card=id('offGrievanceCard'),wrap=id('offGrievanceList');
-    if(!card||!wrap)return;
+    if(loadBtn)loadBtn.style.display=''; // show refresh button after first load
     var list=(r&&r.success)?(r.data||[]):[];
-    if(!list.length){card.style.display='none';return;}
-    card.style.display='block';
+    if(!list.length){
+      wrap.innerHTML='<div style="text-align:center;padding:16px;font-size:12.5px;color:var(--tx3)">No grievances are currently mapped to you.</div>';
+      return;
+    }
     while(wrap.firstChild)wrap.removeChild(wrap.firstChild);
     for(var i=0;i<list.length;i++){
       (function(g){
@@ -4374,10 +4401,23 @@ function buildDeptBreakdown(ds){
   for(var i=0;i<depts.length;i++){var d=depts[i],s=ds[d],rate=s.total>0?Math.round(s.completed/s.total*100):0,col=rate>60?'green':rate>30?'gold':'red';html+='<div style="margin-bottom:13px"><div class="flex-b mb8"><span style="font-size:13px;font-weight:600">'+d+'</span><span class="c-muted">'+s.completed+'/'+s.total+' ('+rate+'%)</span></div><div class="prog-wrap"><div class="prog-fill '+col+'" style="width:'+rate+'%"></div></div></div>';}
   el.innerHTML=html;
 }
+function renderActivityPlaceholder(){
+  var el=id('recentAct');if(!el)return;
+  el.innerHTML='<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;gap:10px">'
+    +'<span class="material-icons-round" style="font-size:28px;color:var(--tx3)">history</span>'
+    +'<span style="font-size:12.5px;color:var(--tx3)">Tap to load recent activity</span>'
+    +'<button class="btn btn-ghost btn-sm" onclick="loadActivityLog()" style="margin-top:2px">'
+    +'<span class="material-icons-round mi">arrow_downward</span> Load Activity</button>'
+    +'</div>';
+}
 function loadActivityLog(){
   var el=id('recentAct');if(!el)return;
+  var loadBtn=id('recentActLoadBtn');
+  el.innerHTML='<div style="text-align:center;padding:20px"><span class="material-icons-round" style="font-size:24px;color:var(--tx3);animation:spin 1s linear infinite">sync</span></div>';
   gasCall('serverGetActivityLogs',S.token,12).then(function(r){
     var meta=id('recentActMeta');
+    // Show the refresh button in the card header now that data has loaded once
+    if(loadBtn)loadBtn.style.display='';
     if(!r||!r.success||!r.data||!r.data.length){
       el.innerHTML='<div class="empty" style="padding:16px"><span class="material-icons-round mi" style="font-size:28px">history</span><p style="font-size:12px;margin-top:4px">No recent activity</p></div>';
       if(meta)meta.textContent='';
@@ -4428,6 +4468,21 @@ function fRelativeTime(ts){
 }
 
 // ─── USAGE ANALYTICS — how often & how long officials use the app ──
+function renderUsageAnalyticsPlaceholder(){
+  var card=id('usageAnalyticsCard');if(!card)return;
+  var isAdminLike=(S.user&&(S.user.role==='Admin'||S.user.role==='Commissioner'));
+  card.style.display=isAdminLike?'block':'none';
+  if(!isAdminLike)return;
+  var list=id('usageAnalyticsList');
+  if(list)list.innerHTML='<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;gap:10px">'
+    +'<span class="material-icons-round" style="font-size:28px;color:var(--tx3)">query_stats</span>'
+    +'<span style="font-size:12.5px;color:var(--tx3)">Tap to load usage analytics</span>'
+    +'<button class="btn btn-ghost btn-sm" onclick="loadUsageAnalytics()" style="margin-top:2px">'
+    +'<span class="material-icons-round mi">arrow_downward</span> Load Analytics</button>'
+    +'</div>';
+  // Reset KPI numbers to dashes until loaded
+  ['ua-totalLogins','ua-activeToday','ua-totalUsers'].forEach(function(i){var e=id(i);if(e)e.textContent='\u2014';});
+}
 function loadUsageAnalytics(){
   var card=id('usageAnalyticsCard');
   if(!card)return;
@@ -4435,10 +4490,12 @@ function loadUsageAnalytics(){
   card.style.display=isAdminLike?'block':'none';
   if(!isAdminLike)return;
 
+  var list=id('usageAnalyticsList');
+  if(list)list.innerHTML='<div style="text-align:center;padding:20px"><span class="material-icons-round" style="font-size:24px;color:var(--tx3);animation:spin 1s linear infinite">sync</span></div>';
+
   var windowDays=V('usageWindowSel')||30;
   gasCall('serverGetUsageAnalytics',S.token,parseInt(windowDays,10)).then(function(r){
     if(!r||!r.success){
-      var list=id('usageAnalyticsList');
       if(list)list.innerHTML='<div class="empty" style="padding:16px"><p style="font-size:12px">'+((r&&r.message)||'Could not load usage analytics.')+'</p></div>';
       return;
     }
@@ -4447,7 +4504,7 @@ function loadUsageAnalytics(){
     var at=id('ua-activeToday');if(at)at.textContent=d.activeToday;
     var tu=id('ua-totalUsers');if(tu)tu.textContent=d.users.length;
 
-    var list=id('usageAnalyticsList');if(!list)return;
+    if(!list)return;
     if(!d.users.length){
       list.innerHTML='<div class="empty" style="padding:16px"><span class="material-icons-round mi">group_off</span><p style="font-size:12px">No login activity recorded yet in this window.</p></div>';
       return;
@@ -6800,23 +6857,28 @@ function renderCommViewForDept(dept){
 function loadCommView(){
   showLoader('Loading...');
   CV_DEPT_FILTER='';
-  // Load both stats and full task list for dept drill-down
-  gasCall('serverGetTasks',S.token,{}).then(function(tr){
+  // Run both calls simultaneously — previously getDashboardStats only
+  // started AFTER getTasks finished, doubling the wait time unnecessarily.
+  Promise.all([
+    gasCall('serverGetTasks',S.token,{}),
+    gasCall('serverGetDashboardStats',S.token)
+  ]).then(function(results){
+    hideLoader();
+    var tr=results[0],r=results[1];
     if(tr&&tr.success){
       S.tasks=normalizeTaskList(tr.data||[]);
       S.filtered=S.tasks.slice();
       S._cvAllTasks=S.tasks.slice();
       buildCommDeptTabs(S.tasks);
     }
-    gasCall('serverGetDashboardStats',S.token).then(function(r){
-      hideLoader();if(!r||!r.success)return;
+    if(r&&r.success){
       var s=r.stats;
       var cv={'cv-total':s.total,'cv-done':s.completed,'cv-over':s.overdue,'cv-rate':r.completionRate+'%'};
       for(var k in cv){var el=id(k);if(el)el.textContent=cv[k];}
       buildCVZone(r.zoneStats);buildCVDept(r.deptStats);
       buildOfficerPerf(r.officerStats);
       buildCritical();
-    });
+    }
   });
 }
 function buildCVZone(zs){
@@ -7075,7 +7137,8 @@ function loadPhotoLog(){
     var pt=id('pl-time');if(pt&&!pt.value){var now=new Date();pt.value=zeroPad(now.getHours(),2)+':'+zeroPad(now.getMinutes(),2);}
     plPopulateOfficerDropdown('pl-officer');
   }
-  plLoadNoteTypes();
+  // NoteTypes NOT loaded here — only needed when "New Entry" form opens.
+  // Moved to plToggleView('form') so it's lazy-loaded on demand.
   showLoader('Loading notes...');
   gasCall('serverGetNotes',S.token).then(function(r){
     hideLoader();
@@ -7254,6 +7317,14 @@ function plToggleView(view){
   if(view==='form'){
     if(fv)fv.style.display='block';
     if(lv)lv.style.display='none';
+    // Load NoteTypes only now — only needed for the New Entry form,
+    // not on every Notes page open. Cache check prevents a repeat fetch
+    // if the user opens and closes the form multiple times in one session.
+    if(!S.noteTypes||!S.noteTypes.length){
+      plLoadNoteTypes();
+    } else {
+      plPopulateTypeDropdowns(); // already cached — populate immediately
+    }
   } else {
     if(fv)fv.style.display='none';
     if(lv)lv.style.display='block';
@@ -9987,10 +10058,20 @@ function showAddCouncilorInline(){
 // ════════════════════════════════════════════════════════════
 var ABOUT_INITED=false;
 function loadAboutPage(){
-  // Animate the stat counters only once per visit (not every time the
-  // user navigates back here) so it still feels intentional, not gimmicky.
   animateAboutStats();
-  checkAboutLiveStatus();
+  // Live status is NO LONGER checked automatically on every About page open.
+  // Was previously calling serverGetLookupData purely for a cosmetic badge —
+  // a real network round-trip wasted on an informational page.
+  // Replaced with a tap-to-check button so it only runs when you want it.
+  var el=id('aboutLiveStatus');
+  if(el){
+    el.innerHTML='<span style="width:7px;height:7px;border-radius:50%;background:#9ca3af;display:inline-block"></span> Tap to check connection';
+    el.style.background='rgba(156,163,175,.15)';
+    el.style.borderColor='rgba(156,163,175,.3)';
+    el.style.color='#9ca3af';
+    el.style.cursor='pointer';
+    el.onclick=checkAboutLiveStatus;
+  }
 }
 function animateAboutStats(){
   var nums=document.querySelectorAll('.about-stat-num');
