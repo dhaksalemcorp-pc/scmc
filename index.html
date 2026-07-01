@@ -1520,21 +1520,36 @@ tbody tr:hover { background: var(--surface2); }
           <div class="kpi purple" onclick="go('tracker')" style="cursor:pointer"><div class="kpi-stripe"></div><div class="kpi-icon-wrap"><span class="material-icons-round mi">priority_high</span></div><div class="kpi-val" id="ok-high">&#8212;</div><div class="kpi-lbl">High Priority</div></div>
           <div class="kpi green"><div class="kpi-stripe"></div><div class="kpi-icon-wrap"><span class="material-icons-round mi">percent</span></div><div class="kpi-val" id="ok-rate">&#8212;</div><div class="kpi-lbl">My Completion %</div></div>
         </div>
-        <div class="card mb16">
-          <div class="card-hd">
-            <span class="card-title">My Task Progress</span>
-            <button class="btn btn-primary btn-sm" onclick="go('tracker')"><span class="material-icons-round mi">open_in_new</span> View All My Tasks</button>
+        <!-- Progress placeholder — shown until officer taps Load -->
+        <div id="offProgressPlaceholder" class="card mb16">
+          <div class="card-bd" style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:28px;gap:10px">
+            <span class="material-icons-round" style="font-size:32px;color:var(--tx3)">insert_chart_outlined</span>
+            <span style="font-size:13px;color:var(--tx3);font-weight:500">Task progress not loaded yet</span>
+            <span style="font-size:11.5px;color:var(--tx3);text-align:center;max-width:260px">Tap below to load your task stats and recent activity</span>
+            <button class="btn btn-primary btn-sm" onclick="triggerOfficerDashLoad()" style="margin-top:4px">
+              <span class="material-icons-round mi">bar_chart</span> Load My Progress
+            </button>
           </div>
-          <div class="card-bd" style="height:200px"><canvas id="offChart"></canvas></div>
         </div>
-        <div class="card">
-          <div class="card-hd"><span class="card-title">My Recent Tasks</span></div>
-          <div class="card-bd-0">
-            <div class="tbl-wrap">
-              <table>
-                <thead><tr><th>Task ID</th><th>Description</th><th>Priority</th><th>Due Date</th><th>Status</th><th>Action</th></tr></thead>
-                <tbody id="offRecentTasks"></tbody>
-              </table>
+        <!-- Actual chart + recent tasks — hidden until loaded -->
+        <div id="offProgressContent" style="display:none">
+          <div class="card mb16">
+            <div class="card-hd">
+              <span class="card-title">My Task Progress</span>
+              <button class="btn btn-ghost btn-sm" id="offProgressRefreshBtn" onclick="triggerOfficerDashLoad()" style="display:none"><span class="material-icons-round mi">refresh</span></button>
+              <button class="btn btn-primary btn-sm" onclick="go('tracker')"><span class="material-icons-round mi">open_in_new</span> View All My Tasks</button>
+            </div>
+            <div class="card-bd" style="height:200px"><canvas id="offChart"></canvas></div>
+          </div>
+          <div class="card">
+            <div class="card-hd"><span class="card-title">My Recent Tasks</span></div>
+            <div class="card-bd-0">
+              <div class="tbl-wrap">
+                <table>
+                  <thead><tr><th>Task ID</th><th>Description</th><th>Priority</th><th>Due Date</th><th>Status</th><th>Action</th></tr></thead>
+                  <tbody id="offRecentTasks"></tbody>
+                </table>
+              </div>
             </div>
           </div>
         </div>
@@ -4243,32 +4258,53 @@ function supFilterOfficers(query){
 
 function loadOfficerDashboard(){
   var u=S.user;if(!u)return;
-  // Set greeting from actual logged-in user
+  // Greeting renders instantly — no network needed
   var gd=id('greetDate');if(gd)gd.textContent=new Date().toLocaleDateString('en-IN',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
   var gn=id('greetName');if(gn)gn.textContent=u.name.split(' ')[0];
-  showLoader('Loading your dashboard...');
-  // Use demo handler for officer dashboard in demo mode; GAS uses serverGetOfficerDashboard
-  var fn = IS_GAS ? 'serverGetOfficerDashboard' : 'serverGetOfficerDashboard';
-  gasCall(fn, S.token).then(function(r){
-    hideLoader();
+  // Show placeholder — actual stats only load when the officer taps "Load My Progress"
+  var ph=id('offProgressPlaceholder'),pc=id('offProgressContent');
+  if(ph)ph.style.display='';
+  if(pc)pc.style.display='none';
+  // KPI cards show dashes until loaded
+  var kpiReset={'ok-total':'\u2014','ok-pending':'\u2014','ok-progress':'\u2014','ok-done':'\u2014','ok-overdue':'\u2014','ok-today':'\u2014','ok-high':'\u2014','ok-rate':'\u2014'};
+  for(var k in kpiReset){var el=id(k);if(el)el.textContent=kpiReset[k];}
+  // Grievances also deferred
+  renderOfficerGrievancesPlaceholder();
+}
+
+function triggerOfficerDashLoad(){
+  var ph=id('offProgressPlaceholder'),pc=id('offProgressContent');
+  var rfBtn=id('offProgressRefreshBtn');
+  // Swap placeholder for a loading spinner while the call is in flight
+  if(ph)ph.innerHTML='<div class="card-bd" style="text-align:center;padding:28px">'
+    +'<span class="material-icons-round" style="font-size:28px;color:var(--tx3);animation:spin 1s linear infinite">sync</span>'
+    +'<p style="font-size:12.5px;color:var(--tx3);margin-top:10px">Loading your task stats...</p></div>';
+
+  var fn='serverGetOfficerDashboard';
+  gasCall(fn,S.token).then(function(r){
     if(!r||!r.success){
-      // Fallback: compute from local tasks if available
-      if(S.tasks.length) buildOfficerDashFromTasks();
-      else { loadTasksThenOfficerDash(); }
+      // Fallback: compute from already-loaded local tasks if available
+      if(ph)ph.style.display='none';
+      if(pc)pc.style.display='';
+      if(rfBtn)rfBtn.style.display='';
+      if(S.tasks&&S.tasks.length)buildOfficerDashFromTasks();
+      else loadTasksThenOfficerDash();
       return;
     }
+    // Hide placeholder, reveal content
+    if(ph)ph.style.display='none';
+    if(pc)pc.style.display='';
+    if(rfBtn)rfBtn.style.display=''; // show refresh icon for subsequent refreshes
     var s=r.stats;
     var kv={'ok-total':s.total,'ok-pending':s.pending,'ok-progress':s.inProgress,'ok-done':s.completed,'ok-overdue':s.overdue,'ok-today':s.dueToday,'ok-high':s.highPriority,'ok-rate':r.completionRate+'%'};
     for(var k in kv){var el=id(k);if(el)el.textContent=kv[k];}
-    if(s.overdue>0){var b=id('overdBadge');if(b){b.textContent=s.overdue;b.style.display='';}var d=id('bnDot');if(d)d.classList.add('on');}
+    if(s.overdue>0){
+      var b=id('overdBadge');if(b){b.textContent=s.overdue;b.style.display='';}
+      var d=id('bnDot');if(d)d.classList.add('on');
+    }
     buildOfficerChart(s);
     buildOfficerRecentTasks(r.recentTasks||[]);
   });
-  // Grievances NOT loaded automatically — most officers have no mapped
-  // grievances and loading all of them on every login was the single
-  // biggest unnecessary call for Officers. Show a placeholder instead;
-  // the card appears and offers a Load button.
-  renderOfficerGrievancesPlaceholder();
 }
 
 function renderOfficerGrievancesPlaceholder(){
@@ -4327,6 +4363,11 @@ function loadTasksThenOfficerDash(){
   });
 }
 function buildOfficerDashFromTasks(){
+  // Reveal the content panel (same as the network path does)
+  var ph=id('offProgressPlaceholder'),pc=id('offProgressContent');
+  if(ph)ph.style.display='none';
+  if(pc)pc.style.display='';
+  var rfBtn=id('offProgressRefreshBtn');if(rfBtn)rfBtn.style.display='';
   var myUID=S.user?S.user.userID:'';
   var tasks=S.tasks.filter(function(t){return t.officerID===myUID||t.officerName===(S.user?S.user.name:'');});
   var pending=0,inProgress=0,completed=0,overdue=0,dueToday=0,high=0;
@@ -9564,34 +9605,25 @@ function loadGrievancesPage(){
 
   if(S.lookup)fillSel('grvFDept',S.lookup.departments,'DeptName','DeptName','All Departments');
 
+  // Councilors NOT loaded here — only needed when "New Grievance" or
+  // "Edit Grievance" form opens. Deferred to showGrievanceModal() so
+  // the list page (which most users just read) skips the extra call.
+  // GRV.councilors retains any previously-loaded list across navigations
+  // so it only fetches once per session even when opening the form repeatedly.
   showLoader('Loading grievances...');
   Promise.all([
     gasCall('serverGetGrievances',S.token),
-    gasCall('serverGetWardCouncilorMap',S.token),
-    gasCall('serverGetCouncilors',S.token)
+    gasCall('serverGetWardCouncilorMap',S.token)
   ]).then(function(results){
     hideLoader();
-    var grvRes=results[0],wardRes=results[1],councilRes=results[2];
+    var grvRes=results[0],wardRes=results[1];
     GRV.list=(grvRes&&grvRes.success)?(grvRes.data||[]):[];
-    // Only replace the built-in fallback ward map if the backend call
-    // actually succeeded AND returned real rows — never overwrite a
-    // working fallback with an empty result just because of a transient
-    // backend hiccup or an old not-yet-redeployed Apps Script version.
     if(wardRes&&wardRes.success&&wardRes.data&&wardRes.data.length){
       GRV.wardMap=wardRes.data;
     }
-    GRV.councilors=(councilRes&&councilRes.success&&councilRes.data&&councilRes.data.length)?councilRes.data:GRV.councilors;
     if(grvRes&&!grvRes.success)toast(grvRes.message||'Could not load grievances.','error');
-    // Surface ward/councilor load failures clearly instead of silently
-    // defaulting to an empty list — this was previously invisible, making
-    // it impossible to tell "no data" apart from "failed to load".
     if(!wardRes||!wardRes.success){
       console.error('serverGetWardCouncilorMap failed:',wardRes);
-      toast('Ward/Councilor data failed to load: '+((wardRes&&wardRes.message)||'unknown error'),'error');
-    }
-    if(!councilRes||!councilRes.success){
-      console.error('serverGetCouncilors failed:',councilRes);
-      toast('Councilor list failed to load: '+((councilRes&&councilRes.message)||'unknown error'),'error');
     }
     renderGrievanceKPIs(GRV.list);
     renderGrievanceList(GRV.list);
@@ -9749,16 +9781,40 @@ function showGrievanceModal(g){
     fillSelZone('grv-zone',ld.zones,'Select Zone');
     fillSel('grv-dept',ld.departments,'DeptName','DeptName','Select Department');
   }
-  // Populate Received From with the councilor master list
-  var sel=id('grv-receivedFrom');
-  if(sel){
+
+  // Load Councilors lazily — only when the form actually opens, not on
+  // every Grievances page visit. Cache check (GRV.councilors.length) means
+  // this call only fires once per session regardless of how many times
+  // the user opens and closes the New/Edit Grievance form.
+  function populateCouncilorDropdown(){
+    var sel=id('grv-receivedFrom');
+    if(!sel)return;
     sel.innerHTML='<option value="">Select...</option>';
     for(var i=0;i<GRV.councilors.length;i++){
       var opt=document.createElement('option');
-      opt.value=GRV.councilors[i].name;opt.textContent=GRV.councilors[i].name+(GRV.councilors[i].designation?' \u2014 '+GRV.councilors[i].designation:'');
+      opt.value=GRV.councilors[i].name;
+      opt.textContent=GRV.councilors[i].name+(GRV.councilors[i].designation?' \u2014 '+GRV.councilors[i].designation:'');
       sel.appendChild(opt);
     }
   }
+
+  if(GRV.councilors&&GRV.councilors.length){
+    // Already loaded this session — populate immediately, no network call
+    populateCouncilorDropdown();
+    finishOpeningGrievanceModal(g);
+  } else {
+    // First time form is opened — fetch and cache for this session
+    var sel=id('grv-receivedFrom');
+    if(sel)sel.innerHTML='<option value="">Loading councilors...</option>';
+    gasCall('serverGetCouncilors',S.token).then(function(councilRes){
+      GRV.councilors=(councilRes&&councilRes.success&&councilRes.data&&councilRes.data.length)?councilRes.data:[];
+      populateCouncilorDropdown();
+      finishOpeningGrievanceModal(g);
+    });
+  }
+}
+
+function finishOpeningGrievanceModal(g){
   GRV.letterFiles=[];
   var prev=id('grvLetterPreview');if(prev)prev.innerHTML='';
   var note=id('grvAutoFillNote');if(note)note.style.display='none';
@@ -9776,13 +9832,14 @@ function showGrievanceModal(g){
     grvFilterOfficerByDept();
     setTimeout(function(){id('grv-officer').value=g.officerID||'';},10);
     setTimeout(function(){
+      var sel=id('grv-receivedFrom'); // re-look up since this runs async
       if(sel){
         var found=false;
         for(var i=0;i<sel.options.length;i++){if(sel.options[i].value===g.receivedFromName){found=true;break;}}
         if(!found&&g.receivedFromName){var opt=document.createElement('option');opt.value=g.receivedFromName;opt.textContent=g.receivedFromName;sel.appendChild(opt);}
         sel.value=g.receivedFromName||'';
       }
-    },10);
+    },50);
   } else {
     id('grvModalTitle').textContent='New Grievance';
     id('grv-id').value='';
