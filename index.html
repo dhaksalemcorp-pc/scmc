@@ -1924,6 +1924,12 @@ tbody tr:hover { background: var(--surface2); }
           <button class="tab" onclick="switchView('kanban',this)"><span class="material-icons-round mi">view_kanban</span> Kanban</button>
         </div>
         <span class="c-muted" id="taskCount" style="flex-shrink:0">Loading...</span>
+        <div style="display:flex;gap:4px;align-items:center;margin-left:auto">
+          <span style="font-size:11px;color:var(--tx3);white-space:nowrap">Sort:</span>
+          <button class="btn btn-ghost btn-sm" id="sortUpdBtn" onclick="sortBy('updatedAt')" style="font-size:11px;padding:3px 8px" title="Sort by last updated">Updated <span id="sort-updatedAt"> ▼</span></button>
+          <button class="btn btn-ghost btn-sm" id="sortDateBtn" onclick="sortBy('dateAssigned')" style="font-size:11px;padding:3px 8px" title="Sort by date assigned">Assigned <span id="sort-dateAssigned"></span></button>
+          <button class="btn btn-ghost btn-sm" id="sortPriBtn" onclick="sortBy('priority')" style="font-size:11px;padding:3px 8px" title="Sort by priority">Priority <span id="sort-priority"></span></button>
+        </div>
       </div>
       <!-- UNIVERSAL SEARCH BAR — always visible, no filter panel needed -->
       <div style="position:relative;margin-bottom:12px">
@@ -3357,7 +3363,7 @@ tbody tr:hover { background: var(--surface2); }
 <div id="toasts"></div>
 <script>
 var LS={get:function(k){try{return localStorage.getItem(k);}catch(e){return null;}},set:function(k,v){try{localStorage.setItem(k,v);}catch(e){}},del:function(k){try{localStorage.removeItem(k);}catch(e){}}};
-var S={token:null,user:null,lookup:null,tasks:[],users:[],filtered:[],drillFilter:'',page:'dashboard',allowedPages:[],theme:LS.get('sc-theme')||'light',charts:{},exportCtx:'tracker',aiTasks:[],selPhotos:[],driveLinks:[],puDocs:[],sortCol:'dateAssigned',sortDir:1};
+var S={token:null,user:null,lookup:null,tasks:[],users:[],filtered:[],drillFilter:'',page:'dashboard',allowedPages:[],theme:LS.get('sc-theme')||'light',charts:{},exportCtx:'tracker',aiTasks:[],selPhotos:[],driveLinks:[],puDocs:[],sortCol:'updatedAt',sortDir:-1};
 // ── GAS URL for GitHub Pages hosting ─────────────────────────
 // When hosted on GitHub Pages, set this to your GAS /exec URL
 // When hosted on GAS itself, leave as empty string ''
@@ -4676,6 +4682,8 @@ function filterTasks(){
     }
     S.filtered.push(t);
   }
+  // Apply current sort order (default: updatedAt descending — latest first)
+  applyCurrentSort();
   // Show active filter summary
   var active=[];
   if(zone)active.push(zone);if(dept)active.push(dept);if(officer)active.push(officer);
@@ -4692,6 +4700,20 @@ function filterTasks(){
   var badge=id('filterCountBadge');
   if(badge){badge.textContent=active.length+' active';badge.style.display=active.length>0?'':'none';}
   renderTable(S.filtered);renderKanban(S.filtered);updateTaskCount();
+}
+
+// Applies S.sortCol/S.sortDir to S.filtered in-place — called from
+// filterTasks() and sortBy() so sort order is always consistent.
+function applyCurrentSort(){
+  if(!S.sortCol)return;
+  S.filtered.sort(function(a,b){
+    var av=a[S.sortCol]||'',bv=b[S.sortCol]||'';
+    if(S.sortCol==='priority'){av=PRIORITY_ORDER[av]||9;bv=PRIORITY_ORDER[bv]||9;return(av-bv)*S.sortDir;}
+    if(S.sortCol==='dateAssigned'||S.sortCol==='dueDate'||S.sortCol==='createdAt'||S.sortCol==='updatedAt'){
+      av=av?String(av).slice(0,19):'0000';bv=bv?String(bv).slice(0,19):'0000';
+    }
+    return av<bv?-S.sortDir:av>bv?S.sortDir:0;
+  });
 }
 function updateTaskCount(){var tc=id('taskCount');if(tc)tc.textContent=S.filtered.length+' task'+(S.filtered.length!==1?'s':'');}
 function updateFilterTags(){}
@@ -4745,20 +4767,13 @@ function fillSelZone(selId,zones,label){
   fillSel(selId,sorted,'ZoneName','ZoneName',label||'All Zones');
 }
 function sortBy(col){
-  if(S.sortCol===col){S.sortDir*=-1;}else{S.sortCol=col;S.sortDir=1;}
-  // Update sort indicators
-  var cols=['taskID','taskType','zone','department','officerName','priority','dateAssigned','dueDate','status'];
+  if(S.sortCol===col){S.sortDir*=-1;}else{S.sortCol=col;S.sortDir=-1;} // default descending for dates, ascending for others
+  if(col==='priority'||col==='taskID')S.sortDir=(S.sortCol===col&&S.sortDir===1)?-1:1; // flip for these
+  // Update sort indicators in column headers
+  var cols=['taskID','taskType','zone','department','officerName','priority','dateAssigned','dueDate','status','updatedAt','createdAt'];
   for(var i=0;i<cols.length;i++){var el=id('sort-'+cols[i]);if(el)el.textContent='';}
   var el=id('sort-'+col);if(el)el.textContent=S.sortDir===1?' ▲':' ▼';
-  // Sort filtered tasks
-  S.filtered.sort(function(a,b){
-    var av=a[col]||'',bv=b[col]||'';
-    if(col==='priority'){av=PRIORITY_ORDER[av]||9;bv=PRIORITY_ORDER[bv]||9;return(av-bv)*S.sortDir;}
-    if(col==='dateAssigned'||col==='dueDate'||col==='createdAt'){
-      av=av?av.slice(0,10):'9999';bv=bv?bv.slice(0,10):'9999';
-    }
-    return av<bv?-S.sortDir:av>bv?S.sortDir:0;
-  });
+  applyCurrentSort();
   renderTable(S.filtered);renderKanban(S.filtered);
 }
 // ── RENDER CARDS — pure DOM, zero innerHTML, crash-proof ─────
