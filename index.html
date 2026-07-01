@@ -4583,6 +4583,10 @@ function loadTasks(){
     var data=r.data||[];
     S.tasks=normalizeTaskList(data);
     S.filtered=S.tasks.slice();
+    // Apply the current sort immediately after loading so the initial
+    // render is already sorted — previously this was missing and tasks
+    // appeared in raw sheet order (new tasks at the bottom).
+    applyCurrentSort();
     var bb=id('bulkBar');if(bb){bb.style.display='none';bb.classList.add('dn');}
     var chkAll=id('chkAll');if(chkAll){chkAll.checked=false;chkAll.indeterminate=false;}
     if(S.drillFilter) applyDrillFilter();
@@ -4703,14 +4707,23 @@ function filterTasks(){
 }
 
 // Applies S.sortCol/S.sortDir to S.filtered in-place — called from
-// filterTasks() and sortBy() so sort order is always consistent.
+// filterTasks() and loadTasks() so sort order is always consistent.
 function applyCurrentSort(){
   if(!S.sortCol)return;
   S.filtered.sort(function(a,b){
     var av=a[S.sortCol]||'',bv=b[S.sortCol]||'';
-    if(S.sortCol==='priority'){av=PRIORITY_ORDER[av]||9;bv=PRIORITY_ORDER[bv]||9;return(av-bv)*S.sortDir;}
-    if(S.sortCol==='dateAssigned'||S.sortCol==='dueDate'||S.sortCol==='createdAt'||S.sortCol==='updatedAt'){
-      av=av?String(av).slice(0,19):'0000';bv=bv?String(bv).slice(0,19):'0000';
+    if(S.sortCol==='priority'){
+      av=PRIORITY_ORDER[av]||9;bv=PRIORITY_ORDER[bv]||9;
+      return(av-bv)*S.sortDir;
+    }
+    if(S.sortCol==='updatedAt'){
+      // New tasks have empty updatedAt — fall back to createdAt so they
+      // still sort at the top (most recent) when sorted by Last Updated.
+      av=a.updatedAt?String(a.updatedAt).slice(0,19):String(a.createdAt||'').slice(0,19);
+      bv=b.updatedAt?String(b.updatedAt).slice(0,19):String(b.createdAt||'').slice(0,19);
+    } else if(S.sortCol==='dateAssigned'||S.sortCol==='dueDate'||S.sortCol==='createdAt'){
+      av=av?String(av).slice(0,19):'0000';
+      bv=bv?String(bv).slice(0,19):'0000';
     }
     return av<bv?-S.sortDir:av>bv?S.sortDir:0;
   });
@@ -5160,7 +5173,13 @@ function saveTask(){
   gasCall('serverCreateTask',S.token,d).then(function(r){
     hideLoader();
     if(btn){btn.disabled=false;btn.style.opacity='1';}
-    if(r&&r.success){toast('Task '+r.taskID+' created!','ok');clearTaskForm();}
+    if(r&&r.success){
+      toast('Task '+r.taskID+' created!','ok');
+      clearTaskForm();
+      // Navigate to Task Tracker immediately — user can see their new
+      // task at the top of the list without any extra steps.
+      go('tracker');
+    }
     else toast((r&&r.message)||'Failed to create task.','error');
   });
 }
@@ -5203,22 +5222,33 @@ function viewTask(taskID){
       }
     });
   }
-  // Fetch this task's documents on demand, same lazy pattern as photos.
-  // Populates the docs section directly (not a full re-render) so it
-  // doesn't fight with the photo-loading re-render above.
-  gasCall('serverGetTaskAttachments',S.token,taskID).then(function(r){
-    var docs=(r&&r.success)?(r.data||[]):[];
-    var list=id('taskDetailDocsList');
-    if(!list)return; // modal may have been closed already
-    if(!docs.length){list.innerHTML='<span style="color:var(--tx3)">No documents attached.</span>';return;}
-    var html='';
-    docs.forEach(function(d){
-      html+='<div style="display:flex;align-items:center;gap:6px;padding:6px 0;cursor:pointer" onclick="window.open(\''+d.driveURL+'\',\'_blank\')">'
-        +'<span class="material-icons-round" style="font-size:16px;color:var(--c-red)">picture_as_pdf</span>'
-        +'<span style="color:var(--c-blue);text-decoration:underline;font-size:12.5px">'+htmlEsc(d.fileName)+'</span></div>';
+  // Fetch this task's documents on demand — but only ONCE per task.
+  // Cache result on the task object (t.docsData) so reopening the same
+  // task never makes a second network call, and tasks with no documents
+  // show "None" immediately without any loading wait.
+  var list=id('taskDetailDocsList');
+  if(typeof t.docsData !== 'undefined'){
+    // Already fetched (either this session or from a previous view) —
+    // render immediately from cache, zero network cost.
+    if(list) renderTaskDocList(list, t.docsData);
+  } else {
+    gasCall('serverGetTaskAttachments',S.token,taskID).then(function(r){
+      t.docsData=(r&&r.success)?(r.data||[]):[];
+      var list2=id('taskDetailDocsList');
+      if(list2) renderTaskDocList(list2, t.docsData);
     });
-    list.innerHTML=html;
+  }
+}
+function renderTaskDocList(el, docs){
+  if(!el)return;
+  if(!docs||!docs.length){el.innerHTML='<span style="color:var(--tx3)">No documents attached.</span>';return;}
+  var html='';
+  docs.forEach(function(d){
+    html+='<div style="display:flex;align-items:center;gap:6px;padding:6px 0;cursor:pointer" onclick="window.open(\''+d.driveURL+'\',\'_blank\')">'
+      +'<span class="material-icons-round" style="font-size:16px;color:var(--c-red)">picture_as_pdf</span>'
+      +'<span style="color:var(--c-blue);text-decoration:underline;font-size:12.5px">'+htmlEsc(d.fileName)+'</span></div>';
   });
+  el.innerHTML=html;
 }
 function taskDetailHTML(t){
   var rows=[
@@ -5348,6 +5378,11 @@ function editTask(taskID){
 // ─── Document management inside the Admin Edit Task form ──────
 function editTaskLoadDocs(taskID){
   var list=id('editTaskDocList');if(!list)return;
+  // Also invalidate the view-mode doc cache so the next viewTask
+  // call re-fetches fresh data instead of showing the stale cached list.
+  for(var i=0;i<S.tasks.length;i++){
+    if(S.tasks[i].taskID===taskID){delete S.tasks[i].docsData;break;}
+  }
   gasCall('serverGetTaskAttachments',S.token,taskID).then(function(r){
     var docs=(r&&r.success)?(r.data||[]):[];
     editTaskRenderDocList(docs,taskID);
