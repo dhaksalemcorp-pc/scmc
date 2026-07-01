@@ -11450,14 +11450,14 @@ function mpSaveProfile(){
       // Handle profile photo
       if(MP.photo==='__remove__'){
         LS.del('sc-photo-'+S.user.userID);
+        LS.del('sc-photo-ts-'+S.user.userID); // clear timestamp so next login fetches fresh
         mpSetAvatarDisplay(null,S.user.name);
-        // Remove from database too
         gasCall('serverSaveProfilePhoto',S.token,'').then(function(){});
       } else if(MP.photo){
         var photoData=MP.photo;
         LS.set('sc-photo-'+S.user.userID,photoData);
+        LS.set('sc-photo-ts-'+S.user.userID,String(Date.now())); // fresh timestamp
         mpSetAvatarDisplay(photoData,S.user.name);
-        // Save photo to database — all devices will see it
         gasCall('serverSaveProfilePhoto',S.token,photoData).then(function(pr){
           if(pr&&pr.success){toast('Profile and photo saved across all devices!','ok');}
           else toast('Profile saved. Photo: '+(pr?pr.message:'too large — use a smaller image.'),'info');
@@ -11546,23 +11546,33 @@ function mpRemovePhoto(){
 
 function loadProfilePhoto(){
   if(!S.user)return;
-  // Show cached version instantly
-  var cached=LS.get('sc-photo-'+S.user.userID);
+  var photoKey='sc-photo-'+S.user.userID;
+  var tsKey='sc-photo-ts-'+S.user.userID;
+  var cached=LS.get(photoKey);
+  var cachedTs=parseInt(LS.get(tsKey)||'0',10);
+  var ageMs=Date.now()-cachedTs;
+  var ONE_DAY=86400000; // 24 hours
+
+  // Show cached version instantly if we have one
   if(cached&&cached.length>10&&cached!=='undefined'){
     mpSetAvatarDisplay(cached,S.user.name);
+    // If the cached photo is less than 24 hours old, skip the network
+    // call entirely — profile photos change very rarely and the cost
+    // of verifying on every login adds up across hundreds of sessions.
+    if(ageMs < ONE_DAY) return;
   }
-  // Fetch from Users sheet col 15 — stored as tiny base64
+
+  // Cache is stale (>24h) or empty — fetch fresh copy
   gasCall('serverGetProfilePhoto',S.token).then(function(r){
     if(!r||!r.success)return;
     var photo=r.photo||'';
     if(photo==='undefined'||photo==='null'||photo.length<10){
-      // No photo — use initial
-      LS.del('sc-photo-'+S.user.userID);
+      LS.del(photoKey);LS.del(tsKey);
       if(!cached||cached.length<10) mpSetAvatarDisplay(null,S.user.name);
       return;
     }
-    // Valid base64 — cache and show
-    LS.set('sc-photo-'+S.user.userID,photo);
+    LS.set(photoKey,photo);
+    LS.set(tsKey,String(Date.now())); // record when we last fetched
     mpSetAvatarDisplay(photo,S.user.name);
   });
 }
