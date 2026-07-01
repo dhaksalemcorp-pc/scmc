@@ -1022,6 +1022,8 @@ tbody tr:hover { background: var(--surface2); }
 
 /* Search input */
 .search-wrap { position: relative; flex: 2; min-width: 160px; }
+#trkUniversalSearch:focus { border-color: var(--c-blue); box-shadow: 0 0 0 3px rgba(29,78,216,.1); }
+#trkUniversalSearch::placeholder { color: var(--tx3); }
 .search-wrap .mi-prefix {
   position: absolute; left: 10px; top: 50%; transform: translateY(-50%);
   color: var(--tx3); font-size: 17px; pointer-events: none;
@@ -1937,6 +1939,20 @@ tbody tr:hover { background: var(--surface2); }
           <button class="tab" onclick="switchView('kanban',this)"><span class="material-icons-round mi">view_kanban</span> Kanban</button>
         </div>
         <span class="c-muted" id="taskCount" style="flex-shrink:0">Loading...</span>
+      </div>
+      <!-- UNIVERSAL SEARCH BAR — always visible, no filter panel needed -->
+      <div style="position:relative;margin-bottom:12px">
+        <span class="material-icons-round" style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--tx3);font-size:18px;pointer-events:none">search</span>
+        <input type="text" id="trkUniversalSearch"
+          placeholder="Search task ID, description, officer, zone, department..."
+          oninput="onUniversalSearch(this.value)"
+          onkeydown="if(event.key==='Escape'){onUniversalSearch('');this.value='';}"
+          autocomplete="off" autocorrect="off" spellcheck="false"
+          style="width:100%;padding:10px 38px 10px 40px;border:1.5px solid var(--border);border-radius:10px;font-size:13.5px;background:var(--surface);color:var(--tx1);outline:none;transition:border-color .15s;box-sizing:border-box">
+        <button id="trkSearchClear" onclick="clearUniversalSearch()"
+          style="display:none;position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--tx3);padding:2px;line-height:1">
+          <span class="material-icons-round" style="font-size:18px">close</span>
+        </button>
       </div>
       <!-- Card View (DOM-based, no innerHTML crash) -->
       <div id="viewCards"><div id="taskCardsGrid"></div></div>
@@ -4655,6 +4671,24 @@ function populateOfficerFilter(){
   if(current&&seen[current])sel.value=current;
   else sel.value='';
 }
+// ─── UNIVERSAL SEARCH — always-visible top-of-tracker search bar ─
+// Writes directly to fSearch (the same input filterTasks() reads) so
+// it works transparently with all existing filter logic — zone, status,
+// date range etc. still apply on top of the search query.
+function clearUniversalSearch(){
+  var bar=id('trkUniversalSearch');
+  if(bar){bar.value='';bar.focus();}
+  onUniversalSearch('');
+}
+function onUniversalSearch(val){
+  // Keep fSearch in sync so filterTasks() picks up the value correctly,
+  // and any filter summary tags also include the active search query.
+  var hidden=id('fSearch');if(hidden)hidden.value=val;
+  // Show/hide the clear ✕ button based on whether there's any text
+  var clrBtn=id('trkSearchClear');
+  if(clrBtn)clrBtn.style.display=val?'':'none';
+  filterTasks();
+}
 function filterTasks(){
   var search=V('fSearch').toLowerCase();
   var zone=V('fZone'),dept=V('fDept'),officer=V('fOfficer');
@@ -4708,6 +4742,9 @@ function toggleChip(btn,hiddenId){
 function clearFilters(){
   var fields=['fZone','fDept','fOfficer','fStatus','fPri','fSource','fDueFrom','fDueTo','fSearch'];
   for(var i=0;i<fields.length;i++){var el=id(fields[i]);if(el)el.value='';}
+  // Also clear the always-visible universal search bar
+  var usBar=id('trkUniversalSearch');if(usBar)usBar.value='';
+  var clrBtn=id('trkSearchClear');if(clrBtn)clrBtn.style.display='none';
   // Reset all chip groups to "All"
   var allChips=document.querySelectorAll('.filter-chip,.filt-btn');
   for(var i=0;i<allChips.length;i++){
