@@ -1024,6 +1024,8 @@ tbody tr:hover { background: var(--surface2); }
 .search-wrap { position: relative; flex: 2; min-width: 160px; }
 #trkUniversalSearch:focus { border-color: var(--c-blue); box-shadow: 0 0 0 3px rgba(29,78,216,.1); }
 #trkUniversalSearch::placeholder { color: var(--tx3); }
+.pl-win-btn { background: transparent; color: var(--tx2); }
+.pl-win-btn.active { background: var(--c-blue); color: #fff; box-shadow: 0 1px 4px rgba(29,78,216,.25); }
 .search-wrap .mi-prefix {
   position: absolute; left: 10px; top: 50%; transform: translateY(-50%);
   color: var(--tx3); font-size: 17px; pointer-events: none;
@@ -2200,6 +2202,18 @@ tbody tr:hover { background: var(--surface2); }
 
       <!-- ENTRY LIST (View B) -->
       <div id="plListView" style="display:none">
+        <!-- Date window selector — controls how many days of notes are loaded from the backend -->
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap">
+          <span class="material-icons-round" style="font-size:15px;color:var(--tx3)">date_range</span>
+          <span style="font-size:12px;color:var(--tx3);font-weight:600">Showing:</span>
+          <div style="display:flex;gap:4px;background:var(--surface2);border-radius:8px;padding:3px">
+            <button class="pl-win-btn active" data-days="7"  onclick="plSetWindow(7)"  style="padding:4px 12px;border-radius:6px;border:none;font-size:12px;font-weight:600;cursor:pointer;transition:all .15s">Last 7 days</button>
+            <button class="pl-win-btn"        data-days="15" onclick="plSetWindow(15)" style="padding:4px 12px;border-radius:6px;border:none;font-size:12px;font-weight:600;cursor:pointer;transition:all .15s">15 days</button>
+            <button class="pl-win-btn"        data-days="30" onclick="plSetWindow(30)" style="padding:4px 12px;border-radius:6px;border:none;font-size:12px;font-weight:600;cursor:pointer;transition:all .15s">30 days</button>
+            <button class="pl-win-btn"        data-days="0"  onclick="plSetWindow(0)"  style="padding:4px 12px;border-radius:6px;border:none;font-size:12px;font-weight:600;cursor:pointer;transition:all .15s">This Month</button>
+          </div>
+          <span id="plWindowInfo" style="font-size:11.5px;color:var(--tx3);margin-left:4px"></span>
+        </div>
         <!-- Improved Filter bar -->
         <div class="card mb12" style="border:1.5px solid var(--border)">
           <div class="card-bd" style="padding:12px 14px">
@@ -7250,7 +7264,7 @@ function clearMultiOfficerList(){
 }
 
 // ── PHOTO LOG ────────────────────────────────────────────────
-var PL={photos:[],pdfs:[],entries:[],editPhotos:[],editExistingPhotos:[],editRemovedPhotoIDs:[],editNoteID:null,editPdfs:[],editExistingAttachments:[],editRemovedAttachmentIDs:[],isAdmin:false,sortOrder:'desc'};
+var PL={photos:[],pdfs:[],entries:[],editPhotos:[],editExistingPhotos:[],editRemovedPhotoIDs:[],editNoteID:null,editPdfs:[],editExistingAttachments:[],editRemovedAttachmentIDs:[],isAdmin:false,sortOrder:'desc',window:7};
 function plCheckAdmin(){
   var liveCheck = S.user && (S.user.role==='Admin'||S.user.role==='Commissioner'||S.user.role==='Supervision');
   return liveCheck && PL.isAdmin;
@@ -7264,6 +7278,48 @@ function plCheckAdmin(){
 // fails to persist, that specific photo gets a small retry badge
 // — it never blocks or hides the rest of the entry.
 // ════════════════════════════════════════════════════════════
+
+// ─── DATE WINDOW SELECTOR ────────────────────────────────────
+// Called when user taps 7d / 15d / 30d / This Month buttons.
+// days=0 means "this calendar month" — calculated on the backend.
+function plSetWindow(days){
+  PL.window=days;
+  PL.entries=[]; // clear cache so reload happens
+  // Update active button state
+  var btns=document.querySelectorAll('.pl-win-btn');
+  for(var i=0;i<btns.length;i++){
+    var bd=parseInt(btns[i].getAttribute('data-days'),10);
+    btns[i].classList.toggle('active', bd===days);
+  }
+  // Reload notes from backend with the new window
+  showLoader('Loading notes...');
+  var winDays = days || plThisMonthDays();
+  gasCall('serverGetNotes',S.token,winDays).then(function(r){
+    hideLoader();
+    if(r&&r.success){
+      PL.entries=r.data||[];
+      var totalCount=r.totalCount||PL.entries.length;
+      var pc=id('plCount');
+      if(pc)pc.textContent=PL.entries.length+' entr'+(PL.entries.length===1?'y':'ies');
+      var info=id('plWindowInfo');
+      if(info){
+        if(totalCount>PL.entries.length){
+          info.textContent=PL.entries.length+' of '+totalCount+' total notes';
+        } else {
+          info.textContent=PL.entries.length+' note'+(PL.entries.length===1?'':'s');
+        }
+      }
+    } else if(r&&r.message){
+      toast(r.message,'error');
+    }
+    plRenderCards(PL.entries);
+  });
+}
+// Returns days since start of current month (for "This Month" button)
+function plThisMonthDays(){
+  var now=new Date();
+  return now.getDate(); // day of month = days since month start
+}
 
 function loadPhotoLog(){
   var isAdmin=(S.user&&(S.user.role==='Admin'||S.user.role==='Commissioner'));
@@ -7287,13 +7343,32 @@ function loadPhotoLog(){
   }
   // NoteTypes NOT loaded here — only needed when "New Entry" form opens.
   // Moved to plToggleView('form') so it's lazy-loaded on demand.
+
+  // Reset to default 7-day window on each page load and highlight button
+  PL.window=7;
+  var btns=document.querySelectorAll('.pl-win-btn');
+  for(var bi=0;bi<btns.length;bi++){
+    btns[bi].classList.toggle('active', parseInt(btns[bi].getAttribute('data-days'),10)===7);
+  }
+
   showLoader('Loading notes...');
-  gasCall('serverGetNotes',S.token).then(function(r){
+  var winDays = PL.window;
+  gasCall('serverGetNotes',S.token,winDays).then(function(r){
     hideLoader();
     if(r&&r.success){
       PL.entries=r.data||[];
+      var totalCount=r.totalCount||PL.entries.length;
       var pc=id('plCount');
       if(pc)pc.textContent=PL.entries.length+' entr'+(PL.entries.length===1?'y':'ies');
+      // Update info label — shows "X of Y total" when filtered
+      var info=id('plWindowInfo');
+      if(info){
+        if(totalCount>PL.entries.length){
+          info.textContent=PL.entries.length+' of '+totalCount+' total notes';
+        } else {
+          info.textContent=PL.entries.length+' note'+(PL.entries.length===1?'':'s');
+        }
+      }
     } else if(r&&r.message){
       toast(r.message,'error');
     }
@@ -7478,7 +7553,7 @@ function plToggleView(view){
     if(lv)lv.style.display='block';
     if(!PL.entries||!PL.entries.length){
       showLoader('Loading notes...');
-      gasCall('serverGetNotes',S.token).then(function(r){
+      gasCall('serverGetNotes',S.token,PL.window||7).then(function(r){
         hideLoader();
         if(r&&r.success){PL.entries=r.data||[];}
         plRenderCards(PL.entries);
@@ -8508,7 +8583,7 @@ function finishEdit(noteID,updated){
   hideLoader();closeModal('mGeneric');
   toast('Entry updated!','ok');
   // Refresh from server so the photo list reflects deletions/additions accurately
-  gasCall('serverGetNotes',S.token).then(function(r){
+  gasCall('serverGetNotes',S.token,PL.window||7).then(function(r){
     if(r&&r.success){PL.entries=r.data||[];}
     PL.editPhotos=[];PL.editExistingPhotos=[];PL.editRemovedPhotoIDs=[];
     plRenderCards(PL.entries);
