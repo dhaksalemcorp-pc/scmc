@@ -3383,7 +3383,7 @@ tbody tr:hover { background: var(--surface2); }
 <div id="toasts"></div>
 <script>
 var LS={get:function(k){try{return localStorage.getItem(k);}catch(e){return null;}},set:function(k,v){try{localStorage.setItem(k,v);}catch(e){}},del:function(k){try{localStorage.removeItem(k);}catch(e){}}};
-var S={token:null,user:null,lookup:null,tasks:[],users:[],filtered:[],drillFilter:'',page:'dashboard',allowedPages:[],theme:LS.get('sc-theme')||'light',charts:{},exportCtx:'tracker',aiTasks:[],selPhotos:[],driveLinks:[],puDocs:[],sortCol:'updatedAt',sortDir:-1,taskWindow:90,showCompleted:false};
+var S={token:null,user:null,lookup:null,tasks:[],users:[],filtered:[],drillFilter:'',page:'dashboard',allowedPages:[],theme:LS.get('sc-theme')||'light',charts:{},exportCtx:'tracker',aiTasks:[],selPhotos:[],driveLinks:[],puDocs:[],sortCol:'updatedAt',sortDir:-1,taskWindow:90};
 
 // ─── STALE-WHILE-REVALIDATE (instant display) ──────────────────
 // Saves the last-loaded data in localStorage so the NEXT visit renders
@@ -3664,21 +3664,10 @@ function demoFn(fn,args){
   }
   if(fn==='serverGetCouncilors')return{success:true,data:DEMO.councilors||[{id:'CNCL_PUBLIC',name:'Public / General Public',designation:''}]};
   if(fn==='serverGetUsers')return{success:true,data:DEMO.users};
-  if(fn==='serverGetTasks'){
-    var inc=args[1]&&args[1].includeCompleted;var outT=[],cc=0;
-    for(var i=0;i<DEMO.tasks.length;i++){var st=DEMO.tasks[i].status;
-      if(st==='Completed'||st==='Closed'){cc++;if(!inc)continue;}
-      outT.push(DEMO.tasks[i]);}
-    return{success:true,data:outT,totalCount:DEMO.tasks.length,windowDays:90,completedCount:cc,includeCompleted:!!inc};
-  }
+  if(fn==='serverGetTasks')return{success:true,data:DEMO.tasks};
   if(fn==='serverGetOfficerTasks'){
-    var incO=args[1]&&args[1].includeCompleted;var offT=[],ccO=0;
-    for(var i=0;i<DEMO.tasks.length;i++){
-      if(DEMO.tasks[i].officerID!=='USR003'&&DEMO.tasks[i].officerName!=='Priya Nair')continue;
-      var stO=DEMO.tasks[i].status;
-      if(stO==='Completed'||stO==='Closed'){ccO++;if(!incO)continue;}
-      offT.push(DEMO.tasks[i]);}
-    return{success:true,data:offT,completedCount:ccO,includeCompleted:!!incO};
+    var offT=[];for(var i=0;i<DEMO.tasks.length;i++){if(DEMO.tasks[i].officerID==='USR003'||DEMO.tasks[i].officerName==='Priya Nair')offT.push(DEMO.tasks[i]);}
+    return{success:true,data:offT};
   }
   if(fn==='serverGetTaskDetail'){
     var dt=null;for(var i=0;i<DEMO.tasks.length;i++)if(DEMO.tasks[i].taskID===args[1]){dt=DEMO.tasks[i];break;}
@@ -4770,28 +4759,15 @@ function loadUsageAnalytics(){
   });
 }
 
-var TRK_RP_ON=false;
-function trkFilterReviewPending(){
-  TRK_RP_ON=!TRK_RP_ON;
-  if(TRK_RP_ON){
-    S.filtered=S.tasks.filter(function(t){return t.status==='Review Pending';});
-    toast('Showing Review Pending only \u2014 tap the chip again to clear.','info');
-  } else {
-    S.filtered=S.tasks.slice();
-  }
-  renderTable(S.filtered);renderKanban(S.filtered);updateTaskCount();
-}
 function loadTasks(){
-  TRK_RP_ON=false;
   var role=S.user?S.user.role:'';
   var fn,args;
-  var reqOpts={includeCompleted:S.showCompleted};
   if(role==='Officer'){
-    fn='serverGetOfficerTasks';args=[S.token,reqOpts];
+    fn='serverGetOfficerTasks';args=[S.token];
   } else if(role==='HOD'){
-    fn='serverGetHODTasks';args=[S.token,reqOpts];
+    fn='serverGetHODTasks';args=[S.token];
   } else {
-    fn='serverGetTasks';args=[S.token,{days:S.taskWindow,includeCompleted:S.showCompleted}];
+    fn='serverGetTasks';args=[S.token,{days:S.taskWindow}];
   }
 
   // ── INSTANT DISPLAY: render last-known tasks from localStorage ──
@@ -4841,31 +4817,16 @@ function loadTasks(){
     if(S.drillFilter) applyDrillFilter();
     else{renderTable(S.filtered);renderKanban(S.filtered);updateTaskCount();}
     if(advFilterOpen) populateOfficerFilter();
-    // Note bar: review-pending chip (admin) + completed toggle + window note
+    // Show "Load all" note if older completed tasks were trimmed by the window
     var note=id('trkOlderNote');
     if(note){
-      var parts=[];
-      var isAdm=(S.user&&(S.user.role==='Admin'||S.user.role==='Commissioner'));
-      // Review Pending chip — the admin's review queue, one tap to filter
-      var rpCount=0;
-      for(var ri=0;ri<S.tasks.length;ri++)if(S.tasks[ri].status==='Review Pending')rpCount++;
-      if(isAdm&&rpCount>0){
-        parts.push('<a href="javascript:void(0)" onclick="trkFilterReviewPending()" style="color:#b45309;background:rgba(217,119,6,.12);padding:2px 10px;border-radius:999px;font-weight:700;text-decoration:none">\u23f3 '+rpCount+' awaiting review</a>');
+      if(r.totalCount&&r.totalCount>data.length&&S.taskWindow>0){
+        note.style.display='';
+        note.innerHTML='Showing recent '+(r.windowDays||90)+' days ('+data.length+' of '+r.totalCount+' total). Old completed tasks are hidden. '
+          +'<a href="javascript:void(0)" onclick="S.taskWindow=0;loadTasks();" style="color:var(--c-blue);font-weight:600">Load all tasks</a>';
+      } else {
+        note.style.display='none';
       }
-      // Completed hidden/shown toggle
-      if(typeof r.completedCount==='number'&&(r.completedCount>0||S.showCompleted)){
-        if(S.showCompleted){
-          parts.push('Completed tasks shown. <a href="javascript:void(0)" onclick="S.showCompleted=false;loadTasks();" style="color:var(--c-blue);font-weight:600">Hide completed</a>');
-        } else {
-          parts.push('Completed hidden ('+r.completedCount+'). <a href="javascript:void(0)" onclick="S.showCompleted=true;loadTasks();" style="color:var(--c-blue);font-weight:600">Show</a>');
-        }
-      }
-      // 90-day window note
-      if(r.totalCount&&r.totalCount>data.length&&S.taskWindow>0&&S.showCompleted){
-        parts.push('Showing recent '+(r.windowDays||90)+' days. <a href="javascript:void(0)" onclick="S.taskWindow=0;loadTasks();" style="color:var(--c-blue);font-weight:600">Load all</a>');
-      }
-      if(parts.length){note.style.display='';note.innerHTML=parts.join(' \u00b7&nbsp; ');}
-      else note.style.display='none';
     }
   }).catch(function(e){
     hideLoader();
@@ -5166,16 +5127,6 @@ function makeTaskCard(t, isAdmin, isHOD, showReassign){
   }
 
   ftr.appendChild(btn('visibility','View','btn-ghost btn-icon', function(){ viewTask(t.taskID); }));
-  // WhatsApp share — Admin/Commissioner only (free wa.me deep link)
-  if(isAdmin){
-  var waBtn=document.createElement('button');
-  waBtn.className='btn btn-ghost btn-sm btn-icon';
-  waBtn.title='Share on WhatsApp';
-  waBtn.style.cssText='color:#25D366;border-color:#25D366';
-  waBtn.innerHTML='<svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor" style="display:block"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413"/></svg>';
-  waBtn.onclick=function(e){e.stopPropagation();waShareTask(t.taskID);};
-  ftr.appendChild(waBtn);
-  }
 
   if(isAdmin){
     ftr.appendChild(btn('update','Update','btn-ghost btn-icon', function(){ adminUpdate(t.taskID); }));
@@ -5509,32 +5460,12 @@ function ensureTaskDetail(t,cb){
   });
 }
 
-// ─── WHATSAPP SHARE ────────────────────────────────────────────
-// Uses WhatsApp's public click-to-chat URL (wa.me). Completely free,
-// no API, no business account, no setup. Opens WhatsApp (app on
-// mobile, WhatsApp Web on desktop) with the task pre-filled — the
-// user picks the recipient and taps Send from their own account.
-// Zero network cost in the app: it's a static link from on-screen data.
-function waShareTask(taskID){
-  var t=null;for(var i=0;i<S.tasks.length;i++)if(S.tasks[i].taskID===taskID){t=S.tasks[i];break;}
-  if(!t)return;
-  var due=t.dueDate?new Date(t.dueDate).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'}):'\u2014';
-  var msg='\ud83d\udccb *Task '+t.taskID+'* \u2014 '+t.priority+' Priority\n'
-    +(t.description||'')+'\n\n'
-    +'\ud83d\udc64 Officer: '+(t.officerName||'\u2014')+(t.department?' ('+t.department+')':'')+'\n'
-    +'\ud83d\udccd Zone: '+(t.zone||'\u2014')+'\n'
-    +'\ud83d\udcc5 Due: '+due+' \u00b7 Status: '+(t.status||'Pending')+'\n\n'
-    +'\u2014 Salem Corporation TMS';
-  window.open('https://wa.me/?text='+encodeURIComponent(msg),'_blank');
-}
-
 function viewTask(taskID){
   var t=null;for(var i=0;i<S.tasks.length;i++)if(S.tasks[i].taskID===taskID){t=S.tasks[i];break;}
   if(!t)return;
   var isAdmin=(S.user&&(S.user.role==='Admin'||S.user.role==='Commissioner'));
   id('mTaskTitle').textContent=taskID;id('mTaskBody').innerHTML=taskDetailHTML(t);
-  var waFtBtn='<button class="btn btn-ghost" style="color:#25D366;border-color:#25D366" onclick="waShareTask(\''+taskID+'\')" title="Share on WhatsApp"><svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor" style="display:inline-block;vertical-align:-2px"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413"/></svg> Share</button>';
-  id('mTaskFt').innerHTML=isAdmin?waFtBtn+'<button class="btn btn-ghost" onclick="closeModal(\'mTask\')">Close</button><button class="btn btn-primary" onclick="closeModal(\'mTask\');editTask(\''+taskID+'\')">Edit All Fields</button>':'<button class="btn btn-ghost" onclick="closeModal(\'mTask\')">Close</button><button class="btn btn-primary" onclick="closeModal(\'mTask\');officerUpdate(\''+taskID+'\')">Update Progress</button>';
+  id('mTaskFt').innerHTML=isAdmin?'<button class="btn btn-ghost" onclick="closeModal(\'mTask\')">Close</button><button class="btn btn-primary" onclick="closeModal(\'mTask\');editTask(\''+taskID+'\')">Edit All Fields</button>':'<button class="btn btn-ghost" onclick="closeModal(\'mTask\')">Close</button><button class="btn btn-primary" onclick="closeModal(\'mTask\');officerUpdate(\''+taskID+'\')">Update Progress</button>';
   openModal('mTask');
 
   // Load full task detail on-demand (heavy fields: officerRemarks,
@@ -6251,7 +6182,6 @@ function adminUpdate(taskID){
   ensureTaskDetail(t,function(){adminUpdateOpen(t,taskID);});
 }
 function adminUpdateOpen(t,taskID){
-  setPuStatusOptions(true,t.status||'Pending');
   var pu=id('pu-taskid');if(pu)pu.value=taskID;
   var pd=id('pu-desc');if(pd)pd.textContent=t.description.substring(0,150)+(t.description.length>150?'\u2026':'');
   var ps=id('pu-status');if(ps)ps.value=t.status||'Pending';
@@ -6342,7 +6272,7 @@ function hodReassignTask(taskID){
   html+='<div class="f-group"><label class="f-label">Reason (optional)</label>'
     +'<textarea class="f-ctrl" id="raNote" rows="2" placeholder="e.g. Redistributing workload..."></textarea></div>'
     +'<div style="display:flex;gap:8px;margin-top:12px">'
-    +'<button class="btn btn-primary" id="raConfirmBtn" onclick="doHodReassign(\''+taskID+'\')"><span class="material-icons-round mi">swap_horiz</span> Confirm Reassign</button>'
+    +'<button class="btn btn-primary" onclick="doHodReassign(\''+taskID+'\')"><span class="material-icons-round mi">swap_horiz</span> Confirm Reassign</button>'
     +'<button class="btn btn-ghost" onclick="closeModal(\'mGeneric\')">Cancel</button>'
     +'</div></div>';
 
@@ -6351,24 +6281,13 @@ function hodReassignTask(taskID){
   openModal('mGeneric');
 }
 
-var RA_BUSY=false; // double-click guard for reassign
 function doHodReassign(taskID){
-  // Freeze immediately — a second tap while the first request is in
-  // flight was creating duplicate reassignment entries.
-  if(RA_BUSY)return;
   var t=null;
   for(var i=0;i<S.tasks.length;i++){if(S.tasks[i].taskID===taskID){t=S.tasks[i];break;}}
   if(!t)return;
 
   var checks=document.querySelectorAll('.ra-target-cb:checked');
   if(!checks.length){toast('Please select at least one person to reassign to.','error');return;}
-  RA_BUSY=true;
-  var raBtn=id('raConfirmBtn');
-  if(raBtn){raBtn.disabled=true;raBtn.innerHTML='<span class="material-icons-round mi" style="animation:spin 1s linear infinite">sync</span> Reassigning...';}
-  function raRelease(failed){
-    RA_BUSY=false;
-    if(failed&&raBtn){raBtn.disabled=false;raBtn.innerHTML='<span class="material-icons-round mi">swap_horiz</span> Confirm Reassign';}
-  }
 
   var targets=[];
   for(var i=0;i<checks.length;i++){
@@ -6402,14 +6321,12 @@ function doHodReassign(taskID){
   gasCall('serverUpdateTask',S.token,taskID,updatePayload).then(function(r){
     if(!r||!r.success){
       hideLoader();closeModal('mGeneric');
-      raRelease(true);
       toast((r&&r.message)||'Reassign failed.','error');
       return;
     }
     var extras=targets.slice(1);
     if(!extras.length){
       hideLoader();closeModal('mGeneric');
-      raRelease(false);
       toast('Task reassigned to '+first.name+'!','ok');
       loadTasks();
       return;
@@ -6421,7 +6338,6 @@ function doHodReassign(taskID){
     function cloneNext(){
       if(idx>=extras.length){
         hideLoader();closeModal('mGeneric');
-        raRelease(false);
         toast('Reassigned to '+first.name+' + '+created+' more.','ok');
         loadTasks();
         return;
@@ -6455,19 +6371,7 @@ function officerUpdate(taskID){
   // wipe the officer's previous remarks.
   ensureTaskDetail(t,function(){officerUpdateOpen(t,taskID,isHOD);});
 }
-function setPuStatusOptions(forAdmin,current){
-  var ps=id('pu-status');if(!ps)return;
-  // Officers/HOD/Supervision can only move work to In Progress or
-  // Review Pending — "Completed" is reserved for Admin/Commissioner,
-  // who mark it after actually reviewing the work. This is also
-  // enforced server-side; the dropdown just makes the rule visible.
-  var opts=forAdmin?['Pending','In Progress','Review Pending','Completed','Closed']:['In Progress','Review Pending'];
-  ps.innerHTML='';
-  for(var i=0;i<opts.length;i++){var o=document.createElement('option');o.value=opts[i];o.textContent=opts[i];ps.appendChild(o);}
-  if(current&&opts.indexOf(current)>=0)ps.value=current;
-}
 function officerUpdateOpen(t,taskID,isHOD){
-  setPuStatusOptions(false,t.status==='Pending'?'In Progress':t.status);
   var pu=id('pu-taskid');if(pu)pu.value=taskID;
   var pd=id('pu-desc');if(pd)pd.textContent=t.description.substring(0,150)+(t.description.length>150?'\u2026':'');
   var ps=id('pu-status');if(ps)ps.value=(t.status==='Completed'?'Completed':'In Progress');
@@ -8002,18 +7906,14 @@ function plRenderPhotoPreview(){
 function handlePlPdfSelect(files){plAddPdfs(Array.prototype.slice.call(files));}
 function plAddPdfs(files){
   if(!PL.pdfs)PL.pdfs=[];
-  var rem=10-PL.pdfs.length,wrongType=0,tooBig=[];
+  var rem=10-PL.pdfs.length,skipped=0,wrongType=0;
   for(var i=0;i<files.length&&i<rem;i++){
     if(files[i].type!=='application/pdf'){wrongType++;continue;}
-    // 8MB ceiling: a PDF is sent as ONE base64 payload (~+33% size), so a
-    // 15MB scan became a ~20MB single upload — several minutes on mobile
-    // networks and frequent silent timeouts ("unable to update").
-    // 8MB (~11MB payload) is the practical limit that reliably completes.
-    if(files[i].size>8*1024*1024){tooBig.push(files[i].name+' ('+(files[i].size/1048576).toFixed(1)+'MB)');continue;}
+    if(files[i].size>15*1024*1024){skipped++;continue;}
     PL.pdfs.push(files[i]);
   }
   if(wrongType)toast(wrongType+' file(s) skipped \u2014 only PDF is accepted.','info');
-  if(tooBig.length)toast('Too large (max 8MB): '+tooBig.join(', ')+'. Please compress the scan or split it.','error');
+  if(skipped)toast(skipped+' PDF(s) skipped \u2014 max 15MB each.','info');
   plRenderPdfPreview();
 }
 function plRenderPdfPreview(){
@@ -8720,13 +8620,11 @@ function plRenderEditExistingAttachments(){
 function plEditAddPdfs(files){
   if(!PL.editPdfs)PL.editPdfs=[];
   var arr=Array.prototype.slice.call(files);
-  var tooBigE=[];
   for(var i=0;i<arr.length&&PL.editPdfs.length<10;i++){
     if(arr[i].type!=='application/pdf')continue;
-    if(arr[i].size>8*1024*1024){tooBigE.push(arr[i].name+' ('+(arr[i].size/1048576).toFixed(1)+'MB)');continue;}
+    if(arr[i].size>15*1024*1024)continue;
     PL.editPdfs.push(arr[i]);
   }
-  if(tooBigE.length)toast('Too large (max 8MB): '+tooBigE.join(', ')+'. Please compress the scan or split it.','error');
   var prev=id('plEditPdfPreview');if(!prev)return;
   while(prev.firstChild)prev.removeChild(prev.firstChild);
   for(var i=0;i<PL.editPdfs.length;i++){
@@ -8895,15 +8793,10 @@ function plSaveEdit(noteID){
     // Step 5: upload any newly added PDF attachments (pool of 3 — PDFs are
     // larger files than compressed photos, so a slightly smaller pool)
     function uploadNewPdfs(){
-      var newPdfs=(PL.editPdfs||[]).slice();
+      var newPdfs=PL.editPdfs||[];
       if(!newPdfs.length){finishEdit(noteID,updated);return;}
-      // NON-BLOCKING: close the modal NOW — the text update is already
-      // saved. PDFs upload in the background so the officer is never
-      // stuck staring at a frozen "Saving..." loader while a large scan
-      // crawls up a mobile connection. Progress arrives as toasts.
-      finishEdit(noteID,updated);
-      toast('Uploading '+newPdfs.length+' document'+(newPdfs.length>1?'s':'')+' in background\u2026','info');
-      var PDF_POOL=2,pdfIdx=0,pdfActive=0,pdfCompleted=0,pdfFailed=0,pdfTotal=newPdfs.length;
+      var PDF_POOL=3,pdfIdx=0,pdfActive=0,pdfCompleted=0,pdfTotal=newPdfs.length;
+      var lm2=id('loaderMsg');
 
       function processOnePdf(idx){
         return new Promise(function(resolve){
@@ -8912,34 +8805,22 @@ function plSaveEdit(noteID){
             var b64=ev.target.result.split(',')[1];
             gasCall('serverUploadNoteAttachment',S.token,{
               noteID:noteID, fileName:newPdfs[idx].name, mimeType:'application/pdf', base64Data:b64
-            }).then(function(pr){
-              if(!pr||!pr.success)pdfFailed++;
-              resolve();
-            });
+            }).then(function(){resolve();});
           };
-          reader.onerror=function(){pdfFailed++;resolve();};
+          reader.onerror=function(){resolve();};
           reader.readAsDataURL(newPdfs[idx]);
         });
       }
       function launchNextPdf(){
-        if(pdfIdx>=pdfTotal){
-          if(pdfActive===0)pdfAllDone();
-          return;
-        }
+        if(pdfIdx>=pdfTotal){if(pdfActive===0)finishEdit(noteID,updated);return;}
         var myIdx=pdfIdx++;
         pdfActive++;
+        if(lm2)lm2.textContent='Uploading document '+pdfCompleted+' of '+pdfTotal+'...';
         processOnePdf(myIdx).then(function(){
           pdfActive--;pdfCompleted++;
-          if(pdfCompleted>=pdfTotal)pdfAllDone();
+          if(lm2)lm2.textContent='Uploading document '+pdfCompleted+' of '+pdfTotal+'...';
+          if(pdfCompleted>=pdfTotal)finishEdit(noteID,updated);
           else launchNextPdf();
-        });
-      }
-      function pdfAllDone(){
-        if(pdfFailed)toast(pdfFailed+' of '+pdfTotal+' document(s) failed to upload \u2014 open Edit and re-add them.','error');
-        else toast('All '+pdfTotal+' document'+(pdfTotal>1?'s':'')+' uploaded \u2713','ok');
-        // Silent refresh so attachment counts on the card are accurate
-        gasCall('serverGetNotes',S.token,PL.window||7).then(function(r){
-          if(r&&r.success){PL.entries=r.data||[];plRenderCards(PL.entries);}
         });
       }
       var pdfStart=Math.min(PDF_POOL,pdfTotal);
