@@ -3583,6 +3583,16 @@ function demoFn(fn,args){
   if(fn==='serverGetCouncilors')return{success:true,data:DEMO.councilors||[{id:'CNCL_PUBLIC',name:'Public / General Public',designation:''}]};
   if(fn==='serverGetUsers')return{success:true,data:DEMO.users};
   if(fn==='serverGetTasks')return{success:true,data:DEMO.tasks};
+  if(fn==='serverGetTaskDetail'){
+    var dt=null;for(var i=0;i<DEMO.tasks.length;i++)if(DEMO.tasks[i].taskID===args[1]){dt=DEMO.tasks[i];break;}
+    if(!dt)return{success:false,message:'Not found'};
+    return{success:true,task:{taskID:dt.taskID,description:dt.description||'',officerRemarks:dt.officerRemarks||'',completedAt:dt.completedAt||'',updatedBy:dt.updatedBy||'',photoLinks:dt.photoLinks||'',updatedAt:dt.updatedAt||'',status:dt.status,dueDate:dt.dueDate}};
+  }
+  if(fn==='serverGetCommissionerView'){
+    var stats={total:DEMO.tasks.length,pending:0,inProgress:0,completed:0,overdue:0,dueToday:0,highPriority:0};
+    for(var i=0;i<DEMO.tasks.length;i++){var t=DEMO.tasks[i];if(t.status==='Pending')stats.pending++;else if(t.status==='In Progress')stats.inProgress++;else if(t.status==='Completed')stats.completed++;if(t.isOverdue)stats.overdue++;}
+    return{success:true,tasks:DEMO.tasks,stats:{success:true,stats:stats,completionRate:stats.total?Math.round(stats.completed/stats.total*100):0,zoneStats:{},deptStats:{},officerStats:{}}};
+  }
   if(fn==='serverGetDashboardStats'){
     var t=DEMO.tasks,now=new Date(),todayStr=now.toDateString();
     var pending=0,inProgress=0,completed=0,overdue=0,dueToday=0,high=0;
@@ -5102,7 +5112,7 @@ function buildHODRows(tasks, canReassign){
     try{
       var t=tasks[i];
       var taskID=htmlEsc(t.taskID||'');
-      var photoIcon=t.photoLinks?'<span class="material-icons-round mi" style="font-size:13px;color:var(--c-teal);margin-left:3px">attach_file</span>':'';
+      var photoIcon=(t.photoLinks||t.hasPhotos)?'<span class="material-icons-round mi" style="font-size:13px;color:var(--c-teal);margin-left:3px">attach_file</span>':'';
       var btns='<button class="btn btn-ghost btn-sm btn-icon" onclick="viewTask(\''+taskID+'\')" title="View"><span class="material-icons-round mi">visibility</span></button>'
         +'<button class="btn btn-primary btn-sm btn-icon" onclick="officerUpdate(\''+taskID+'\')" title="Update"><span class="material-icons-round mi">update</span></button>'
         +'<button class="btn btn-ghost btn-sm btn-icon" onclick="hodReassignTask(\''+taskID+'\')" title="Reassign" style="color:#059669;border-color:#059669"><span class="material-icons-round mi">swap_horiz</span></button>';
@@ -5277,29 +5287,43 @@ function viewTask(taskID){
   id('mTaskFt').innerHTML=isAdmin?'<button class="btn btn-ghost" onclick="closeModal(\'mTask\')">Close</button><button class="btn btn-primary" onclick="closeModal(\'mTask\');editTask(\''+taskID+'\')">Edit All Fields</button>':'<button class="btn btn-ghost" onclick="closeModal(\'mTask\')">Close</button><button class="btn btn-primary" onclick="closeModal(\'mTask\');officerUpdate(\''+taskID+'\')">Update Progress</button>';
   openModal('mTask');
 
-  // Fetch this task's fast-format photos on demand — only when actually
-  // opening its detail view, not for every task on every list load. This
-  // is the single biggest fix for slow Task Tracker loading: previously
-  // every photo for every task was being fetched on every page load.
+  // Load full task detail on-demand (heavy fields: officerRemarks,
+  // photoLinks, updatedBy, completedAt, full description).
+  // These are omitted from the list payload to keep it slim.
+  // Cache on t._detail so re-opening the same task is instant.
+  if(!t._detail){
+    gasCall('serverGetTaskDetail',S.token,taskID).then(function(r){
+      if(r&&r.success){
+        t._detail=r.task;
+        // Merge detail fields back into the task object
+        t.officerRemarks=r.task.officerRemarks;
+        t.completedAt=r.task.completedAt;
+        t.updatedBy=r.task.updatedBy;
+        t.photoLinks=r.task.photoLinks;
+        // Only update if this task's modal is still open
+        if(id('mTaskTitle')&&id('mTaskTitle').textContent===taskID){
+          id('mTaskBody').innerHTML=taskDetailHTML(t);
+          // Re-attach doc list after re-render
+          var dl=id('taskDetailDocsList');
+          if(dl&&typeof t.docsData!=='undefined')renderTaskDocList(dl,t.docsData);
+        }
+      }
+    });
+  }
+
+  // Photo and document loading (on-demand, already implemented)
   if(!t.newPhotos){
     gasCall('serverGetTaskPhotos',S.token,taskID).then(function(r){
       if(r&&r.success){
         t.newPhotos=r.data||[];
-        // Only re-render if the modal for THIS task is still open
         if(id('mTaskTitle')&&id('mTaskTitle').textContent===taskID){
           id('mTaskBody').innerHTML=taskDetailHTML(t);
         }
       }
     });
   }
-  // Fetch this task's documents on demand — but only ONCE per task.
-  // Cache result on the task object (t.docsData) so reopening the same
-  // task never makes a second network call, and tasks with no documents
-  // show "None" immediately without any loading wait.
   var list=id('taskDetailDocsList');
   if(typeof t.docsData !== 'undefined'){
-    // Already fetched (either this session or from a previous view) —
-    // render immediately from cache, zero network cost.
     if(list) renderTaskDocList(list, t.docsData);
   } else {
     gasCall('serverGetTaskAttachments',S.token,taskID).then(function(r){
@@ -5451,7 +5475,7 @@ function editTaskLoadDocs(taskID){
   // Also invalidate the view-mode doc cache so the next viewTask
   // call re-fetches fresh data instead of showing the stale cached list.
   for(var i=0;i<S.tasks.length;i++){
-    if(S.tasks[i].taskID===taskID){delete S.tasks[i].docsData;break;}
+    if(S.tasks[i].taskID===taskID){delete S.tasks[i].docsData;delete S.tasks[i]._detail;break;}
   }
   gasCall('serverGetTaskAttachments',S.token,taskID).then(function(r){
     var docs=(r&&r.success)?(r.data||[]):[];
@@ -7019,26 +7043,25 @@ function renderCommViewForDept(dept){
 function loadCommView(){
   showLoader('Loading...');
   CV_DEPT_FILTER='';
-  // Run both calls simultaneously — previously getDashboardStats only
-  // started AFTER getTasks finished, doubling the wait time unnecessarily.
-  Promise.all([
-    gasCall('serverGetTasks',S.token,{}),
-    gasCall('serverGetDashboardStats',S.token)
-  ]).then(function(results){
+  // Single merged call — returns tasks + stats in one round-trip (v110).
+  // Previously fired 2 parallel calls; this eliminates the second
+  // network response entirely.
+  gasCall('serverGetCommissionerView',S.token).then(function(result){
     hideLoader();
-    var tr=results[0],r=results[1];
-    if(tr&&tr.success){
-      S.tasks=normalizeTaskList(tr.data||[]);
+    if(!result||!result.success){toast('Failed to load Commissioner View','error');return;}
+    if(result.tasks){
+      S.tasks=normalizeTaskList(result.tasks||[]);
       S.filtered=S.tasks.slice();
       S._cvAllTasks=S.tasks.slice();
+      applyCurrentSort();
       buildCommDeptTabs(S.tasks);
     }
-    if(r&&r.success){
-      var s=r.stats;
-      var cv={'cv-total':s.total,'cv-done':s.completed,'cv-over':s.overdue,'cv-rate':r.completionRate+'%'};
+    if(result.stats&&result.stats.stats){
+      var s=result.stats.stats;
+      var cv={'cv-total':s.total,'cv-done':s.completed,'cv-over':s.overdue,'cv-rate':result.stats.completionRate+'%'};
       for(var k in cv){var el=id(k);if(el)el.textContent=cv[k];}
-      buildCVZone(r.zoneStats);buildCVDept(r.deptStats);
-      buildOfficerPerf(r.officerStats);
+      buildCVZone(result.stats.zoneStats);buildCVDept(result.stats.deptStats);
+      buildOfficerPerf(result.stats.officerStats);
       buildCritical();
     }
   });
@@ -9815,26 +9838,24 @@ function loadGrievancesPage(){
 
   if(S.lookup)fillSel('grvFDept',S.lookup.departments,'DeptName','DeptName','All Departments');
 
-  // Councilors NOT loaded here — only needed when "New Grievance" or
-  // "Edit Grievance" form opens. Deferred to showGrievanceModal() so
-  // the list page (which most users just read) skips the extra call.
-  // GRV.councilors retains any previously-loaded list across navigations
-  // so it only fetches once per session even when opening the form repeatedly.
+  // WardCouncilorMap is now bundled in S.lookup at login (v110) —
+  // no separate network call needed. Falls back to the API if for
+  // some reason lookup is missing the map (e.g. old cached session).
+  if(S.lookup&&S.lookup.wardMap&&S.lookup.wardMap.length){
+    GRV.wardMap=S.lookup.wardMap;
+  }
+
   showLoader('Loading grievances...');
-  Promise.all([
-    gasCall('serverGetGrievances',S.token),
-    gasCall('serverGetWardCouncilorMap',S.token)
-  ]).then(function(results){
+  gasCall('serverGetGrievances',S.token).then(function(r){
     hideLoader();
-    var grvRes=results[0],wardRes=results[1];
-    GRV.list=(grvRes&&grvRes.success)?(grvRes.data||[]):[];
-    if(wardRes&&wardRes.success&&wardRes.data&&wardRes.data.length){
-      GRV.wardMap=wardRes.data;
+    GRV.list=(r&&r.success)?(r.data||[]):[];
+    if(!GRV.wardMap||!GRV.wardMap.length){
+      // Fallback: fetch ward map if not in lookup
+      gasCall('serverGetWardCouncilorMap',S.token).then(function(wr){
+        if(wr&&wr.success&&wr.data&&wr.data.length) GRV.wardMap=wr.data;
+      });
     }
-    if(grvRes&&!grvRes.success)toast(grvRes.message||'Could not load grievances.','error');
-    if(!wardRes||!wardRes.success){
-      console.error('serverGetWardCouncilorMap failed:',wardRes);
-    }
+    if(r&&!r.success)toast(r.message||'Could not load grievances.','error');
     renderGrievanceKPIs(GRV.list);
     renderGrievanceList(GRV.list);
   });
