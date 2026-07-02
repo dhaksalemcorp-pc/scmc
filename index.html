@@ -1947,6 +1947,8 @@ tbody tr:hover { background: var(--surface2); }
           <span class="material-icons-round" style="font-size:18px">close</span>
         </button>
       </div>
+      <!-- Older-tasks note — appears when the 90-day window trims old completed tasks -->
+      <div id="trkOlderNote" style="display:none;font-size:12px;color:var(--tx3);background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:7px 12px;margin-bottom:10px"></div>
       <!-- Card View (DOM-based, no innerHTML crash) -->
       <div id="viewCards"><div id="taskCardsGrid"></div></div>
       <!-- Kanban View -->
@@ -3377,7 +3379,31 @@ tbody tr:hover { background: var(--surface2); }
 <div id="toasts"></div>
 <script>
 var LS={get:function(k){try{return localStorage.getItem(k);}catch(e){return null;}},set:function(k,v){try{localStorage.setItem(k,v);}catch(e){}},del:function(k){try{localStorage.removeItem(k);}catch(e){}}};
-var S={token:null,user:null,lookup:null,tasks:[],users:[],filtered:[],drillFilter:'',page:'dashboard',allowedPages:[],theme:LS.get('sc-theme')||'light',charts:{},exportCtx:'tracker',aiTasks:[],selPhotos:[],driveLinks:[],puDocs:[],sortCol:'updatedAt',sortDir:-1};
+var S={token:null,user:null,lookup:null,tasks:[],users:[],filtered:[],drillFilter:'',page:'dashboard',allowedPages:[],theme:LS.get('sc-theme')||'light',charts:{},exportCtx:'tracker',aiTasks:[],selPhotos:[],driveLinks:[],puDocs:[],sortCol:'updatedAt',sortDir:-1,taskWindow:90};
+
+// ─── STALE-WHILE-REVALIDATE (instant display) ──────────────────
+// Saves the last-loaded data in localStorage so the NEXT visit renders
+// instantly from the device (0ms) while fresh data loads silently in
+// the background. This is what makes the app FEEL instant even though
+// each Apps Script round-trip takes 1-3+ seconds on mobile networks.
+// Data is keyed per-user so different users on the same device never
+// see each other's cached data.
+function swrSave(key,data){
+  try{
+    if(!S.user)return;
+    LS.set('swr-'+S.user.userID+'-'+key,JSON.stringify({t:Date.now(),d:data}));
+  }catch(e){/* quota exceeded — silently skip */}
+}
+function swrLoad(key,maxAgeMs){
+  try{
+    if(!S.user)return null;
+    var raw=LS.get('swr-'+S.user.userID+'-'+key);
+    if(!raw)return null;
+    var o=JSON.parse(raw);
+    if(maxAgeMs&&(Date.now()-o.t)>maxAgeMs)return null; // too old
+    return o.d;
+  }catch(e){return null;}
+}
 // ── GAS URL for GitHub Pages hosting ─────────────────────────
 // When hosted on GitHub Pages, set this to your GAS /exec URL
 // When hosted on GAS itself, leave as empty string ''
@@ -3583,6 +3609,10 @@ function demoFn(fn,args){
   if(fn==='serverGetCouncilors')return{success:true,data:DEMO.councilors||[{id:'CNCL_PUBLIC',name:'Public / General Public',designation:''}]};
   if(fn==='serverGetUsers')return{success:true,data:DEMO.users};
   if(fn==='serverGetTasks')return{success:true,data:DEMO.tasks};
+  if(fn==='serverGetOfficerTasks'){
+    var offT=[];for(var i=0;i<DEMO.tasks.length;i++){if(DEMO.tasks[i].officerID==='USR003'||DEMO.tasks[i].officerName==='Priya Nair')offT.push(DEMO.tasks[i]);}
+    return{success:true,data:offT};
+  }
   if(fn==='serverGetTaskDetail'){
     var dt=null;for(var i=0;i<DEMO.tasks.length;i++)if(DEMO.tasks[i].taskID===args[1]){dt=DEMO.tasks[i];break;}
     if(!dt)return{success:false,message:'Not found'};
@@ -4015,17 +4045,33 @@ function loadDashboard(){
   var gd=id('greetDate');if(gd)gd.textContent=new Date().toLocaleDateString('en-IN',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
   var gn=id('greetName');if(gn)gn.textContent=S.user?S.user.name.split(' ')[0]:'';
 
-  // Use pre-loaded dashboard data from the login response when available.
+  // Priority 1: pre-loaded dashboard data from the login response.
   if(S.preloadedDash&&S.preloadedDash.success&&S.preloadedDash.stats){
     var r=S.preloadedDash;
     S.preloadedDash=null; // consume once
+    swrSave('admindash',r); // save BEFORE render so a chart error can't block it
     applyAdminDashData(r);
     return;
   }
 
-  showLoader('Loading dashboard...');
+  // Priority 2: INSTANT DISPLAY from last session's cached data —
+  // renders immediately, fresh data updates silently in background.
+  var cached=swrLoad('admindash',86400000);
+  var renderedFromCache=false;
+  if(cached&&cached.stats){
+    applyAdminDashData(cached);
+    renderedFromCache=true;
+  } else {
+    showLoader('Loading dashboard...');
+  }
+
   gasCall('serverGetDashboardStats',S.token).then(function(r){
-    hideLoader();if(!r||!r.success){toast(r?r.message:'Load failed','error');return;}
+    hideLoader();
+    if(!r||!r.success){
+      if(!renderedFromCache)toast(r?r.message:'Load failed','error');
+      return;
+    }
+    swrSave('admindash',r);
     applyAdminDashData(r);
   });
 }
@@ -4342,26 +4388,40 @@ function loadOfficerDashboard(){
   var gd=id('greetDate');if(gd)gd.textContent=new Date().toLocaleDateString('en-IN',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
   var gn=id('greetName');if(gn)gn.textContent=u.name.split(' ')[0];
 
-  // Use dashboard data pre-loaded in the login response (v108).
-  // If available, render immediately with zero additional network cost.
-  // Clear it after use so re-visiting the dashboard later fetches fresh data.
+  // Priority 1: dashboard data bundled in the login response (v108) —
+  // freshest possible data, zero extra network cost.
   if(S.preloadedDash&&S.preloadedDash.success&&S.preloadedDash.stats){
     var r=S.preloadedDash;
-    S.preloadedDash=null; // consume once — next visit does a real fetch
+    S.preloadedDash=null; // consume once
+    swrSave('offdash',r); // save BEFORE render so a chart error can't block it
     applyOfficerDashData(r);
     renderOfficerGrievancesPlaceholder();
     return;
   }
 
-  showLoader('Loading your dashboard...');
+  // Priority 2: INSTANT DISPLAY from localStorage (last session's data,
+  // up to 24h old) — renders in 0ms, then fresh data loads silently in
+  // the background and updates the numbers when it arrives.
+  var cached=swrLoad('offdash',86400000);
+  var renderedFromCache=false;
+  if(cached&&cached.stats){
+    applyOfficerDashData(cached);
+    renderedFromCache=true;
+    // No loader — the dashboard is already visible with cached numbers
+  } else {
+    showLoader('Loading your dashboard...');
+  }
+
   gasCall('serverGetOfficerDashboard',S.token).then(function(r){
     hideLoader();
     if(!r||!r.success){
+      if(renderedFromCache)return; // cached view is still showing — fine
       if(S.tasks&&S.tasks.length)buildOfficerDashFromTasks();
       else loadTasksThenOfficerDash();
       return;
     }
-    applyOfficerDashData(r);
+    swrSave('offdash',r);      // save for next session (before render)
+    applyOfficerDashData(r);   // silently update to fresh numbers
   });
   renderOfficerGrievancesPlaceholder();
 }
@@ -4644,37 +4704,70 @@ function loadTasks(){
   } else if(role==='HOD'){
     fn='serverGetHODTasks';args=[S.token];
   } else {
-    fn='serverGetTasks';args=[S.token,{}];
+    fn='serverGetTasks';args=[S.token,{days:S.taskWindow}];
   }
 
-  var tb=id('tBody');
-  if(tb)tb.innerHTML='<tr><td colspan="12"><div style="padding:40px;text-align:center"><div class="spinner" style="margin:0 auto 12px"></div><div style="color:var(--tx3)">Loading tasks...</div></div></td></tr>';
+  // ── INSTANT DISPLAY: render last-known tasks from localStorage ──
+  // If we have tasks saved from a previous session (up to 24h old),
+  // show them IMMEDIATELY — zero wait — while fresh data loads in
+  // the background. The list quietly updates when fresh data arrives.
+  var renderedFromCache=false;
+  var cached=swrLoad('tasks',86400000); // max 24h old
+  if(cached&&cached.length&&(!S.tasks||!S.tasks.length)){
+    S.tasks=cached;
+    S.filtered=S.tasks.slice();
+    applyCurrentSort();
+    renderTable(S.filtered);renderKanban(S.filtered);updateTaskCount();
+    // subtle refreshing indicator on the count label
+    var tc0=id('taskCount');
+    if(tc0)tc0.innerHTML=S.filtered.length+' tasks <span style="color:var(--c-blue);font-size:11px">· refreshing\u2026</span>';
+    renderedFromCache=true;
+  } else if(S.tasks&&S.tasks.length){
+    // Tasks already in memory this session — keep showing them while refreshing
+    renderedFromCache=true;
+    var tc1=id('taskCount');
+    if(tc1)tc1.innerHTML=S.filtered.length+' tasks <span style="color:var(--c-blue);font-size:11px">· refreshing\u2026</span>';
+  } else {
+    // Nothing cached at all (first ever load) — show the spinner
+    var tb=id('tBody');
+    if(tb)tb.innerHTML='<tr><td colspan="12"><div style="padding:40px;text-align:center"><div class="spinner" style="margin:0 auto 12px"></div><div style="color:var(--tx3)">Loading tasks...</div></div></td></tr>';
+  }
 
   gasCall.apply(null,[fn].concat(args)).then(function(r){
     hideLoader();
     if(!r){
-      showTrackerError('No response from server. Check your internet connection and GAS deployment.');
+      if(!renderedFromCache)showTrackerError('No response from server. Check your internet connection and GAS deployment.');
       return;
     }
     if(!r.success){
-      showTrackerError((r.message||'Server error')+' (fn: '+fn+')');
+      if(!renderedFromCache)showTrackerError((r.message||'Server error')+' (fn: '+fn+')');
       return;
     }
     var data=r.data||[];
     S.tasks=normalizeTaskList(data);
     S.filtered=S.tasks.slice();
-    // Apply the current sort immediately after loading so the initial
-    // render is already sorted — previously this was missing and tasks
-    // appeared in raw sheet order (new tasks at the bottom).
     applyCurrentSort();
+    // Save for instant display on the next visit/login
+    swrSave('tasks',S.tasks);
     var bb=id('bulkBar');if(bb){bb.style.display='none';bb.classList.add('dn');}
     var chkAll=id('chkAll');if(chkAll){chkAll.checked=false;chkAll.indeterminate=false;}
     if(S.drillFilter) applyDrillFilter();
     else{renderTable(S.filtered);renderKanban(S.filtered);updateTaskCount();}
     if(advFilterOpen) populateOfficerFilter();
+    // Show "Load all" note if older completed tasks were trimmed by the window
+    var note=id('trkOlderNote');
+    if(note){
+      if(r.totalCount&&r.totalCount>data.length&&S.taskWindow>0){
+        note.style.display='';
+        note.innerHTML='Showing recent '+(r.windowDays||90)+' days ('+data.length+' of '+r.totalCount+' total). Old completed tasks are hidden. '
+          +'<a href="javascript:void(0)" onclick="S.taskWindow=0;loadTasks();" style="color:var(--c-blue);font-weight:600">Load all tasks</a>';
+      } else {
+        note.style.display='none';
+      }
+    }
   }).catch(function(e){
     hideLoader();
-    showTrackerError('Unexpected error: '+(e&&e.message?e.message:String(e)));
+    if(!renderedFromCache)showTrackerError('Unexpected error: '+(e&&e.message?e.message:String(e)));
   });
 }
 function showTrackerError(msg){
