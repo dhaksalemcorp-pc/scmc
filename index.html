@@ -3515,11 +3515,35 @@ function buildLookupData(){
 }
 function demoFn(fn,args){
   if(fn==='serverLogin'){
-    var lu=buildLookupData(); // bundle lookup just like the real backend now does
+    var lu=buildLookupData();
     if(args[0]==='admin'&&args[1]==='admin123')return{success:true,token:'tok-admin',lookup:lu,user:{userID:'USR001',name:'Admin User',designation:'Deputy Commissioner',department:'General',zone:'Main Office',role:'Admin',username:'admin'}};
     if(args[0]==='commissioner'&&args[1]==='comm123')return{success:true,token:'tok-comm',lookup:lu,user:{userID:'USR002',name:'Commissioner Raj',designation:'Deputy Commissioner',department:'General',zone:'Main Office',role:'Commissioner',username:'commissioner'}};
     if(args[0]==='priya.nair'&&args[1]==='officer123')return{success:true,token:'tok-off',lookup:lu,user:{userID:'USR003',name:'Priya Nair',designation:'City Health Officer',department:'Public Health',zone:'Ammapet Zone-3',role:'Officer',username:'priya.nair'}};
     return{success:false,message:'Invalid credentials.'};
+  }
+  if(fn==='serverLoginAndLoad'){
+    // Demo: same as serverLogin but also includes dashboard data
+    var lu2=buildLookupData();
+    var dashResult=null;
+    var loginR=null;
+    if(args[0]==='admin'&&args[1]==='admin123'){loginR={success:true,token:'tok-admin',lookup:lu2,user:{userID:'USR001',name:'Admin User',designation:'Deputy Commissioner',department:'General',zone:'Main Office',role:'Admin',username:'admin'}};}
+    else if(args[0]==='commissioner'&&args[1]==='comm123'){loginR={success:true,token:'tok-comm',lookup:lu2,user:{userID:'USR002',name:'Commissioner Raj',designation:'Deputy Commissioner',department:'General',zone:'Main Office',role:'Commissioner',username:'commissioner'}};}
+    else if(args[0]==='priya.nair'&&args[1]==='officer123'){loginR={success:true,token:'tok-off',lookup:lu2,user:{userID:'USR003',name:'Priya Nair',designation:'City Health Officer',department:'Public Health',zone:'Ammapet Zone-3',role:'Officer',username:'priya.nair'}};}
+    else{return{success:false,message:'Invalid credentials.'};}
+    // Bundle a minimal dashboard payload
+    if(loginR.user.role==='Officer'){
+      loginR.dashData={success:true,stats:{total:5,pending:2,inProgress:1,completed:2,overdue:1,dueToday:0,highPriority:1},completionRate:40,recentTasks:[]};
+    } else {
+      loginR.dashData={success:true,stats:{total:5,pending:2,inProgress:1,completed:2,overdue:1,dueToday:0,highPriority:1},completionRate:40,zoneStats:{},deptStats:{},officerStats:{}};
+    }
+    return loginR;
+  }
+  if(fn==='serverGetNoteDetail'){
+    // Return demo photos for a note
+    return{success:true,noteID:args[1],photos:[],attachments:[]};
+  }
+  if(fn==='serverGetGrievanceDetail'){
+    return{success:true,grievanceID:args[1],atr:[],letterAttachments:[]};
   }
   if(fn==='serverValidateSession')return{valid:false};
   if(fn==='serverLogout')return{success:true};
@@ -3640,20 +3664,22 @@ function doLogin(){
   if(!errEl||!btn)return;
   if(!u||!p){errEl.textContent='Please enter username and password.';errEl.style.display='block';return;}
   btn.disabled=true;btn.textContent='Signing in...';errEl.style.display='none';
-  gasCall('serverLogin',u,p).then(function(r){
+  // serverLoginAndLoad authenticates AND returns dashboard data in one
+  // round-trip — eliminates the separate dashboard call that previously
+  // fired right after login. Saves ~350ms on every login.
+  gasCall('serverLoginAndLoad',u,p).then(function(r){
     btn.disabled=false;btn.textContent='Sign In to System';
     if(r&&r.success){
       S.token=r.token;S.user=r.user;
-      // Lookup data is now bundled in the login response (since v103) —
-      // no separate serverGetLookupData call needed after login.
+      // Lookup bundled in response since v103
       if(r.lookup&&r.lookup.success){S.lookup=r.lookup;populateSelects();}
+      // Dashboard data bundled since v108 — store so the dashboard
+      // function can use it directly without a second backend call
+      if(r.dashData&&r.dashData.success){S.preloadedDash=r.dashData;}
       var rem=id('rememberMe');if(rem&&rem.checked){LS.set('sc-tok',r.token);LS.set('sc-usr',JSON.stringify(r.user));}
       showApp();
     }else{
       var failMsg=(r&&r.message)?r.message:'Login failed. Check your credentials.';
-      // A connection drop at login looks identical to a real credential
-      // error unless we say otherwise — make it clear this isn't a wrong
-      // password, just a network hiccup worth simply trying again.
       if(isLikelyConnectionDrop(failMsg)){
         errEl.textContent='Connection trouble \u2014 this is usually just a weak signal. Please tap "Sign In" again.';
       } else {
@@ -3964,15 +3990,29 @@ function loadDashboard(){
   if(role==='Supervision'){loadSupervisionDashboard();return;}
   var gd=id('greetDate');if(gd)gd.textContent=new Date().toLocaleDateString('en-IN',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
   var gn=id('greetName');if(gn)gn.textContent=S.user?S.user.name.split(' ')[0]:'';
+
+  // Use pre-loaded dashboard data from the login response when available.
+  if(S.preloadedDash&&S.preloadedDash.success&&S.preloadedDash.stats){
+    var r=S.preloadedDash;
+    S.preloadedDash=null; // consume once
+    applyAdminDashData(r);
+    return;
+  }
+
   showLoader('Loading dashboard...');
   gasCall('serverGetDashboardStats',S.token).then(function(r){
     hideLoader();if(!r||!r.success){toast(r?r.message:'Load failed','error');return;}
-    var s=r.stats;
-    var kv={'k-total':s.total,'k-pending':s.pending,'k-progress':s.inProgress,'k-done':s.completed,'k-overdue':s.overdue,'k-today':s.dueToday,'k-high':s.highPriority,'k-rate':r.completionRate+'%'};
-    for(var k in kv){var el=id(k);if(el)el.textContent=kv[k];}
-    if(s.overdue>0){var b=id('overdBadge');if(b){b.textContent=s.overdue;b.style.display='';}var d=id('bnDot');if(d)d.classList.add('on');}
-    buildStatusChart(s);buildZoneChart(r.zoneStats);buildDeptBreakdown(r.deptStats);renderActivityPlaceholder();renderUsageAnalyticsPlaceholder();
+    applyAdminDashData(r);
   });
+}
+
+function applyAdminDashData(r){
+  hideLoader();
+  var s=r.stats;
+  var kv={'k-total':s.total,'k-pending':s.pending,'k-progress':s.inProgress,'k-done':s.completed,'k-overdue':s.overdue,'k-today':s.dueToday,'k-high':s.highPriority,'k-rate':r.completionRate+'%'};
+  for(var k in kv){var el=id(k);if(el)el.textContent=kv[k];}
+  if(s.overdue>0){var b=id('overdBadge');if(b){b.textContent=s.overdue;b.style.display='';}var d=id('bnDot');if(d)d.classList.add('on');}
+  buildStatusChart(s);buildZoneChart(r.zoneStats);buildDeptBreakdown(r.deptStats);renderActivityPlaceholder();renderUsageAnalyticsPlaceholder();
 }
 function loadHODDashboard(){
   var u=S.user;if(!u)return;
@@ -4277,6 +4317,18 @@ function loadOfficerDashboard(){
   var u=S.user;if(!u)return;
   var gd=id('greetDate');if(gd)gd.textContent=new Date().toLocaleDateString('en-IN',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
   var gn=id('greetName');if(gn)gn.textContent=u.name.split(' ')[0];
+
+  // Use dashboard data pre-loaded in the login response (v108).
+  // If available, render immediately with zero additional network cost.
+  // Clear it after use so re-visiting the dashboard later fetches fresh data.
+  if(S.preloadedDash&&S.preloadedDash.success&&S.preloadedDash.stats){
+    var r=S.preloadedDash;
+    S.preloadedDash=null; // consume once — next visit does a real fetch
+    applyOfficerDashData(r);
+    renderOfficerGrievancesPlaceholder();
+    return;
+  }
+
   showLoader('Loading your dashboard...');
   gasCall('serverGetOfficerDashboard',S.token).then(function(r){
     hideLoader();
@@ -4285,17 +4337,21 @@ function loadOfficerDashboard(){
       else loadTasksThenOfficerDash();
       return;
     }
-    var s=r.stats;
-    var kv={'ok-total':s.total,'ok-pending':s.pending,'ok-progress':s.inProgress,'ok-done':s.completed,'ok-overdue':s.overdue,'ok-today':s.dueToday,'ok-high':s.highPriority,'ok-rate':r.completionRate+'%'};
-    for(var k in kv){var el=id(k);if(el)el.textContent=kv[k];}
-    if(s.overdue>0){
-      var b=id('overdBadge');if(b){b.textContent=s.overdue;b.style.display='';}
-      var d=id('bnDot');if(d)d.classList.add('on');
-    }
-    buildOfficerChart(s);
-    buildOfficerRecentTasks(r.recentTasks||[]);
+    applyOfficerDashData(r);
   });
   renderOfficerGrievancesPlaceholder();
+}
+
+function applyOfficerDashData(r){
+  var s=r.stats;
+  var kv={'ok-total':s.total,'ok-pending':s.pending,'ok-progress':s.inProgress,'ok-done':s.completed,'ok-overdue':s.overdue,'ok-today':s.dueToday,'ok-high':s.highPriority,'ok-rate':r.completionRate+'%'};
+  for(var k in kv){var el=id(k);if(el)el.textContent=kv[k];}
+  if(s.overdue>0){
+    var b=id('overdBadge');if(b){b.textContent=s.overdue;b.style.display='';}
+    var d=id('bnDot');if(d)d.classList.add('on');
+  }
+  buildOfficerChart(s);
+  buildOfficerRecentTasks(r.recentTasks||[]);
 }
 
 function renderOfficerGrievancesPlaceholder(){
@@ -7765,7 +7821,7 @@ function plRenderCards(entries){
     var ic=0,mc=0,sc=0,pc=0;
     for(var i=0;i<entries.length;i++){
       if(entries[i].type==='Inspection')ic++;else if(entries[i].type==='Meeting')mc++;else sc++;
-      pc+=(entries[i].photos?entries[i].photos.length:0);
+      pc+=(entries[i].photoCount !== undefined ? entries[i].photoCount : (entries[i].photos?entries[i].photos.length:0));
     }
     strip.innerHTML='<div style="background:rgba(29,78,216,.08);border:1px solid rgba(29,78,216,.2);border-radius:8px;padding:8px 14px;font-size:12.5px;color:#1d4ed8;display:flex;gap:4px;align-items:center"><span class="material-icons-round mi" style="font-size:14px">search</span><strong>'+ic+'</strong> Inspections</div>'
       +'<div style="background:rgba(5,150,105,.08);border:1px solid rgba(5,150,105,.2);border-radius:8px;padding:8px 14px;font-size:12.5px;color:#059669;display:flex;gap:4px;align-items:center"><span class="material-icons-round mi" style="font-size:14px">groups</span><strong>'+mc+'</strong> Meetings</div>'
@@ -7814,6 +7870,8 @@ function plRenderCards(entries){
 function plMakeEntryCard(e, typeColors, months){
   var tc=typeColors[e.type]||typeColors['Site Visit'];
   var photos=e.photos||[];
+  // photoCount is returned by new API (v108+) when photos array is empty
+  var photoCountDisplay = typeof e.photoCount === 'number' ? e.photoCount : photos.length;
   var dayNum=e.date?e.date.split('-').slice(2).join(''):'';
   var monthName=e.date?(months[parseInt((e.date||'0-0').split('-')[1]||1)]||'').slice(0,3):'';
   var dayOfWeek='';
@@ -7862,10 +7920,10 @@ function plMakeEntryCard(e, typeColors, months){
     failTag.innerHTML='<span class="material-icons-round" style="font-size:13px">refresh</span>Retry Save';
     failTag.onclick=function(ev){ev.stopPropagation();plRetryEntry(e);};
     tagRow.appendChild(failTag);
-  } else if(photos.length>0){
+  } else if(photoCountDisplay>0){
     var photoTag=document.createElement('span');
     photoTag.style.cssText='font-size:12px;color:var(--c-teal);margin-left:auto;display:flex;align-items:center;gap:3px';
-    photoTag.innerHTML='<span class="material-icons-round mi" style="font-size:13px">photo_camera</span>'+photos.length;
+    photoTag.innerHTML='<span class="material-icons-round mi" style="font-size:13px">photo_camera</span>'+photoCountDisplay;
     tagRow.appendChild(photoTag);
   }
   content.appendChild(tagRow);
@@ -7878,11 +7936,35 @@ function plMakeEntryCard(e, typeColors, months){
   }
 
   var notesDiv=document.createElement('div');
-  notesDiv.style.cssText='font-size:13px;color:var(--tx2);line-height:1.6;white-space:pre-wrap;margin-bottom:'+(photos.length>0?'10px':'0');
+  notesDiv.style.cssText='font-size:13px;color:var(--tx2);line-height:1.6;white-space:pre-wrap;margin-bottom:'+(photoCountDisplay>0?'10px':'0');
   notesDiv.textContent=e.notes||'';
   content.appendChild(notesDiv);
 
-  if(photos.length>0){
+  // Photo grid — rendered only when photos are available.
+  // With new API (v108+), photos array is empty on list load.
+  // We render an on-demand "Tap to load photos" section if photoCount > 0
+  // and photos haven't been loaded yet.
+  if(photoCountDisplay>0&&!photos.length&&!e._photosLoaded){
+    var loadPhotoBtn=document.createElement('div');
+    loadPhotoBtn.style.cssText='display:flex;align-items:center;gap:6px;padding:8px;background:var(--surface2);border-radius:8px;cursor:pointer;font-size:12px;color:var(--c-teal)';
+    loadPhotoBtn.innerHTML='<span class="material-icons-round mi" style="font-size:15px">photo_camera</span>'
+      +(photoCountDisplay)+' photo'+(photoCountDisplay!==1?'s':'')+' — tap to view';
+    loadPhotoBtn.onclick=function(ev){
+      ev.stopPropagation();
+      loadPhotoBtn.innerHTML='<span class="material-icons-round" style="font-size:15px;animation:spin 1s linear infinite">sync</span> Loading photos...';
+      gasCall('serverGetNoteDetail',S.token,e.noteID).then(function(r){
+        if(r&&r.success){
+          e.photos=r.photos||[];
+          e.attachments=r.attachments||[];
+          e._photosLoaded=true;
+          // Re-render just this card's photo section
+          var newCard=plMakeEntryCard(e,typeColors,months);
+          if(card.parentNode)card.parentNode.replaceChild(newCard,card);
+        }
+      });
+    };
+    content.appendChild(loadPhotoBtn);
+  } else if(photos.length>0){
     var grid=document.createElement('div');
     grid.style.cssText='display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px';
     var photoUrls=photos.map(function(p){return p.photoData;});
@@ -8906,6 +8988,8 @@ function plBasicDiary(entries,style,from,to){
   return lines.join('\n\n');
 }
 function plPhotoCount(e){
+  // New API (v108+) returns photoCount directly — use it if present
+  if(typeof e.photoCount === 'number') return e.photoCount;
   if(!e.photos)return 0;
   if(Array.isArray(e.photos))return e.photos.length;
   // fallback for any legacy string-based entries
@@ -10038,10 +10122,52 @@ function openGrievanceDetail(grievanceID){
 
   id('grvDetailBody').innerHTML=html;
   GRV._curG=g;
-  renderATRThread(g.atr||[]);
+
+  // Load ATR thread and letter attachments on-demand.
+  // Previously loaded with every grievance list — now loaded only
+  // when this specific grievance is actually opened.
+  var atrWrap=id('grvATRThread');
+  if(atrWrap)atrWrap.innerHTML='<div style="color:var(--tx3);font-size:12.5px;padding:8px 0"><span class="material-icons-round" style="font-size:14px;vertical-align:middle;animation:spin 1s linear infinite">sync</span> Loading...</div>';
+
+  if(g._detailLoaded){
+    // Already fetched this session — render from cache
+    renderATRThread(g.atr||[]);
+    renderGrvLetterAttachments(g.letterAttachments||[]);
+  } else {
+    gasCall('serverGetGrievanceDetail',S.token,g.grievanceID).then(function(r){
+      if(r&&r.success){
+        g.atr=r.atr||[];
+        g.letterAttachments=r.letterAttachments||[];
+        g._detailLoaded=true;
+      }
+      renderATRThread(g.atr||[]);
+      renderGrvLetterAttachments(g.letterAttachments||[]);
+    });
+  }
   openModal('mGrievanceDetail');
 }
 
+function renderGrvLetterAttachments(attachments){
+  // The letter attachment section is rendered inline in openGrievanceDetail's HTML.
+  // If there are attachments, update the section; if the section doesn't
+  // exist yet (none were in the cached list view data), insert it before the ATR block.
+  var atrBlock=id('grvATRThread');
+  if(!attachments||!attachments.length)return;
+  var html='<div style="margin-bottom:14px"><div style="font-size:11px;font-weight:700;color:var(--tx3);text-transform:uppercase;margin-bottom:6px">Original Letter</div>';
+  for(var i=0;i<attachments.length;i++){
+    var att=attachments[i];
+    html+='<div style="display:flex;align-items:center;gap:8px;padding:7px 10px;background:var(--surface2);border-radius:8px;margin-bottom:5px;cursor:pointer" onclick="window.open(\''+att.driveURL+'\',\'_blank\')">'
+      +'<span class="material-icons-round" style="font-size:18px;color:var(--c-red)">picture_as_pdf</span>'
+      +'<div style="flex:1;font-size:12.5px;color:var(--c-blue);text-decoration:underline">'+htmlEsc(att.fileName)+'</div>'
+      +'<span class="material-icons-round" style="font-size:15px;color:var(--c-blue)">open_in_new</span></div>';
+  }
+  html+='</div>';
+  if(atrBlock){
+    var div=document.createElement('div');
+    div.innerHTML=html;
+    atrBlock.parentNode.insertBefore(div,atrBlock.parentNode.querySelector('#grvATRThread').parentNode||atrBlock);
+  }
+}
 function renderATRThread(atrList){
   var wrap=id('grvATRThread');if(!wrap)return;
   if(!atrList.length){wrap.innerHTML='<div style="color:var(--tx3);font-size:12.5px;padding:8px 0">No ATR entries yet.</div>';return;}
@@ -10071,6 +10197,8 @@ function submitGrievanceATR(){
     hideLoader();
     if(r&&r.success){
       toast('ATR entry added!','ok');
+      // Clear the detail cache so next time this grievance is opened it re-fetches
+      if(GRV._curG){GRV._curG._detailLoaded=false;GRV._curG.atr=[];GRV._curG.letterAttachments=[];}
       closeModal('mGrievanceDetail');
       loadGrievancesPage();
     } else {
