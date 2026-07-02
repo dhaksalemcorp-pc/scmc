@@ -1426,7 +1426,8 @@ tbody tr:hover { background: var(--surface2); }
       <div class="sb-item" data-page="about" onclick="go('about')"><span class="material-icons-round sb-i">info</span> About</div>
     </div>
     <div class="sb-footer">
-      <button class="sb-logout" onclick="doLogout()"><span class="material-icons-round sb-i">logout</span> Sign Out</button>
+      <button class="sb-logout" id="langToggleBtn" onclick="toggleLanguage()" style="margin-bottom:6px"><span class="material-icons-round sb-i">translate</span> <span id="langToggleLbl">தமிழ்</span></button>
+      <button class="sb-logout" onclick="doLogout()"><span class="material-icons-round sb-i">logout</span> <span data-i18n="signout">Sign Out</span></button>
     </div>
   </nav>
 
@@ -2182,6 +2183,8 @@ tbody tr:hover { background: var(--surface2); }
                 <div style="font-size:13px;color:var(--tx3);margin-top:6px">Tap to upload or drag photos here</div>
               </div>
               <input type="file" id="plPhotoInput" accept="image/*" multiple style="display:none" onchange="handlePlPhotoSelect(this.files)">
+              <input type="file" id="plPhotoCamInput" accept="image/*" capture="environment" style="display:none" onchange="handlePlPhotoSelect(this.files)">
+              <button type="button" class="btn btn-ghost btn-sm" style="margin-top:6px" onclick="document.getElementById('plPhotoCamInput').click()"><span class="material-icons-round mi">photo_camera</span> Take Photo with Camera</button>
               <div id="plPhotoPreview" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:10px"></div>
             </div>
             <div class="f-group">
@@ -2993,6 +2996,7 @@ tbody tr:hover { background: var(--surface2); }
         <!-- Source selection -->
         <div class="flex-c gap8 mb8">
           <button type="button" class="btn btn-ghost btn-sm" onclick="document.getElementById('photoInput').click()"><span class="material-icons-round mi">upload</span> From Device</button>
+          <button type="button" class="btn btn-ghost btn-sm" onclick="document.getElementById('photoInputCam').click()"><span class="material-icons-round mi">photo_camera</span> Camera</button>
           <button type="button" class="btn btn-ghost btn-sm" onclick="addDriveLink()"><span class="material-icons-round mi">add_link</span> Add Drive Link</button>
         </div>
         <!-- Drop zone -->
@@ -3001,7 +3005,7 @@ tbody tr:hover { background: var(--surface2); }
           <div style="font-size:12.5px;font-weight:600;color:var(--tx2)">Tap to select or drag &amp; drop</div>
           <div style="font-size:11px;color:var(--tx3);margin-top:3px">JPG, PNG, WEBP &middot; Max 5 photos &middot; 10MB each</div>
         </div>
-        <input type="file" id="photoInput" accept="image/*" multiple style="display:none" onchange="handlePhotoSelect(this.files)">
+        <input type="file" id="photoInput" accept="image/*" multiple style="display:none" onchange="handlePhotoSelect(this.files)"><input type="file" id="photoInputCam" accept="image/*" capture="environment" style="display:none" onchange="handlePhotoSelect(this.files)">
         <!-- Drive link input -->
         <div id="driveLinkRow" class="dn mt8" style="display:flex;gap:8px;align-items:center">
           <input type="url" class="f-ctrl" id="driveLinkInput" placeholder="https://drive.google.com/file/d/...">
@@ -3394,6 +3398,58 @@ function swrSave(key,data){
     LS.set('swr-'+S.user.userID+'-'+key,JSON.stringify({t:Date.now(),d:data}));
   }catch(e){/* quota exceeded — silently skip */}
 }
+// ─── TAMIL / ENGLISH LANGUAGE TOGGLE ──────────────────────────
+// Covers main navigation, page titles, and common buttons. Toggle
+// persists in localStorage per device. Dynamic data (task text, names,
+// remarks) stays as entered — only the app chrome is translated.
+var I18N_TA={
+  // Sidebar
+  'Dashboard':'\u0b95\u0bc1\u0bb1\u0bbf\u0baa\u0bcd\u0baa\u0bb2\u0b95\u0bc8','Task Entry':'\u0baa\u0ba3\u0bbf \u0baa\u0ba4\u0bbf\u0bb5\u0bc1','Task Tracker':'\u0baa\u0ba3\u0bbf \u0b95\u0ba3\u0bcd\u0b95\u0bbe\u0ba3\u0bbf\u0baa\u0bcd\u0baa\u0bc1',
+  'Commissioner View':'\u0b86\u0ba3\u0bc8\u0baf\u0bb0\u0bcd \u0baa\u0bbe\u0bb0\u0bcd\u0bb5\u0bc8','User Management':'\u0baa\u0baf\u0ba9\u0bb0\u0bcd \u0bae\u0bc7\u0bb2\u0bbe\u0ba3\u0bcd\u0bae\u0bc8','Settings':'\u0b85\u0bae\u0bc8\u0baa\u0bcd\u0baa\u0bc1\u0b95\u0bb3\u0bcd',
+  'My Profile':'\u0b8e\u0ba9\u0ba4\u0bc1 \u0b9a\u0bc1\u0baf\u0bb5\u0bbf\u0bb5\u0bb0\u0bae\u0bcd','Notes':'\u0b95\u0bc1\u0bb1\u0bbf\u0baa\u0bcd\u0baa\u0bc1\u0b95\u0bb3\u0bcd','Calendar':'\u0b95\u0bbe\u0bb2\u0ba3\u0bcd\u0b9f\u0bb0\u0bcd',
+  'Reports':'\u0b85\u0bb1\u0bbf\u0b95\u0bcd\u0b95\u0bc8\u0b95\u0bb3\u0bcd','Grievances':'\u0b95\u0bc1\u0bb1\u0bc8\u0b95\u0bb3\u0bcd','About':'\u0baa\u0bb1\u0bcd\u0bb1\u0bbf','Sign Out':'\u0bb5\u0bc6\u0bb3\u0bbf\u0baf\u0bc7\u0bb1\u0bc1',
+  'Main':'\u0bae\u0bc1\u0ba4\u0ba9\u0bcd\u0bae\u0bc8','Manage':'\u0bae\u0bc7\u0bb2\u0bbe\u0ba3\u0bcd\u0bae\u0bc8',
+  // Common buttons / labels
+  'New Task':'\u0baa\u0bc1\u0ba4\u0bbf\u0baf \u0baa\u0ba3\u0bbf','Filters':'\u0bb5\u0b9f\u0bbf\u0b95\u0b9f\u0bcd\u0b9f\u0bbf','Export':'\u0b8f\u0bb1\u0bcd\u0bb1\u0bc1\u0bae\u0ba4\u0bbf','Refresh':'\u0baa\u0bc1\u0ba4\u0bc1\u0baa\u0bcd\u0baa\u0bbf',
+  'Save':'\u0b9a\u0bc7\u0bae\u0bbf','Cancel':'\u0bb0\u0ba4\u0bcd\u0ba4\u0bc1','Edit':'\u0ba4\u0bbf\u0bb0\u0bc1\u0ba4\u0bcd\u0ba4\u0bc1','Delete':'\u0ba8\u0bc0\u0b95\u0bcd\u0b95\u0bc1','Close':'\u0bae\u0bc2\u0b9f\u0bc1',
+  'Pending':'\u0ba8\u0bbf\u0bb2\u0bc1\u0bb5\u0bc8','In Progress':'\u0ba8\u0b9f\u0bc8\u0baa\u0bc6\u0bb1\u0bc1\u0b95\u0bbf\u0bb1\u0ba4\u0bc1','Completed':'\u0bae\u0bc1\u0b9f\u0bbf\u0ba8\u0bcd\u0ba4\u0ba4\u0bc1','Overdue':'\u0ba4\u0bbe\u0bae\u0ba4\u0bae\u0bcd'
+};
+var I18N_ORIG={}; // element -> original English text, captured on first toggle
+function currentLang(){return LS.get('sc-lang')||'en';}
+function toggleLanguage(){
+  var next=currentLang()==='en'?'ta':'en';
+  LS.set('sc-lang',next);
+  applyLanguage();
+  toast(next==='ta'?'\u0ba4\u0bae\u0bbf\u0bb4\u0bcd \u0b87\u0b9f\u0bc8\u0bae\u0bc1\u0b95\u0baa\u0bcd\u0baa\u0bc1 \u0b87\u0baf\u0b95\u0bcd\u0b95\u0baa\u0bcd\u0baa\u0b9f\u0bcd\u0b9f\u0ba4\u0bc1':'Switched to English','ok');
+}
+function applyLanguage(){
+  var lang=currentLang();
+  var lbl=id('langToggleLbl');
+  if(lbl)lbl.textContent=lang==='en'?'\u0ba4\u0bae\u0bbf\u0bb4\u0bcd':'English';
+  // Translate sidebar items and section labels by matching their text
+  var nodes=document.querySelectorAll('.sb-item, .sb-section-lbl, .sb-logout span[data-i18n], .page-title, .tab, .btn');
+  for(var i=0;i<nodes.length;i++){
+    var el=nodes[i];
+    // Work on the LAST text node so icons inside are untouched
+    var tn=null;
+    for(var j=el.childNodes.length-1;j>=0;j--){
+      if(el.childNodes[j].nodeType===3&&el.childNodes[j].textContent.trim()){tn=el.childNodes[j];break;}
+    }
+    var target=tn||((el.children.length===0)?el:null);
+    if(!target)continue;
+    var curr=(tn?tn.textContent:el.textContent).trim();
+    if(lang==='ta'){
+      if(I18N_TA[curr]){
+        if(!el.dataset.i18nOrig)el.dataset.i18nOrig=curr;
+        if(tn)tn.textContent=' '+I18N_TA[curr];else el.textContent=I18N_TA[curr];
+      }
+    } else {
+      if(el.dataset.i18nOrig){
+        if(tn)tn.textContent=' '+el.dataset.i18nOrig;else el.textContent=el.dataset.i18nOrig;
+      }
+    }
+  }
+}
 function swrLoad(key,maxAgeMs){
   try{
     if(!S.user)return null;
@@ -3682,6 +3738,12 @@ function demoFn(fn,args){
   }
   return{success:false,message:'Unknown function: '+fn};
 }
+// PWA: register service worker for offline shell caching.
+// sw.js must sit next to index.html on GitHub Pages; registration
+// silently skips if the file isn't deployed or on http (non-secure).
+if('serviceWorker' in navigator&&location.protocol==='https:'){
+  try{navigator.serviceWorker.register('sw.js').catch(function(){});}catch(swE){}
+}
 window.addEventListener('load',function(){
   applyTheme(S.theme);
   var pe=id('loginPass');if(pe)pe.addEventListener('keydown',function(e){if(e.key==='Enter')doLogin();});
@@ -3763,6 +3825,7 @@ function showApp(){
     var sr=id('sbRole');if(sr)sr.textContent=u.role;
     var bd=id('sbBuildDate');if(bd)bd.textContent=''; // legacy element no longer in the DOM — safe no-op
     applyRoleNav(u.role);
+    applyLanguage(); // restore saved Tamil/English preference
     go('dashboard');
     // If lookup wasn't bundled in the login response (e.g. auto-login
     // from remembered token path), fetch it now as a fallback.
@@ -5372,6 +5435,31 @@ function previewTask(){
   id('mTaskFt').innerHTML='<button class="btn btn-ghost" onclick="closeModal(\'mTask\')">Close</button><button class="btn btn-primary" onclick="closeModal(\'mTask\');saveTask()">Confirm & Save</button>';
   openModal('mTask');
 }
+// ─── ENSURE FULL TASK DETAIL BEFORE EDITING ────────────────────
+// The task LIST payload carries a truncated description (120 chars) and
+// omits officerRemarks/photoLinks entirely (v110 slim-payload optimisation).
+// Any form that pre-fills from the task object MUST call this first,
+// otherwise the truncated/missing values get saved back to the sheet —
+// permanently destroying the full text. (This exact bug shipped in v110
+// and is fixed in v112.)
+function ensureTaskDetail(t,cb){
+  if(t._detail){cb();return;}
+  showLoader('Loading task...');
+  gasCall('serverGetTaskDetail',S.token,t.taskID).then(function(r){
+    hideLoader();
+    if(r&&r.success){
+      t._detail=r.task;
+      t.description=r.task.description;       // full, untruncated
+      t.officerRemarks=r.task.officerRemarks;
+      t.completedAt=r.task.completedAt;
+      t.updatedBy=r.task.updatedBy;
+      t.photoLinks=r.task.photoLinks;
+      if(r.task.history)t._history=r.task.history;
+    }
+    cb();
+  });
+}
+
 function viewTask(taskID){
   var t=null;for(var i=0;i<S.tasks.length;i++)if(S.tasks[i].taskID===taskID){t=S.tasks[i];break;}
   if(!t)return;
@@ -5389,10 +5477,12 @@ function viewTask(taskID){
       if(r&&r.success){
         t._detail=r.task;
         // Merge detail fields back into the task object
+        t.description=r.task.description;   // FULL description (list is truncated)
         t.officerRemarks=r.task.officerRemarks;
         t.completedAt=r.task.completedAt;
         t.updatedBy=r.task.updatedBy;
         t.photoLinks=r.task.photoLinks;
+        if(r.task.history)t._history=r.task.history;
         // Only update if this task's modal is still open
         if(id('mTaskTitle')&&id('mTaskTitle').textContent===taskID){
           id('mTaskBody').innerHTML=taskDetailHTML(t);
@@ -5511,11 +5601,45 @@ function taskDetailHTML(t){
     +'<div id="taskDetailDocsList" style="font-size:12px;color:var(--tx3)">Loading documents...</div>'
     +'</div>';
 
+  // History timeline — arrives with the on-demand detail fetch (t._history)
+  html+='<div style="margin-top:12px">'
+    +'<div style="font-size:10px;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">&#128337; History</div>';
+  if(t._history&&t._history.length){
+    html+='<div style="border-left:2px solid var(--border);padding-left:12px;display:flex;flex-direction:column;gap:8px">';
+    // newest first
+    for(var hi=t._history.length-1;hi>=0;hi--){
+      var h=t._history[hi];
+      var icon=h.action==='Created'?'add_circle':(h.action==='Status changed'?'swap_horiz':(h.action==='Progress update'?'trending_up':'edit'));
+      var iconColor=h.action==='Created'?'var(--c-green)':(h.action==='Status changed'?'var(--c-blue)':'var(--tx3)');
+      var when=h.at?new Date(h.at).toLocaleString('en-IN',{day:'numeric',month:'short',hour:'numeric',minute:'2-digit'}):'';
+      var line=h.action==='Status changed'
+        ? htmlEsc(h.fromStatus)+' \u2192 <b>'+htmlEsc(h.toStatus)+'</b>'
+        : htmlEsc(h.action);
+      html+='<div style="position:relative;font-size:12px">'
+        +'<span class="material-icons-round" style="position:absolute;left:-20px;top:0;font-size:14px;color:'+iconColor+';background:var(--surface);border-radius:50%">'+icon+'</span>'
+        +'<div style="color:var(--tx1)">'+line+'</div>'
+        +'<div style="font-size:11px;color:var(--tx3)">'+htmlEsc(h.by)+' \u00b7 '+when+(h.detail?' \u00b7 '+htmlEsc(h.detail.slice(0,80)):'')+'</div>'
+        +'</div>';
+    }
+    html+='</div>';
+  } else if(typeof t._history!=='undefined'){
+    html+='<div style="font-size:12px;color:var(--tx3)">No history recorded yet (history starts from v112).</div>';
+  } else {
+    html+='<div style="font-size:12px;color:var(--tx3)">Loading history...</div>';
+  }
+  html+='</div>';
+
   return html;
 }
 var EDIT_TASK={newPhotos:[],newDocs:[],taskID:null};
 function editTask(taskID){
   var t=null;for(var i=0;i<S.tasks.length;i++)if(S.tasks[i].taskID===taskID){t=S.tasks[i];break;}if(!t)return;
+  // CRITICAL: fetch full description/remarks BEFORE building the form.
+  // The list copy is truncated — editing from it would save the
+  // truncation back and permanently lose the full text.
+  ensureTaskDetail(t,function(){editTaskBuildForm(t,taskID);});
+}
+function editTaskBuildForm(t,taskID){
   var ld=S.lookup;
   var offOpts='<option value="">Select Officer</option>';if(ld&&ld.officers){for(var i=0;i<ld.officers.length;i++){var o=ld.officers[i];offOpts+='<option value="'+o.userID+'"'+(o.userID===t.officerID?' selected':'')+'>'+o.name+' \u2014 '+o.designation+'</option>';}}
   var deptOpts='<option value="">Select</option>';if(ld&&ld.departments){for(var i=0;i<ld.departments.length;i++){var d=ld.departments[i];deptOpts+='<option'+(d.DeptName===t.department?' selected':'')+'>'+d.DeptName+'</option>';}}
@@ -5553,6 +5677,8 @@ function editTask(taskID){
     +'<div style="font-size:12px;color:var(--tx3);margin-top:4px">Tap to add new photos</div>'
     +'</div>'
     +'<input type="file" id="editTaskPhotoInput" accept="image/*" multiple style="display:none" onchange="editTaskAddPhotos(this.files)">'
+    +'<input type="file" id="editTaskPhotoCamInput" accept="image/*" capture="environment" style="display:none" onchange="editTaskAddPhotos(this.files)">'
+    +'<button class="btn btn-ghost btn-sm" style="margin-top:6px" onclick="document.getElementById(\'editTaskPhotoCamInput\').click()"><span class="material-icons-round mi">photo_camera</span> Take Photo with Camera</button>'
     +'<div id="editTaskNewPhotoPreview" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px"></div>'
     +'</div>';
   setTimeout(function(){var et=id('e-type');if(et)et.value=t.taskType||'';var ep=id('e-priority');if(ep)ep.value=t.priority||'Medium';var es=id('e-status');if(es)es.value=t.status||'Pending';},50);
@@ -6053,6 +6179,9 @@ function deleteAllSelectedDuplicates(){
 
 function adminUpdate(taskID){
   var t=null;for(var i=0;i<S.tasks.length;i++)if(S.tasks[i].taskID===taskID){t=S.tasks[i];break;}if(!t)return;
+  ensureTaskDetail(t,function(){adminUpdateOpen(t,taskID);});
+}
+function adminUpdateOpen(t,taskID){
   var pu=id('pu-taskid');if(pu)pu.value=taskID;
   var pd=id('pu-desc');if(pd)pd.textContent=t.description.substring(0,150)+(t.description.length>150?'\u2026':'');
   var ps=id('pu-status');if(ps)ps.value=t.status||'Pending';
@@ -6237,6 +6366,12 @@ function officerUpdate(taskID){
   if(isHOD&&t.officerID!==S.user.userID&&t.officerName!==S.user.name){
     hodReassignTask(taskID);return;
   }
+  // Fetch full remarks/description before pre-filling — the list copy
+  // omits officerRemarks entirely; saving from an empty field would
+  // wipe the officer's previous remarks.
+  ensureTaskDetail(t,function(){officerUpdateOpen(t,taskID,isHOD);});
+}
+function officerUpdateOpen(t,taskID,isHOD){
   var pu=id('pu-taskid');if(pu)pu.value=taskID;
   var pd=id('pu-desc');if(pd)pd.textContent=t.description.substring(0,150)+(t.description.length>150?'\u2026':'');
   var ps=id('pu-status');if(ps)ps.value=(t.status==='Completed'?'Completed':'In Progress');
@@ -7382,7 +7517,9 @@ function clearMultiOfficerList(){
 // ── PHOTO LOG ────────────────────────────────────────────────
 var PL={photos:[],pdfs:[],entries:[],editPhotos:[],editExistingPhotos:[],editRemovedPhotoIDs:[],editNoteID:null,editPdfs:[],editExistingAttachments:[],editRemovedAttachmentIDs:[],isAdmin:false,sortOrder:'desc',window:7};
 function plCheckAdmin(){
-  var liveCheck = S.user && (S.user.role==='Admin'||S.user.role==='Commissioner'||S.user.role==='Supervision');
+  // Add/Edit/Delete notes: Admin, Commissioner, HOD, Supervision.
+  // Everyone else (Officers etc.) is read-only.
+  var liveCheck = S.user && (S.user.role==='Admin'||S.user.role==='Commissioner'||S.user.role==='HOD'||S.user.role==='Supervision');
   return liveCheck && PL.isAdmin;
 }
 
@@ -7439,7 +7576,7 @@ function plThisMonthDays(){
 
 function loadPhotoLog(){
   var isAdmin=(S.user&&(S.user.role==='Admin'||S.user.role==='Commissioner'));
-  var canWriteNotes=(S.user&&(S.user.role==='Admin'||S.user.role==='Commissioner'||S.user.role==='Supervision'));
+  var canWriteNotes=(S.user&&(S.user.role==='Admin'||S.user.role==='Commissioner'||S.user.role==='HOD'||S.user.role==='Supervision'));
   PL.isAdmin=canWriteNotes;
   var adminAct=id('plAdminActions'),viewAct=id('plViewActions');
   if(adminAct)adminAct.style.display=canWriteNotes?'':'none';
@@ -8237,17 +8374,16 @@ function plMakeEntryCard(e, typeColors, months){
     content.appendChild(attachWrap);
   }
 
-  var isStrictAdmin=(S.user&&(S.user.role==='Admin'||S.user.role==='Commissioner'));
   if(plCheckAdmin()&&!e._saving){
     var actRow=document.createElement('div');
     actRow.style.cssText='display:flex;gap:8px;margin-top:6px;padding-top:8px;border-top:1px solid var(--border)';
-    if(isStrictAdmin){
-      var editBtn=document.createElement('button');
-      editBtn.className='btn btn-ghost btn-sm';
-      editBtn.innerHTML='<span class="material-icons-round mi">edit</span> Edit';
-      editBtn.onclick=function(ev){ev.stopPropagation();plEditEntry(e.noteID);};
-      actRow.appendChild(editBtn);
-    }
+    // Edit available to every role that can delete (Admin, Commissioner,
+    // Supervision) — previously restricted to Admin/Commissioner only.
+    var editBtn=document.createElement('button');
+    editBtn.className='btn btn-ghost btn-sm';
+    editBtn.innerHTML='<span class="material-icons-round mi">edit</span> Edit';
+    editBtn.onclick=function(ev){ev.stopPropagation();plEditEntry(e.noteID);};
+    actRow.appendChild(editBtn);
     var delBtn=document.createElement('button');
     delBtn.className='btn btn-ghost btn-sm';
     delBtn.style.cssText='color:var(--c-red);border-color:var(--c-red)';
