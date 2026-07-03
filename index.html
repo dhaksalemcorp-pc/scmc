@@ -3898,6 +3898,7 @@ function resetSessionState(){
 // dashboard + task list in ONE call while the user is already looking
 // at instantly-rendered cached data. Retries quietly on bad networks;
 // only a truly dead session sends the user back to the login page.
+var FRONTEND_VERSION='v119';
 var BOOT_TRIES=0;
 var BOOT_PENDING=false;
 function startBootstrap(){
@@ -3917,9 +3918,22 @@ function bootRetry(){
   else toast('Could not refresh data — showing last saved copy. Pull down or navigate to retry.','info');
 }
 function applyBootstrap(r){
+  // Version sanity check — the #1 cause of "fix didn't work" is the
+  // backend still running an old deployment version. Tell the Admin
+  // plainly instead of failing silently.
+  if(r.backendVersion&&r.backendVersion!==FRONTEND_VERSION&&S.user&&(S.user.role==='Admin'||S.user.role==='Commissioner')){
+    toast('App is '+FRONTEND_VERSION+' but backend is '+r.backendVersion+' \u2014 please redeploy Code.gs as a NEW VERSION in Apps Script \u2192 Manage Deployments.','error');
+  } else if(!r.backendVersion&&S.user&&(S.user.role==='Admin'||S.user.role==='Commissioner')){
+    toast('Backend deployment is outdated (pre-v119) \u2014 please redeploy Code.gs as a NEW VERSION.','error');
+  }
   if(r.lookup&&r.lookup.success){
     S.lookup=r.lookup;populateSelects();
     swrSave('lookup',r.lookup); // selects render instantly next session
+    // If the Notes page opened before lookup arrived, its department
+    // dropdown was empty — fill it now.
+    if(S.page==='photolog'&&typeof plPopulateDeptDropdown==='function'){
+      plPopulateDeptDropdown('plDeptFilter',PL.deptFilter||'');
+    }
   }
   if(r.dashData&&r.dashData.success&&S.user){
     var role=S.user.role;
@@ -4319,6 +4333,15 @@ function loadHODDashboard(){
       pending=bs.pending;inProg=bs.inProgress;review=bs.review;overdue=bs.overdue;
       if(r.officerStats)officerMap=r.officerStats;
     } else {
+      // Old backend (no stats field): its default list HIDES completed
+      // tasks, so counting it would show Completed = 0. Fetch once with
+      // the include flags (supported since v115) and count the full set.
+      if(!r._isFullFallback){
+        gasCall('serverGetHODTasks',S.token,{includeCompleted:true,includeClosed:true}).then(function(fr){
+          if(fr&&fr.success){fr._isFullFallback=true;handle(fr);}
+        });
+        return;
+      }
       total=allTasks.length;done=0;pending=0;inProg=0;overdue=0;review=0;
       for(var i=0;i<allTasks.length;i++){
         var t=allTasks[i];
@@ -4332,6 +4355,9 @@ function loadHODDashboard(){
         officerMap[on].total++;
         if(t.status==='Completed'||t.status==='Closed')officerMap[on].done++;
       }
+      // Keep the working task list actionable-only for consistency
+      S.tasks=allTasks.filter(function(t){return t.status!=='Completed'&&t.status!=='Closed';});
+      S.filtered=S.tasks.slice();
     }
     // KPIs
     var ht=id('hod-total');if(ht)ht.textContent=total;
