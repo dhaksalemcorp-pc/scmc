@@ -1929,9 +1929,7 @@ tbody tr:hover { background: var(--surface2); }
         <span class="c-muted" id="taskCount" style="flex-shrink:0">Loading...</span>
         <div style="display:flex;gap:4px;align-items:center;margin-left:auto">
           <span style="font-size:11px;color:var(--tx3);white-space:nowrap">Sort:</span>
-          <button class="btn btn-ghost btn-sm" id="sortUpdBtn" onclick="sortBy('updatedAt')" style="font-size:11px;padding:3px 8px" title="Sort by last updated">Updated <span id="sort-updatedAt"> ▼</span></button>
-          <button class="btn btn-ghost btn-sm" id="sortDateBtn" onclick="sortBy('dateAssigned')" style="font-size:11px;padding:3px 8px" title="Sort by date assigned">Assigned <span id="sort-dateAssigned"></span></button>
-          <button class="btn btn-ghost btn-sm" id="sortPriBtn" onclick="sortBy('priority')" style="font-size:11px;padding:3px 8px" title="Sort by priority">Priority <span id="sort-priority"></span></button>
+          <button class="btn btn-ghost btn-sm" id="sortUpdBtn" onclick="sortBy('updatedAt')" style="font-size:11px;padding:3px 8px" title="Newest updates first — tap to reverse">Updated <span id="sort-updatedAt"> ▼</span></button>
         </div>
       </div>
       <!-- UNIVERSAL SEARCH BAR — always visible, no filter panel needed -->
@@ -2169,6 +2167,12 @@ tbody tr:hover { background: var(--surface2); }
               </select>
             </div>
             <div class="f-group">
+              <label class="f-label">Department <span style="font-size:11px;color:var(--tx3)">(for department-wise review, optional)</span></label>
+              <select class="f-sel" id="pl-dept">
+                <option value="">Select Department (optional)</option>
+              </select>
+            </div>
+            <div class="f-group">
               <label class="f-label" id="pl-notes-label">Notes</label>
               <textarea class="f-ctrl" id="pl-notes" rows="4" placeholder="Enter your observations..."></textarea>
             </div>
@@ -2218,6 +2222,9 @@ tbody tr:hover { background: var(--surface2); }
             <button class="pl-win-btn"        data-days="0"  onclick="plSetWindow(0)"  style="padding:4px 12px;border-radius:6px;border:none;font-size:12px;font-weight:600;cursor:pointer;transition:all .15s">This Month</button>
           </div>
           <span id="plWindowInfo" style="font-size:11.5px;color:var(--tx3);margin-left:4px"></span>
+          <select id="plDeptFilter" class="f-sel" onchange="plSetDeptFilter(this.value)" style="margin-left:auto;font-size:12px;padding:4px 8px;max-width:220px">
+            <option value="">All Departments</option>
+          </select>
         </div>
         <!-- Improved Filter bar -->
         <div class="card mb12" style="border:1.5px solid var(--border)">
@@ -3492,8 +3499,13 @@ function gasCall(fn){
   // ── GitHub Pages mode: call GAS as a web API via fetch ──
   if(GAS_URL){
     function attempt(retriesLeft){
+      // Abort after 30s — a request that old is dead; failing fast with a
+      // clear message beats a browser-default hang that looks like a freeze.
+      var ctrl=(typeof AbortController!=='undefined')?new AbortController():null;
+      var timer=ctrl?setTimeout(function(){try{ctrl.abort();}catch(e){}},30000):null;
       return fetch(GAS_URL,{
         method:'POST',
+        signal:ctrl?ctrl.signal:undefined,
         cache:'no-store', // prevents stale cached responses without triggering a
                            // CORS preflight (unlike custom Cache-Control/Pragma
                            // headers, which Apps Script's web app cannot answer —
@@ -3507,6 +3519,7 @@ function gasCall(fn){
         body:'fn='+encodeURIComponent(fn)+'&payload='+encodeURIComponent(JSON.stringify(args))+'&_ts='+Date.now()
       })
       .then(function(r){
+        if(timer)clearTimeout(timer);
         return r.text().then(function(txt){
           try{
             return JSON.parse(txt);
@@ -3527,6 +3540,7 @@ function gasCall(fn){
       })
       .then(function(r){return r||{success:false,message:'No response'};})
       .catch(function(e){
+        if(timer)clearTimeout(timer);
         // Genuine network-level failures (DNS hiccup, momentary drop, a
         // slow mobile connection timing out) are often transient — retry
         // once automatically before surfacing an error, since a silent
@@ -3616,6 +3630,34 @@ function demoFn(fn,args){
     if(args[0]==='commissioner'&&args[1]==='comm123')return{success:true,token:'tok-comm',lookup:lu,user:{userID:'USR002',name:'Commissioner Raj',designation:'Deputy Commissioner',department:'General',zone:'Main Office',role:'Commissioner',username:'commissioner'}};
     if(args[0]==='priya.nair'&&args[1]==='officer123')return{success:true,token:'tok-off',lookup:lu,user:{userID:'USR003',name:'Priya Nair',designation:'City Health Officer',department:'Public Health',zone:'Ammapet Zone-3',role:'Officer',username:'priya.nair'}};
     return{success:false,message:'Invalid credentials.'};
+  }
+  if(fn==='serverLoginLight'){
+    // Light auth — same demo credentials, no lookup/dash/tasks bundled
+    if(args[0]==='admin'&&args[1]==='admin123')return{success:true,token:'tok-admin',user:{userID:'USR001',name:'Admin User',designation:'Deputy Commissioner',department:'General',zone:'Main Office',role:'Admin',username:'admin'}};
+    if(args[0]==='commissioner'&&args[1]==='comm123')return{success:true,token:'tok-comm',user:{userID:'USR002',name:'Commissioner Raj',designation:'Deputy Commissioner',department:'General',zone:'Main Office',role:'Commissioner',username:'commissioner'}};
+    if(args[0]==='priya.nair'&&args[1]==='officer123')return{success:true,token:'tok-off',user:{userID:'USR003',name:'Priya Nair',designation:'City Health Officer',department:'Public Health',zone:'Ammapet Zone-3',role:'Officer',username:'priya.nair'}};
+    return{success:false,message:'Invalid credentials.'};
+  }
+  if(fn==='serverGetBootstrap'){
+    var role=S.user?S.user.role:'Admin';
+    var out={success:true,lookup:buildLookupData()};
+    if(role==='Officer'){
+      out.dashData={success:true,stats:{total:5,pending:2,inProgress:1,completed:2,overdue:1,dueToday:0,highPriority:1},completionRate:40,recentTasks:[]};
+      var bo=[],bc=0;
+      for(var bi=0;bi<DEMO.tasks.length;bi++){var bt=DEMO.tasks[bi];
+        if(bt.officerID!=='USR003'&&bt.officerName!=='Priya Nair')continue;
+        if(bt.status==='Completed'||bt.status==='Closed'){bc++;continue;}
+        bo.push(bt);}
+      out.tasksData={success:true,data:bo,completedCount:bc,includeCompleted:false};
+    } else {
+      out.dashData={success:true,stats:{total:5,pending:2,inProgress:1,completed:2,overdue:1,dueToday:0,highPriority:1},completionRate:40,zoneStats:{},deptStats:{},officerStats:{}};
+      var ba=[],bc2=0;
+      for(var bj=0;bj<DEMO.tasks.length;bj++){var bt2=DEMO.tasks[bj];
+        if(bt2.status==='Completed'||bt2.status==='Closed'){bc2++;continue;}
+        ba.push(bt2);}
+      out.tasksData={success:true,data:ba,totalCount:DEMO.tasks.length,windowDays:90,completedCount:bc2,includeCompleted:false};
+    }
+    return out;
   }
   if(fn==='serverLoginAndLoad'){
     // Demo: same as serverLogin but also includes dashboard data
@@ -3769,26 +3811,26 @@ window.addEventListener('load',function(){
   var pe=id('loginPass');if(pe)pe.addEventListener('keydown',function(e){if(e.key==='Enter')doLogin();});
   var mods=document.querySelectorAll('.modal-bg');
   for(var i=0;i<mods.length;i++){(function(bg){bg.addEventListener('click',function(e){if(e.target===bg)bg.classList.remove('open');});})(mods[i]);}
-  // Auto-login from stored token — always validate with server to get fresh user data
+  // v117 OPTIMISTIC AUTO-LOGIN: the token and user are already on the
+  // device — show the app INSTANTLY (dashboard/tasks render from cache)
+  // instead of blocking on a server round-trip that used to take seconds
+  // or fail outright on weak connections. The background bootstrap call
+  // doubles as validation: a genuinely expired session comes back as
+  // invalidSession and cleanly returns the user to the login page.
   try{
-    var tok=LS.get('sc-tok');
-    if(tok){
-      gasCall('serverValidateSession',tok).then(function(r){
-        if(r&&r.valid&&r.user){
-          // Server returned fresh user data — use it (not stale localStorage)
-          S.token=tok;
-          S.user=r.user;
-          LS.set('sc-usr',JSON.stringify(r.user));
-          showApp();
-        } else if(r&&r.valid){
-          // Server validated but did not return user — try localStorage as fallback
-          var usr=LS.get('sc-usr');
-          if(usr){try{S.token=tok;S.user=JSON.parse(usr);showApp();}catch(pe){LS.del('sc-tok');LS.del('sc-usr');}}
-        } else {
-          // Session invalid — clear and show login
-          LS.del('sc-tok');LS.del('sc-usr');
-        }
-      });
+    var tok=LS.get('sc-tok'),usrRaw=LS.get('sc-usr');
+    if(tok&&usrRaw){
+      var savedUser=null;
+      try{savedUser=JSON.parse(usrRaw);}catch(pe){savedUser=null;}
+      if(savedUser&&savedUser.userID){
+        S.token=tok;S.user=savedUser;
+        resetSessionState();
+        BOOT_TRIES=0;
+        startBootstrap();
+        showApp();
+      } else {
+        LS.del('sc-tok');LS.del('sc-usr');
+      }
     }
   }catch(e){}
   loadSavedLogo();
@@ -3803,19 +3845,21 @@ function doLogin(){
   // serverLoginAndLoad authenticates AND returns dashboard data in one
   // round-trip — eliminates the separate dashboard call that previously
   // fired right after login. Saves ~350ms on every login.
-  gasCall('serverLoginAndLoad',u,p).then(function(r){
+  // v117 INSTANT LOGIN: the login call now does authentication ONLY —
+  // the smallest possible request/response, so it succeeds fast even on
+  // weak connections. The app appears IMMEDIATELY (dashboard and tasks
+  // render from device cache), while lookup + fresh dashboard + tasks
+  // arrive via one background bootstrap call the user never waits on.
+  gasCall('serverLoginLight',u,p).then(function(r){
     btn.disabled=false;btn.textContent='Sign In to System';
     if(r&&r.success){
       resetSessionState(); // never carry the previous user's data forward
       S.token=r.token;S.user=r.user;
-      // Lookup bundled in response since v103
-      if(r.lookup&&r.lookup.success){S.lookup=r.lookup;populateSelects();}
-      // Dashboard data bundled since v108 — store so the dashboard
-      // function can use it directly without a second backend call
-      if(r.dashData&&r.dashData.success){S.preloadedDash=r.dashData;}
-      // Task list bundled for Officer/HOD (v116) — tracker opens instantly
-      if(r.tasksData&&r.tasksData.success){S.preloadedTasks=r.tasksData;}
       var rem=id('rememberMe');if(rem&&rem.checked){LS.set('sc-tok',r.token);LS.set('sc-usr',JSON.stringify(r.user));}
+      // Fire the bootstrap BEFORE showApp so BOOT_PENDING is set when the
+      // dashboard renders — it then skips its own duplicate fetch.
+      BOOT_TRIES=0;
+      startBootstrap();
       showApp();
     }else{
       var failMsg=(r&&r.message)?r.message:'Login failed. Check your credentials.';
@@ -3835,13 +3879,61 @@ function doLogin(){
 function resetSessionState(){
   S.tasks=[];S.filtered=[];S.drillFilter='';
   S.preloadedDash=null;S.preloadedTasks=null;
-  S.showCompleted=false;S.taskWindow=90;
+  S.showCompleted=false;S.taskWindow=90;S._fullList=null;S._trkMeta=null;
   if(typeof TRK_RP_ON!=='undefined')TRK_RP_ON=false;
   if(typeof PL!=='undefined'){PL.entries=[];PL.window=7;}
   if(typeof GRV!=='undefined'&&GRV){GRV.list=[];}
   var tb=id('tBody');if(tb)tb.innerHTML='';
   var tg=id('taskCardsGrid');if(tg)tg.innerHTML='';
 }
+// ─── BACKGROUND BOOTSTRAP (v117) ──────────────────────────────
+// Fired right after the app becomes visible. Fetches lookup + fresh
+// dashboard + task list in ONE call while the user is already looking
+// at instantly-rendered cached data. Retries quietly on bad networks;
+// only a truly dead session sends the user back to the login page.
+var BOOT_TRIES=0;
+var BOOT_PENDING=false;
+function startBootstrap(){
+  BOOT_PENDING=true;
+  gasCall('serverGetBootstrap',S.token).then(function(r){
+    BOOT_PENDING=false;
+    if(!r||(!r.success&&!r.invalidSession)){bootRetry();return;}
+    if(r.invalidSession){
+      toast('Your session has expired — please sign in again.','error');
+      doLogout();return;
+    }
+    applyBootstrap(r);
+  });
+}
+function bootRetry(){
+  if(BOOT_TRIES++<3)setTimeout(startBootstrap,3000);
+  else toast('Could not refresh data — showing last saved copy. Pull down or navigate to retry.','info');
+}
+function applyBootstrap(r){
+  if(r.lookup&&r.lookup.success){
+    S.lookup=r.lookup;populateSelects();
+    swrSave('lookup',r.lookup); // selects render instantly next session
+  }
+  if(r.dashData&&r.dashData.success&&S.user){
+    var role=S.user.role;
+    swrSave(role==='Officer'?'offdash':'admindash',r.dashData);
+    if(S.page==='dashboard'){
+      if(role==='Officer')applyOfficerDashData(r.dashData);
+      else if(role==='Admin'||role==='Commissioner')applyAdminDashData(r.dashData);
+      else S.preloadedDash=r.dashData;
+    } else {
+      S.preloadedDash=r.dashData;
+    }
+  }
+  if(r.tasksData&&r.tasksData.success){
+    if(S.page==='tracker'){
+      trkApplyResponse(r.tasksData,'bootstrap',true); // silent live update
+    } else {
+      S.preloadedTasks=r.tasksData; // tracker consumes on first open
+    }
+  }
+}
+
 function doLogout(){
   gasCall('serverLogout',S.token).then(function(){});
   S.token=null;S.user=null;LS.del('sc-tok');LS.del('sc-usr');
@@ -3864,6 +3956,12 @@ function showApp(){
     var bd=id('sbBuildDate');if(bd)bd.textContent=''; // legacy element no longer in the DOM — safe no-op
     applyRoleNav(u.role);
     applyLanguage(); // restore saved Tamil/English preference
+    // Lookup (departments/zones/officers) from device cache — selects
+    // populate instantly; the background bootstrap refreshes them.
+    if(!S.lookup){
+      var lkc=swrLoad('lookup',7*86400000);
+      if(lkc&&lkc.success){S.lookup=lkc;populateSelects();}
+    }
     go('dashboard');
     // If lookup wasn't bundled in the login response (e.g. auto-login
     // from remembered token path), fetch it now as a fallback.
@@ -4165,6 +4263,9 @@ function loadDashboard(){
   } else {
     showLoader('Loading dashboard...');
   }
+
+  // Bootstrap already delivers fresh dashboard data — skip the duplicate
+  if(BOOT_PENDING&&renderedFromCache)return;
 
   gasCall('serverGetDashboardStats',S.token).then(function(r){
     hideLoader();
@@ -4513,6 +4614,10 @@ function loadOfficerDashboard(){
     showLoader('Loading your dashboard...');
   }
 
+  // Bootstrap already has fresh dashboard data on the way — don't fire a
+  // second, redundant fetch for the same numbers.
+  if(BOOT_PENDING&&renderedFromCache){renderOfficerGrievancesPlaceholder();return;}
+
   gasCall('serverGetOfficerDashboard',S.token).then(function(r){
     hideLoader();
     if(!r||!r.success){
@@ -4810,6 +4915,7 @@ function trkFilterReviewPending(){
 }
 function loadTasks(){
   TRK_RP_ON=false;
+  if(!S.showCompleted)S._fullList=null; // fresh fetch invalidates the re-show cache
   var role=S.user?S.user.role:'';
   var fn,args;
   var reqOpts={includeCompleted:S.showCompleted};
@@ -4859,7 +4965,7 @@ function loadTasks(){
   gasCall.apply(null,[fn].concat(args)).then(function(r){
     hideLoader();
     if(!r){
-      if(!renderedFromCache)showTrackerError('No response from server. Check your internet connection and GAS deployment.');
+      if(!renderedFromCache)showTrackerError('Connection problem \u2014 please check your internet and tap Refresh.');
       return;
     }
     if(!r.success){
@@ -4869,50 +4975,88 @@ function loadTasks(){
     trkApplyResponse(r,fn,false);
   }).catch(function(e){
     hideLoader();
-    if(!renderedFromCache)showTrackerError('Unexpected error: '+(e&&e.message?e.message:String(e)));
+    var em=(e&&e.message?e.message:String(e)).toLowerCase();
+    var friendly=(em.indexOf('failed to fetch')>=0||em.indexOf('load failed')>=0||em.indexOf('network')>=0)
+      ?'Connection problem \u2014 please check your internet and tap Refresh.'
+      :'Unexpected error: '+(e&&e.message?e.message:String(e));
+    if(!renderedFromCache)showTrackerError(friendly);
   });
 }
 
 // Shared response processing for both the preloaded (login-bundled) and
 // network paths — keeps the note bar, SWR save and rendering identical.
+function trkToggleCompleted(show){
+  if(show){
+    // Reuse the full list if we already fetched it this visit — INSTANT.
+    if(S._fullList&&S._fullList.length){
+      S.showCompleted=true;
+      S.tasks=S._fullList.slice();S.filtered=S.tasks.slice();applyCurrentSort();
+      renderTable(S.filtered);renderKanban(S.filtered);updateTaskCount();
+      trkRenderNoteBar();
+      return;
+    }
+    S.showCompleted=true;loadTasks(); // network only the first time
+  } else {
+    // Hiding never needs the network — filter what we already have.
+    S.showCompleted=false;
+    if(S.tasks&&S.tasks.length){
+      if(!S._fullList)S._fullList=S.tasks.slice(); // remember for instant re-show
+      S.tasks=S.tasks.filter(function(t){return t.status!=='Completed'&&t.status!=='Closed';});
+      S.filtered=S.tasks.slice();applyCurrentSort();
+      renderTable(S.filtered);renderKanban(S.filtered);updateTaskCount();
+      trkRenderNoteBar();
+    } else {
+      loadTasks();
+    }
+  }
+}
+
 function trkApplyResponse(r,fn,fromPreload){
     var data=r.data||[];
+    // Remember response meta so the note bar can re-render on instant
+    // client-side toggles without another network call.
+    S._trkMeta={completedCount:(typeof r.completedCount==='number'?r.completedCount:null),
+                totalCount:r.totalCount||0,windowDays:r.windowDays||90};
+    if(r.includeCompleted){S._fullList=null;/* rebuilt below after normalize */}
     S.tasks=normalizeTaskList(data);
+    if(r.includeCompleted)S._fullList=S.tasks.slice(); // instant re-show cache
     S.filtered=S.tasks.slice();
     applyCurrentSort();
-    // Save for instant display on the next visit/login
-    swrSave('tasks',S.tasks);
+    // Save for instant display on the next visit/login (open tasks only —
+    // don't bloat localStorage with completed history)
+    if(!r.includeCompleted)swrSave('tasks',S.tasks);
     var bb=id('bulkBar');if(bb){bb.style.display='none';bb.classList.add('dn');}
     var chkAll=id('chkAll');if(chkAll){chkAll.checked=false;chkAll.indeterminate=false;}
     if(S.drillFilter) applyDrillFilter();
     else{renderTable(S.filtered);renderKanban(S.filtered);updateTaskCount();}
     if(advFilterOpen) populateOfficerFilter();
-    // Note bar: review-pending chip (admin) + completed toggle + window note
-    var note=id('trkOlderNote');
-    if(note){
-      var parts=[];
-      var isAdm=(S.user&&(S.user.role==='Admin'||S.user.role==='Commissioner'));
-      // Review Pending chip — the admin's review queue, one tap to filter
-      var rpCount=0;
-      for(var ri=0;ri<S.tasks.length;ri++)if(S.tasks[ri].status==='Review Pending')rpCount++;
-      if(isAdm&&rpCount>0){
-        parts.push('<a onclick="trkFilterReviewPending()" style="cursor:pointer;color:#b45309;background:rgba(217,119,6,.12);padding:2px 10px;border-radius:999px;font-weight:700;text-decoration:none">\u23f3 '+rpCount+' awaiting review</a>');
-      }
-      // Completed hidden/shown toggle
-      if(typeof r.completedCount==='number'&&(r.completedCount>0||S.showCompleted)){
-        if(S.showCompleted){
-          parts.push('Completed tasks shown. <a onclick="S.showCompleted=false;loadTasks();" style="cursor:pointer;color:var(--c-blue);font-weight:600">Hide completed</a>');
-        } else {
-          parts.push('Completed hidden ('+r.completedCount+'). <a onclick="S.showCompleted=true;loadTasks();" style="cursor:pointer;color:var(--c-blue);font-weight:600">Show</a>');
-        }
-      }
-      // 90-day window note
-      if(r.totalCount&&r.totalCount>data.length&&S.taskWindow>0&&S.showCompleted){
-        parts.push('Showing recent '+(r.windowDays||90)+' days. <a onclick="S.taskWindow=0;loadTasks();" style="cursor:pointer;color:var(--c-blue);font-weight:600">Load all</a>');
-      }
-      if(parts.length){note.style.display='';note.innerHTML=parts.join(' \u00b7&nbsp; ');}
-      else note.style.display='none';
+    trkRenderNoteBar();
+}
+
+// Note bar (review chip + completed toggle + window note) — reads
+// S._trkMeta so it can re-render after instant client-side toggles.
+function trkRenderNoteBar(){
+  var note=id('trkOlderNote');if(!note)return;
+  var meta=S._trkMeta||{};
+  var parts=[];
+  var isAdm=(S.user&&(S.user.role==='Admin'||S.user.role==='Commissioner'));
+  var rpCount=0;
+  for(var ri=0;ri<S.tasks.length;ri++)if(S.tasks[ri].status==='Review Pending')rpCount++;
+  if(isAdm&&rpCount>0){
+    parts.push('<a onclick="trkFilterReviewPending()" style="cursor:pointer;color:#b45309;background:rgba(217,119,6,.12);padding:2px 10px;border-radius:999px;font-weight:700;text-decoration:none">\u23f3 '+rpCount+' awaiting review</a>');
+  }
+  if(typeof meta.completedCount==='number'&&(meta.completedCount>0||S.showCompleted)){
+    if(S.showCompleted){
+      parts.push('Completed tasks shown. <a onclick="trkToggleCompleted(false)" style="cursor:pointer;color:var(--c-blue);font-weight:600">Hide completed</a>');
+    } else {
+      parts.push('Completed hidden ('+meta.completedCount+'). <a onclick="trkToggleCompleted(true)" style="cursor:pointer;color:var(--c-blue);font-weight:600">Show</a>');
     }
+  }
+  if(meta.totalCount&&meta.totalCount>S.tasks.length&&S.taskWindow>0&&S.showCompleted){
+    parts.push('Showing recent '+(meta.windowDays||90)+' days. <a onclick="S.taskWindow=0;loadTasks();" style="cursor:pointer;color:var(--c-blue);font-weight:600">Load all</a>');
+  }
+  if(parts.length){note.style.display='';note.innerHTML=parts.join(' \u00b7&nbsp; ');}
+  else note.style.display='none';
 }
 function showTrackerError(msg){
   var tb=id('tBody');
@@ -5097,12 +5241,15 @@ function fillSelZone(selId,zones,label){
   fillSel(selId,sorted,'ZoneName','ZoneName',label||'All Zones');
 }
 function sortBy(col){
-  if(S.sortCol===col){S.sortDir*=-1;}else{S.sortCol=col;S.sortDir=-1;} // default descending for dates, ascending for others
-  if(col==='priority'||col==='taskID')S.sortDir=(S.sortCol===col&&S.sortDir===1)?-1:1; // flip for these
-  // Update sort indicators in column headers
+  // Simplified per usage: the tracker sorts by Last Updated only — the
+  // newest activity always on top. Clicking the Updated header flips the
+  // direction; clicks on other headers are ignored.
+  if(col!=='updatedAt')return;
+  S.sortCol='updatedAt';
+  S.sortDir*=-1;
   var cols=['taskID','taskType','zone','department','officerName','priority','dateAssigned','dueDate','status','updatedAt','createdAt'];
   for(var i=0;i<cols.length;i++){var el=id('sort-'+cols[i]);if(el)el.textContent='';}
-  var el=id('sort-'+col);if(el)el.textContent=S.sortDir===1?' ▲':' ▼';
+  var el=id('sort-updatedAt');if(el)el.textContent=S.sortDir===1?' \u25b2':' \u25bc';
   applyCurrentSort();
   renderTable(S.filtered);renderKanban(S.filtered);
 }
@@ -7749,6 +7896,8 @@ function loadPhotoLog(){
     var pd=id('pl-date');if(pd&&!pd.value)pd.value=new Date().toISOString().slice(0,10);
     var pt=id('pl-time');if(pt&&!pt.value){var now=new Date();pt.value=zeroPad(now.getHours(),2)+':'+zeroPad(now.getMinutes(),2);}
     plPopulateOfficerDropdown('pl-officer');
+    plPopulateDeptDropdown('pl-dept');
+    plPopulateDeptDropdown('plDeptFilter');
   }
   // NoteTypes NOT loaded here — only needed when "New Entry" form opens.
   // Moved to plToggleView('form') so it's lazy-loaded on demand.
@@ -7797,6 +7946,24 @@ function plLoadNoteTypes(){
   });
 }
 // Populates an Officer Name dropdown from the master officer list — used
+// Populates a Department <select> from lookup data. Used by the New
+// Entry form, the Edit modal, and the list-view review filter.
+function plPopulateDeptDropdown(selId,current){
+  var sel=id(selId);if(!sel)return;
+  var first=sel.options.length?sel.options[0].outerHTML:'<option value="">Select Department (optional)</option>';
+  sel.innerHTML=first;
+  var depts=(S.lookup&&S.lookup.departments)||[];
+  for(var i=0;i<depts.length;i++){
+    var name=depts[i].DeptName||depts[i].deptName||depts[i].name||'';
+    if(!name||String(depts[i].Status||depts[i].status||'Active')!=='Active')continue;
+    var o=document.createElement('option');o.value=name;o.textContent=name;sel.appendChild(o);
+  }
+  if(current)sel.value=current;
+}
+function plSetDeptFilter(v){
+  PL.deptFilter=v||'';
+  plRenderCards(PL.entries);
+}
 // in both the New Entry form (id passed as 'pl-officer') and the Edit
 // modal (id passed as 'plEdit-officer'). Officer Name on a note records
 // who the note "belongs to" — e.g. the inspecting officer or meeting
@@ -8112,7 +8279,7 @@ function plRenderPdfPreview(){
 function savePlEntry(){
   var date=V('pl-date'),time=V('pl-time'),type=V('pl-type'),zone=V('pl-zone'),
       loc=V('pl-location'),notes=id('pl-notes')?id('pl-notes').value:'',
-      officerName=V('pl-officer');
+      officerName=V('pl-officer'),dept=V('pl-dept');
   if(!date||!type){toast('Please fill Date and select a Type.','error');return;}
   if(type==='Meeting'&&!zone){
     toast('Please select at least one Department for the Meeting.','error');return;
@@ -8129,7 +8296,7 @@ function savePlEntry(){
   // STEP 1 — build local preview entry immediately, no network wait
   var localEntry={
     noteID:tempID, date:date, time:time, type:type, zone:zone, location:loc, notes:notes,
-    officerName:officerName,
+    officerName:officerName, department:dept,
     createdBy:S.user?S.user.name:'', createdAt:new Date().toISOString(),
     photos: pickedFiles.map(function(f){
       return { photoID:'temp_'+Math.random().toString(36).slice(2), photoData:URL.createObjectURL(f), pending:true };
@@ -8147,7 +8314,7 @@ function savePlEntry(){
   plRenderCards(PL.entries); // photos visible THE INSTANT save is pressed
 
   // STEP 2 — save the note text to the server in the background
-  gasCall('serverCreateNote',S.token,{date:date,time:time,type:type,zone:zone,location:loc,notes:notes,officerName:officerName}).then(function(r){
+  gasCall('serverCreateNote',S.token,{date:date,time:time,type:type,zone:zone,location:loc,notes:notes,officerName:officerName,department:dept}).then(function(r){
     if(!r||!r.success){
       localEntry._saving=false;
       localEntry._failed=true;
@@ -8303,6 +8470,19 @@ function clearPlForm(){
 
 // ─── RENDER — pure DOM, no innerHTML for content, no lazy-load timers ──
 function plRenderCards(entries){
+  // Department review filter — set from the dropdown in the list header
+  if(PL.deptFilter){
+    // Notes don't store a department column — derive it from the note's
+    // Officer Name via the officer master list, so "Public Health" shows
+    // every note belonging to a Public Health officer during review.
+    var nameDept={};
+    var offsD=(S.lookup&&S.lookup.officers)||[];
+    for(var di=0;di<offsD.length;di++)nameDept[String(offsD[di].name)]=String(offsD[di].department||'');
+    entries=(entries||[]).filter(function(e){
+      var d=String(e.department||'')||nameDept[String(e.officerName||'')]||'';
+      return d===PL.deptFilter;
+    });
+  }
   entries=plSortEntries(entries); // always honor current sort order (default: newest first)
   var strip=id('plSummaryStrip');
   if(strip){
@@ -8408,7 +8588,14 @@ function plMakeEntryCard(e, typeColors, months){
     failTag.innerHTML='<span class="material-icons-round" style="font-size:13px">refresh</span>Retry Save';
     failTag.onclick=function(ev){ev.stopPropagation();plRetryEntry(e);};
     tagRow.appendChild(failTag);
-  } else if(photoCountDisplay>0){
+  }
+  if(e.department){
+    var deptTag=document.createElement('span');
+    deptTag.style.cssText='font-size:11px;color:var(--c-blue);background:rgba(29,78,216,.08);padding:2px 8px;border-radius:999px;font-weight:600';
+    deptTag.textContent=e.department;
+    tagRow.appendChild(deptTag);
+  }
+  if(!e._saving&&!e._failed&&photoCountDisplay>0){
     var photoTag=document.createElement('span');
     photoTag.style.cssText='font-size:12px;color:var(--c-teal);margin-left:auto;display:flex;align-items:center;gap:3px';
     photoTag.innerHTML='<span class="material-icons-round mi" style="font-size:13px">photo_camera</span>'+photoCountDisplay;
@@ -8563,7 +8750,7 @@ function plMakeEntryCard(e, typeColors, months){
 function plRetryEntry(entry){
   entry._failed=false;entry._saving=true;
   plRenderCards(PL.entries);
-  gasCall('serverCreateNote',S.token,{date:entry.date,time:entry.time,type:entry.type,zone:entry.zone,location:entry.location,notes:entry.notes}).then(function(r){
+  gasCall('serverCreateNote',S.token,{date:entry.date,time:entry.time,type:entry.type,zone:entry.zone,location:entry.location,notes:entry.notes,officerName:entry.officerName||'',department:entry.department||''}).then(function(r){
     if(!r||!r.success){
       entry._saving=false;entry._failed=true;
       plRenderCards(PL.entries);
@@ -8696,6 +8883,7 @@ function plEditEntry(noteID){
     +'</div>'
     +'<div class="f-group"><label class="f-label">Location</label><input type="text" class="f-ctrl" id="plEdit-loc" value="'+(e.location||'')+'" placeholder="Ward / Venue"></div>'
     +'<div class="f-group"><label class="f-label">Officer Name <span style="font-size:11px;color:var(--tx3)">(owner of this note)</span></label><select class="f-sel" id="plEdit-officer"><option value="">Select Officer (optional)</option></select></div>'
+    +'<div class="f-group"><label class="f-label">Department</label><select class="f-sel" id="plEdit-dept"><option value="">Select Department (optional)</option></select></div>'
     +'<div class="f-group"><label class="f-label">Notes <span class="req">*</span></label><textarea class="f-ctrl" id="plEdit-notes" rows="4">'+e.notes+'</textarea></div>'
     +(PL.editExistingPhotos.length>0?'<div class="f-group"><label class="f-label">Existing Photos <span style="font-size:11px;color:var(--tx3)">(tap X to remove)</span></label><div id="plEditExistingGrid" style="display:flex;flex-wrap:wrap;gap:8px;padding:10px;background:var(--surface2);border-radius:8px"></div></div>':'')
     +'<div class="f-group"><label class="f-label">Add More Photos</label>'
@@ -8738,6 +8926,7 @@ function plEditEntry(noteID){
       st.value=e.type||'Inspection';
     }
     plPopulateOfficerDropdown('plEdit-officer',e.officerName);
+    plPopulateDeptDropdown('plEdit-dept',e.department||'');
     plRenderEditExistingPhotos();
     plRenderEditExistingAttachments();
   },50);
@@ -8873,7 +9062,8 @@ function plSaveEdit(noteID){
     noteID:noteID,date:V('plEdit-date'),time:V('plEdit-time'),
     type:V('plEdit-type'),zone:V('plEdit-zone'),
     location:V('plEdit-loc'),notes:id('plEdit-notes')?id('plEdit-notes').value:'',
-    officerName:V('plEdit-officer')
+    officerName:V('plEdit-officer'),
+    department:V('plEdit-dept')
   };
   if(!updated.notes.trim()){toast('Notes cannot be empty.','error');return;}
   showLoader('Saving...');
