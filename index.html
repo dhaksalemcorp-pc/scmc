@@ -3390,7 +3390,7 @@ tbody tr:hover { background: var(--surface2); }
 <div id="toasts"></div>
 <script>
 var LS={get:function(k){try{return localStorage.getItem(k);}catch(e){return null;}},set:function(k,v){try{localStorage.setItem(k,v);}catch(e){}},del:function(k){try{localStorage.removeItem(k);}catch(e){}}};
-var S={token:null,user:null,lookup:null,tasks:[],users:[],filtered:[],drillFilter:'',page:'dashboard',allowedPages:[],theme:LS.get('sc-theme')||'light',charts:{},exportCtx:'tracker',aiTasks:[],selPhotos:[],driveLinks:[],puDocs:[],sortCol:'updatedAt',sortDir:-1,taskWindow:90,showCompleted:false};
+var S={token:null,user:null,lookup:null,tasks:[],users:[],filtered:[],drillFilter:'',page:'dashboard',allowedPages:[],theme:LS.get('sc-theme')||'light',charts:{},exportCtx:'tracker',aiTasks:[],selPhotos:[],driveLinks:[],puDocs:[],sortCol:'updatedAt',sortDir:-1,taskWindow:90,showCompleted:false,showClosed:false};
 
 // ─── STALE-WHILE-REVALIDATE (instant display) ──────────────────
 // Saves the last-loaded data in localStorage so the NEXT visit renders
@@ -3643,19 +3643,21 @@ function demoFn(fn,args){
     var out={success:true,lookup:buildLookupData()};
     if(role==='Officer'){
       out.dashData={success:true,stats:{total:5,pending:2,inProgress:1,completed:2,overdue:1,dueToday:0,highPriority:1},completionRate:40,recentTasks:[]};
-      var bo=[],bc=0;
+      var bo=[],bc=0,bz=0;
       for(var bi=0;bi<DEMO.tasks.length;bi++){var bt=DEMO.tasks[bi];
         if(bt.officerID!=='USR003'&&bt.officerName!=='Priya Nair')continue;
-        if(bt.status==='Completed'||bt.status==='Closed'){bc++;continue;}
+        if(bt.status==='Completed'){bc++;continue;}
+        if(bt.status==='Closed'){bz++;continue;}
         bo.push(bt);}
-      out.tasksData={success:true,data:bo,completedCount:bc,includeCompleted:false};
+      out.tasksData={success:true,data:bo,completedCount:bc,closedCount:bz,includeCompleted:false,includeClosed:false};
     } else {
       out.dashData={success:true,stats:{total:5,pending:2,inProgress:1,completed:2,overdue:1,dueToday:0,highPriority:1},completionRate:40,zoneStats:{},deptStats:{},officerStats:{}};
-      var ba=[],bc2=0;
+      var ba=[],bc2=0,bz2=0;
       for(var bj=0;bj<DEMO.tasks.length;bj++){var bt2=DEMO.tasks[bj];
-        if(bt2.status==='Completed'||bt2.status==='Closed'){bc2++;continue;}
+        if(bt2.status==='Completed'){bc2++;continue;}
+        if(bt2.status==='Closed'){bz2++;continue;}
         ba.push(bt2);}
-      out.tasksData={success:true,data:ba,totalCount:DEMO.tasks.length,windowDays:90,completedCount:bc2,includeCompleted:false};
+      out.tasksData={success:true,data:ba,totalCount:DEMO.tasks.length,windowDays:90,completedCount:bc2,closedCount:bz2,includeCompleted:false,includeClosed:false};
     }
     return out;
   }
@@ -3716,20 +3718,24 @@ function demoFn(fn,args){
   if(fn==='serverGetCouncilors')return{success:true,data:DEMO.councilors||[{id:'CNCL_PUBLIC',name:'Public / General Public',designation:''}]};
   if(fn==='serverGetUsers')return{success:true,data:DEMO.users};
   if(fn==='serverGetTasks'){
-    var inc=args[1]&&args[1].includeCompleted;var outT=[],cc=0;
+    var inc=args[1]&&args[1].includeCompleted;var incC=args[1]&&args[1].includeClosed;
+    var outT=[],cc=0,zc=0;
     for(var i=0;i<DEMO.tasks.length;i++){var st=DEMO.tasks[i].status;
-      if(st==='Completed'||st==='Closed'){cc++;if(!inc)continue;}
+      if(st==='Completed'){cc++;if(!inc)continue;}
+      if(st==='Closed'){zc++;if(!incC)continue;}
       outT.push(DEMO.tasks[i]);}
-    return{success:true,data:outT,totalCount:DEMO.tasks.length,windowDays:90,completedCount:cc,includeCompleted:!!inc};
+    return{success:true,data:outT,totalCount:DEMO.tasks.length,windowDays:90,completedCount:cc,closedCount:zc,includeCompleted:!!inc,includeClosed:!!incC};
   }
   if(fn==='serverGetOfficerTasks'){
-    var incO=args[1]&&args[1].includeCompleted;var offT=[],ccO=0;
+    var incO=args[1]&&args[1].includeCompleted;var incOC=args[1]&&args[1].includeClosed;
+    var offT=[],ccO=0,zcO=0;
     for(var i=0;i<DEMO.tasks.length;i++){
       if(DEMO.tasks[i].officerID!=='USR003'&&DEMO.tasks[i].officerName!=='Priya Nair')continue;
       var stO=DEMO.tasks[i].status;
-      if(stO==='Completed'||stO==='Closed'){ccO++;if(!incO)continue;}
+      if(stO==='Completed'){ccO++;if(!incO)continue;}
+      if(stO==='Closed'){zcO++;if(!incOC)continue;}
       offT.push(DEMO.tasks[i]);}
-    return{success:true,data:offT,completedCount:ccO,includeCompleted:!!incO};
+    return{success:true,data:offT,completedCount:ccO,closedCount:zcO,includeCompleted:!!incO,includeClosed:!!incOC};
   }
   if(fn==='serverGetTaskDetail'){
     var dt=null;for(var i=0;i<DEMO.tasks.length;i++)if(DEMO.tasks[i].taskID===args[1]){dt=DEMO.tasks[i];break;}
@@ -3879,7 +3885,8 @@ function doLogin(){
 function resetSessionState(){
   S.tasks=[];S.filtered=[];S.drillFilter='';
   S.preloadedDash=null;S.preloadedTasks=null;
-  S.showCompleted=false;S.taskWindow=90;S._fullList=null;S._trkMeta=null;
+  S.showCompleted=false;S.showClosed=false;S.taskWindow=90;
+  if(typeof TRK_COMP_ON!=='undefined')TRK_COMP_ON=false;S._fullList=null;S._trkMeta=null;
   if(typeof TRK_RP_ON!=='undefined')TRK_RP_ON=false;
   if(typeof PL!=='undefined'){PL.entries=[];PL.window=7;}
   if(typeof GRV!=='undefined'&&GRV){GRV.list=[];}
@@ -4293,25 +4300,38 @@ function loadHODDashboard(){
   if(titleEl)titleEl.textContent=depts||'My Department';
   if(subEl)subEl.textContent='HOD Dashboard \u00b7 '+u.designation;
   var gn=id('greetName');if(gn)gn.textContent=u.name.split(' ')[0];
-  showLoader('Loading dashboard...');
-  gasCall('serverGetHODTasks',S.token).then(function(r){
+  // Peek at bootstrap-preloaded tasks (don't consume — tracker will)
+  var pre=(S.preloadedTasks&&S.preloadedTasks.success)?S.preloadedTasks:null;
+  if(!pre)showLoader('Loading dashboard...');
+  var handle=function(r){
     hideLoader();
     if(!r||!r.success)return;
     var allTasks=normalizeTaskList(r.data||[]);
     S.tasks=allTasks;S.filtered=allTasks.slice();
-    var total=allTasks.length,done=0,pending=0,inProg=0,overdue=0,review=0;
+    // v118 FIX: KPIs come from backend stats computed over the FULL
+    // department set. The list payload hides Completed/Closed by default
+    // (v115), so counting from the visible list made Completed read 0.
+    var bs=r.stats||null;
+    var total,done,pending,inProg,overdue,review;
     var officerMap={};
-    for(var i=0;i<allTasks.length;i++){
-      var t=allTasks[i];
-      if(t.status==='Completed'||t.status==='Closed')done++;
-      else if(t.status==='In Progress')inProg++;
-      else if(t.status==='Pending')pending++;
-      else if(t.status==='Review Pending')review++;
-      if(t.isOverdue)overdue++;
-      var on=t.officerName||'Unknown';
-      if(!officerMap[on])officerMap[on]={total:0,done:0};
-      officerMap[on].total++;
-      if(t.status==='Completed'||t.status==='Closed')officerMap[on].done++;
+    if(bs){
+      total=bs.total;done=(bs.completed||0)+(bs.closed||0);
+      pending=bs.pending;inProg=bs.inProgress;review=bs.review;overdue=bs.overdue;
+      if(r.officerStats)officerMap=r.officerStats;
+    } else {
+      total=allTasks.length;done=0;pending=0;inProg=0;overdue=0;review=0;
+      for(var i=0;i<allTasks.length;i++){
+        var t=allTasks[i];
+        if(t.status==='Completed'||t.status==='Closed')done++;
+        else if(t.status==='In Progress')inProg++;
+        else if(t.status==='Pending')pending++;
+        else if(t.status==='Review Pending')review++;
+        if(t.isOverdue)overdue++;
+        var on=t.officerName||'Unknown';
+        if(!officerMap[on])officerMap[on]={total:0,done:0};
+        officerMap[on].total++;
+        if(t.status==='Completed'||t.status==='Closed')officerMap[on].done++;
+      }
     }
     // KPIs
     var ht=id('hod-total');if(ht)ht.textContent=total;
@@ -4389,7 +4409,10 @@ function loadHODDashboard(){
       }
       ol.innerHTML=html+'</tbody></table>';
     }
-  });
+  };
+  if(pre){handle(pre);}
+  else{gasCall('serverGetHODTasks',S.token).then(handle);}
+
 }
 
 function loadSupervisionDashboard(){
@@ -4903,6 +4926,45 @@ function loadUsageAnalytics(){
 }
 
 var TRK_RP_ON=false;
+var TRK_COMP_ON=false;
+// Green chip: one tap loads + shows ONLY the completed tasks (the
+// admin's completion-review queue); tapping again hides them and
+// returns to the normal actionable view.
+function trkToggleCompletedView(){
+  if(!TRK_COMP_ON){
+    TRK_COMP_ON=true;
+    // Do we already have completed tasks in memory? (fullList from an
+    // earlier show, or a load done with includeCompleted)
+    var have=false;
+    for(var i=0;i<S.tasks.length;i++)if(S.tasks[i].status==='Completed'){have=true;break;}
+    if(!have&&S._fullList&&S._fullList.length){
+      S.showCompleted=true;
+      S.tasks=S._fullList.slice();
+      for(var j=0;j<S.tasks.length;j++)if(S.tasks[j].status==='Completed'){have=true;break;}
+    }
+    if(!have){
+      // Network — once; trkApplyResponse applies the completed-only view
+      S.showCompleted=true;loadTasks();return;
+    }
+    S.filtered=S.tasks.filter(function(t){return t.status==='Completed';});
+    applyCurrentSort();
+    renderTable(S.filtered);renderKanban(S.filtered);updateTaskCount();
+    trkRenderNoteBar();
+  } else {
+    TRK_COMP_ON=false;
+    trkToggleCompleted(false); // instant client-side hide + re-render
+  }
+}
+function trkToggleClosed(show){
+  if(show){S.showClosed=true;loadTasks();return;} // fetch once
+  // Hiding is instant — filter out closed from what we already have
+  S.showClosed=false;
+  S.tasks=S.tasks.filter(function(t){return t.status!=='Closed';});
+  if(S._fullList)S._fullList=S._fullList.filter(function(t){return t.status!=='Closed';});
+  S.filtered=S.tasks.slice();applyCurrentSort();
+  renderTable(S.filtered);renderKanban(S.filtered);updateTaskCount();
+  trkRenderNoteBar();
+}
 function trkFilterReviewPending(){
   TRK_RP_ON=!TRK_RP_ON;
   if(TRK_RP_ON){
@@ -4918,13 +4980,13 @@ function loadTasks(){
   if(!S.showCompleted)S._fullList=null; // fresh fetch invalidates the re-show cache
   var role=S.user?S.user.role:'';
   var fn,args;
-  var reqOpts={includeCompleted:S.showCompleted};
+  var reqOpts={includeCompleted:S.showCompleted,includeClosed:S.showClosed};
   if(role==='Officer'){
     fn='serverGetOfficerTasks';args=[S.token,reqOpts];
   } else if(role==='HOD'){
     fn='serverGetHODTasks';args=[S.token,reqOpts];
   } else {
-    fn='serverGetTasks';args=[S.token,{days:S.taskWindow,includeCompleted:S.showCompleted}];
+    fn='serverGetTasks';args=[S.token,{days:S.taskWindow,includeCompleted:S.showCompleted,includeClosed:S.showClosed}];
   }
 
   // ── INSTANT DISPLAY: render last-known tasks from localStorage ──
@@ -4955,7 +5017,7 @@ function loadTasks(){
 
   // Consume tasks bundled in the login response (Officer/HOD) — fresh
   // data, zero network. Used once; later visits refresh normally.
-  if(S.preloadedTasks&&S.preloadedTasks.success&&!S.showCompleted&&S.taskWindow===90){
+  if(S.preloadedTasks&&S.preloadedTasks.success&&!S.showCompleted&&!S.showClosed&&S.taskWindow===90){
     var pre=S.preloadedTasks;S.preloadedTasks=null;
     hideLoader();
     trkApplyResponse(pre,fn,true);
@@ -5016,6 +5078,7 @@ function trkApplyResponse(r,fn,fromPreload){
     // Remember response meta so the note bar can re-render on instant
     // client-side toggles without another network call.
     S._trkMeta={completedCount:(typeof r.completedCount==='number'?r.completedCount:null),
+                closedCount:(typeof r.closedCount==='number'?r.closedCount:null),
                 totalCount:r.totalCount||0,windowDays:r.windowDays||90};
     if(r.includeCompleted){S._fullList=null;/* rebuilt below after normalize */}
     S.tasks=normalizeTaskList(data);
@@ -5030,6 +5093,11 @@ function trkApplyResponse(r,fn,fromPreload){
     if(S.drillFilter) applyDrillFilter();
     else{renderTable(S.filtered);renderKanban(S.filtered);updateTaskCount();}
     if(advFilterOpen) populateOfficerFilter();
+    // Green chip active: show ONLY the completed tasks (sign-off queue)
+    if(TRK_COMP_ON){
+      S.filtered=S.tasks.filter(function(t){return t.status==='Completed';});
+      renderTable(S.filtered);renderKanban(S.filtered);updateTaskCount();
+    }
     trkRenderNoteBar();
 }
 
@@ -5040,19 +5108,32 @@ function trkRenderNoteBar(){
   var meta=S._trkMeta||{};
   var parts=[];
   var isAdm=(S.user&&(S.user.role==='Admin'||S.user.role==='Commissioner'));
+  // Amber chip: tasks the admin pushed back, awaiting the officer
   var rpCount=0;
   for(var ri=0;ri<S.tasks.length;ri++)if(S.tasks[ri].status==='Review Pending')rpCount++;
   if(isAdm&&rpCount>0){
     parts.push('<a onclick="trkFilterReviewPending()" style="cursor:pointer;color:#b45309;background:rgba(217,119,6,.12);padding:2px 10px;border-radius:999px;font-weight:700;text-decoration:none">\u23f3 '+rpCount+' awaiting review</a>');
   }
-  if(typeof meta.completedCount==='number'&&(meta.completedCount>0||S.showCompleted)){
-    if(S.showCompleted){
-      parts.push('Completed tasks shown. <a onclick="trkToggleCompleted(false)" style="cursor:pointer;color:var(--c-blue);font-weight:600">Hide completed</a>');
+  // Green chip: completed work waiting for admin sign-off (v118 workflow).
+  // One tap shows ONLY completed tasks; tap again returns to normal view.
+  var compCount=(typeof meta.completedCount==='number')?meta.completedCount:0;
+  if(compCount>0||TRK_COMP_ON){
+    if(TRK_COMP_ON){
+      parts.push('<a onclick="trkToggleCompletedView()" style="cursor:pointer;color:#fff;background:#059669;padding:2px 10px;border-radius:999px;font-weight:700;text-decoration:none">\u2714 Viewing completed ('+compCount+') \u2014 tap to go back</a>');
     } else {
-      parts.push('Completed hidden ('+meta.completedCount+'). <a onclick="trkToggleCompleted(true)" style="cursor:pointer;color:var(--c-blue);font-weight:600">Show</a>');
+      parts.push('<a onclick="trkToggleCompletedView()" style="cursor:pointer;color:#059669;background:rgba(5,150,105,.12);padding:2px 10px;border-radius:999px;font-weight:700;text-decoration:none">\u2714 '+compCount+' completed \u2014 view</a>');
     }
   }
-  if(meta.totalCount&&meta.totalCount>S.tasks.length&&S.taskWindow>0&&S.showCompleted){
+  // Closed: the final archived state — hidden unless explicitly shown
+  var clCount=(typeof meta.closedCount==='number')?meta.closedCount:0;
+  if(clCount>0||S.showClosed){
+    if(S.showClosed){
+      parts.push('Closed shown. <a onclick="trkToggleClosed(false)" style="cursor:pointer;color:var(--c-blue);font-weight:600">Hide closed</a>');
+    } else {
+      parts.push('Closed hidden ('+clCount+'). <a onclick="trkToggleClosed(true)" style="cursor:pointer;color:var(--c-blue);font-weight:600">Show</a>');
+    }
+  }
+  if(meta.totalCount&&meta.totalCount>S.tasks.length&&S.taskWindow>0&&(S.showCompleted||S.showClosed)){
     parts.push('Showing recent '+(meta.windowDays||90)+' days. <a onclick="S.taskWindow=0;loadTasks();" style="cursor:pointer;color:var(--c-blue);font-weight:600">Load all</a>');
   }
   if(parts.length){note.style.display='';note.innerHTML=parts.join(' \u00b7&nbsp; ');}
@@ -6668,7 +6749,10 @@ function setPuStatusOptions(forAdmin,current){
   // Review Pending — "Completed" is reserved for Admin/Commissioner,
   // who mark it after actually reviewing the work. This is also
   // enforced server-side; the dropdown just makes the rule visible.
-  var opts=forAdmin?['Pending','In Progress','Review Pending','Completed','Closed']:['In Progress','Review Pending'];
+  // v118 workflow: field roles mark In Progress / Review Pending /
+  // Completed. Admin/Commissioner additionally set Pending and Closed —
+  // Closed is the final sign-off after reviewing completed work.
+  var opts=forAdmin?['Pending','In Progress','Review Pending','Completed','Closed']:['In Progress','Review Pending','Completed'];
   ps.innerHTML='';
   for(var i=0;i<opts.length;i++){var o=document.createElement('option');o.value=opts[i];o.textContent=opts[i];ps.appendChild(o);}
   if(current&&opts.indexOf(current)>=0)ps.value=current;
