@@ -6618,16 +6618,19 @@ function doHodReassign(taskID){
 }
 var _OU_LOCK=false;
 function officerUpdate(taskID){
-  if(_OU_LOCK)return;_OU_LOCK=true;
-  // Lock released by submitPhotoUpdate/saveTask after their call completes;
-  // safety: if modal closed without saving, release after 2 minutes.
-  setTimeout(function(){_OU_LOCK=false;},120000);
+  if(_OU_LOCK)return;
   var t=null;for(var i=0;i<S.tasks.length;i++)if(S.tasks[i].taskID===taskID){t=S.tasks[i];break;}if(!t)return;
   var isHOD=(S.user&&S.user.role==='HOD');
   // Update always opens the progress-update modal — the Reassign button
   // (separate, on dept-task cards only) opens the reassign modal.
   // The old logic that redirected dept-task Update→Reassign was wrong.
-  ensureTaskDetail(t,function(){officerUpdateOpen(t,taskID,isHOD);});
+  ensureTaskDetail(t,function(){
+    // Set lock only AFTER detail arrives — a hanging fetch won't freeze the button
+    if(_OU_LOCK)return; // second tap while first was fetching
+    _OU_LOCK=true;
+    setTimeout(function(){_OU_LOCK=false;},120000); // 2min safety
+    officerUpdateOpen(t,taskID,isHOD);
+  });
 }
 function officerUpdateOpen(t,taskID,isHOD){
   var pu=id('pu-taskid');if(pu)pu.value=taskID;
@@ -7202,8 +7205,19 @@ function saveAllAI(){
   var saved=0,total=tasks.length;
   showLoader('Saving '+total+' tasks...');
   function saveNext(idx){
-    if(idx>=tasks.length){hideLoader();toast('Saved '+saved+'/'+total+' tasks!','ok');clearAI();go('tracker');return;}
-    gasCall('serverCreateTask',S.token,tasks[idx]).then(function(r){if(r&&r.success)saved++;saveNext(idx+1);});
+    if(idx>=tasks.length){
+      hideLoader();
+      // Re-enable the button — it was disabled at the start of saveAllAI
+      // and never re-enabled on the success path, leaving it permanently frozen.
+      if(saveBtn){saveBtn.disabled=false;saveBtn.style.opacity='1';}
+      window.AIB_BUSY=false;
+      toast('Saved '+saved+'/'+total+' tasks!','ok');
+      clearAI();go('tracker');return;
+    }
+    gasCall('serverCreateTask',S.token,tasks[idx]).then(function(r){
+      if(r&&r.success)saved++;
+      saveNext(idx+1);
+    });
   }
   saveNext(0);
 }
