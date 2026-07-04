@@ -2983,7 +2983,7 @@ tbody tr:hover { background: var(--surface2); }
       <div style="background:var(--surface2);padding:10px;border-radius:8px;font-size:13px;margin-bottom:14px;line-height:1.5;color:var(--tx2)" id="pu-desc"></div>
       <div class="f-row">
         <div class="f-group"><label class="f-label">Status</label>
-          <select class="f-sel" id="pu-status"><option>In Progress</option><option>Completed</option><option>Review Pending</option></select>
+          <select class="f-sel" id="pu-status"><option value="In Progress">In Progress</option><option value="Completed">Completed</option><option value="Review Pending">Review Pending</option></select>
         </div>
         <div class="f-group"><label class="f-label">Priority</label>
           <select class="f-sel" id="pu-priority"><option>High</option><option>Medium</option><option>Low</option></select>
@@ -3411,7 +3411,7 @@ var I18N_TA={
   // Common buttons / labels
   'New Task':'\u0baa\u0bc1\u0ba4\u0bbf\u0baf \u0baa\u0ba3\u0bbf','Filters':'\u0bb5\u0b9f\u0bbf\u0b95\u0b9f\u0bcd\u0b9f\u0bbf','Export':'\u0b8f\u0bb1\u0bcd\u0bb1\u0bc1\u0bae\u0ba4\u0bbf','Refresh':'\u0baa\u0bc1\u0ba4\u0bc1\u0baa\u0bcd\u0baa\u0bbf',
   'Save':'\u0b9a\u0bc7\u0bae\u0bbf','Cancel':'\u0bb0\u0ba4\u0bcd\u0ba4\u0bc1','Edit':'\u0ba4\u0bbf\u0bb0\u0bc1\u0ba4\u0bcd\u0ba4\u0bc1','Delete':'\u0ba8\u0bc0\u0b95\u0bcd\u0b95\u0bc1','Close':'\u0bae\u0bc2\u0b9f\u0bc1',
-  'Pending':'\u0ba8\u0bbf\u0bb2\u0bc1\u0bb5\u0bc8','In Progress':'\u0ba8\u0b9f\u0bc8\u0baa\u0bc6\u0bb1\u0bc1\u0b95\u0bbf\u0bb1\u0ba4\u0bc1','Completed':'\u0bae\u0bc1\u0b9f\u0bbf\u0ba8\u0bcd\u0ba4\u0ba4\u0bc1','Overdue':'\u0ba4\u0bbe\u0bae\u0ba4\u0bae\u0bcd'
+  /* Status keys removed: these caused Tamil text to be saved to the sheet (v120 fix) */
 };
 var I18N_ORIG={}; // element -> original English text, captured on first toggle
 function currentLang(){return LS.get('sc-lang')||'en';}
@@ -3574,6 +3574,16 @@ function fDate(d){
 }
 function V(x){var e=document.getElementById(x);return e?e.value:'';}
 function show(elId,visible){var e=document.getElementById(elId);if(e)e.style.display=visible?'':'none';}
+// Normalize Tamil status values to English before any save/update.
+// Officers who had Tamil mode on may have Tamil text in their selects.
+var TAMIL_MAP_FE={
+  '\u0ba8\u0bbf\u0bb2\u0bc1\u0bb5\u0bc8':'Pending',
+  '\u0ba8\u0b9f\u0bc8\u0baa\u0bc6\u0bb1\u0bc1\u0b95\u0bbf\u0bb1\u0ba4\u0bc1':'In Progress',
+  '\u0bae\u0bc1\u0b9f\u0bbf\u0ba8\u0bcd\u0ba4\u0ba4\u0bc1':'Completed',
+  '\u0ba8\u0bbf\u0bb1\u0bc8\u0bb5\u0bc1\u0bb1\u0bcd\u0bb1\u0ba4\u0bc1':'Completed',
+  '\u0ba4\u0bbe\u0bae\u0ba4\u0bae\u0bcd':'Overdue'
+};
+function normSt(v){return TAMIL_MAP_FE[String(v||'').trim()]||String(v||'').trim();}
 var DEMO={
 users:[
 {userID:'USR001',employeeID:'EMP001',name:'Admin User',designation:'Deputy Commissioner',department:'General',zone:'Main Office',mobile:'9999999999',email:'admin@corp.gov.in',username:'admin',role:'Admin',status:'Active'},
@@ -3719,6 +3729,7 @@ function demoFn(fn,args){
     var t=DEMO.tasks,now=new Date(),todayStr=now.toDateString();
     var pending=0,inProgress=0,completed=0,overdue=0,dueToday=0,high=0;
     var zoneStats={},deptStats={},officerStats={};
+    // Commissioner stats count ALL tasks regardless of completed/closed
     for(var i=0;i<t.length;i++){
       var tk=t[i];
       if(tk.status==='Pending')pending++;
@@ -4209,14 +4220,12 @@ function loadHODDashboard(){
   if(subEl)subEl.textContent='HOD Dashboard \u00b7 '+u.designation;
   var gn=id('greetName');if(gn)gn.textContent=u.name.split(' ')[0];
   showLoader('Loading dashboard...');
-  gasCall('serverGetHODTasks',S.token).then(function(r){
+  gasCall('serverGetHODTasks',S.token,{includeCompleted:true,includeClosed:true}).then(function(r){
     hideLoader();
     if(!r||!r.success)return;
     var allTasks=normalizeTaskList(r.data||[]);
-    S.tasks=allTasks;S.filtered=allTasks.slice();
-    // v120: KPIs come from backend stats computed over the FULL set —
-    // the list now hides Completed/Closed by default, so counting the
-    // visible list would show Completed = 0.
+    S.tasks=allTasks;S.filtered=allTasks.filter(function(t){return t.status!=='Completed'&&t.status!=='Closed';});
+    // v120: KPIs come from backend stats or client-count over the FULL set.
     var bs=r.stats||null;
     var total,done,pending,inProg,overdue,review;
     var officerMap={};
@@ -5589,7 +5598,11 @@ function validateTask(d){
 }
 var ST_BUSY=false;
 function saveTask(){
-  if(ST_BUSY)return; ST_BUSY=true; setTimeout(function(){ST_BUSY=false;},20000);
+  if(ST_BUSY)return; ST_BUSY=true;
+  var _stBtn=document.querySelector('#taskEntryForm button[onclick*="saveTask"],button[id*="saveTsk"],button.btn-primary[onclick*="saveTask"]');
+  if(_stBtn){_stBtn.disabled=true;_stBtn.innerHTML='<span class="material-icons-round mi" style="animation:spin 1s linear infinite">sync</span> Saving...';}
+  function _stRelease(){ST_BUSY=false;if(_stBtn){_stBtn.disabled=false;_stBtn.innerHTML='<span class="material-icons-round mi">save</span> Save Task';}}
+  setTimeout(_stRelease,20000);
   // If officers added to list, use multi-save
   if(MO.officers.length>0){saveTaskMultiOfficer();return;}
   var d=getTaskForm();
@@ -6388,7 +6401,9 @@ function deleteAllSelectedDuplicates(){
 }
 
 
+var _AU_LOCK=false;
 function adminUpdate(taskID){
+  if(_AU_LOCK)return;_AU_LOCK=true;setTimeout(function(){_AU_LOCK=false;},500);
   var t=null;for(var i=0;i<S.tasks.length;i++)if(S.tasks[i].taskID===taskID){t=S.tasks[i];break;}if(!t)return;
   ensureTaskDetail(t,function(){adminUpdateOpen(t,taskID);});
 }
@@ -6582,7 +6597,9 @@ function doHodReassign(taskID){
     cloneNext();
   });
 }
+var _OU_LOCK=false;
 function officerUpdate(taskID){
+  if(_OU_LOCK)return;_OU_LOCK=true;setTimeout(function(){_OU_LOCK=false;},500);
   var t=null;for(var i=0;i<S.tasks.length;i++)if(S.tasks[i].taskID===taskID){t=S.tasks[i];break;}if(!t)return;
   var isHOD=(S.user&&S.user.role==='HOD');
   // HOD clicking a dept task (not their own) — open reassign modal
@@ -6774,8 +6791,10 @@ var PU_BUSY=false;
 function submitPhotoUpdate(){
   if(PU_BUSY)return; // freeze: repeated Save taps were duplicating uploads
   PU_BUSY=true;
-  setTimeout(function(){PU_BUSY=false;},90000); // safety release
-  var taskID=V('pu-taskid'),status=V('pu-status'),remarks=V('pu-remarks'),priority=V('pu-priority');
+  setTimeout(function(){PU_BUSY=false;var b=id('pu-saveBtn');if(b){b.disabled=false;b.innerHTML='<span class="material-icons-round mi">save</span> Save Update';}},90000);
+  var _puBtn=id('pu-saveBtn');
+  if(_puBtn){_puBtn.disabled=true;_puBtn.innerHTML='<span class="material-icons-round mi" style="animation:spin 1s linear infinite">sync</span> Saving...';}
+  var taskID=V('pu-taskid'),status=normSt(V('pu-status')),remarks=V('pu-remarks'),priority=V('pu-priority');
   if(!taskID||!status){toast('Please select a status.','error');return;}
 
   var pickedPhotos=S.selPhotos.slice();
@@ -6789,6 +6808,7 @@ function submitPhotoUpdate(){
     gasCall('serverUpdateTask',S.token,taskID,{status:status,officerRemarks:remarks,priority:priority}).then(function(r){
       if(btn)btn.disabled=false;
       PU_BUSY=false;
+      var _puB=id('pu-saveBtn');if(_puB){_puB.disabled=false;_puB.innerHTML='<span class="material-icons-round mi">save</span> Save Update';}
       if(r&&r.success){
         closeModal('mPhotoUpload');
         var t=null;for(var i=0;i<S.tasks.length;i++){if(S.tasks[i].taskID===taskID){t=S.tasks[i];break;}}
@@ -6826,6 +6846,14 @@ function submitPhotoUpdate(){
   var docInputEl=id('puDocInput');
 
   function setUploadingUI(uploading){
+    PU_BUSY=uploading; // keep the busy flag in sync so repeated taps are blocked
+    var _puBt=id('pu-saveBtn');
+    if(_puBt){
+      _puBt.disabled=uploading;
+      _puBt.innerHTML=uploading
+        ?'<span class="material-icons-round mi" style="animation:spin 1s linear infinite">sync</span> Uploading...'
+        :'<span class="material-icons-round mi">save</span> Save Update';
+    }
     if(saveBtn){saveBtn.disabled=uploading;saveBtn.style.opacity=uploading?'.6':'1';}
     if(cancelBtn)cancelBtn.disabled=uploading;
     var xBtn=id('pu-xCloseBtn');if(xBtn)xBtn.style.visibility=uploading?'hidden':'visible';
@@ -6862,6 +6890,7 @@ function submitPhotoUpdate(){
   }
 
   function allFinished(){
+    PU_BUSY=false;
     setUploadingUI(false);
     closeModal('mPhotoUpload');
     toast('Task updated with '+totalItems+' attachment'+(totalItems!==1?'s':'')+'!','ok');
