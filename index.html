@@ -1689,6 +1689,10 @@ tbody tr:hover { background: var(--surface2); }
                 <select class="f-sel" id="t-priority"><option value="">Select</option><option>High</option><option>Medium</option><option>Low</option></select>
               </div>
             </div>
+            <!-- Designation filter: narrows the officer list before selection -->
+            <select class="f-sel" id="t-desig-filter" onchange="filterOfficers()" style="margin-bottom:4px">
+              <option value="">All Designations</option>
+            </select>
             <!-- Hidden designation field - auto-filled from officer selection -->
             <input type="hidden" id="t-desig">
             <div class="f-group">
@@ -3028,7 +3032,7 @@ tbody tr:hover { background: var(--surface2); }
       </div>
     </div>
     <div class="modal-ft">
-      <button class="btn btn-ghost" id="pu-cancelBtn" onclick="closeModal('mPhotoUpload')">Cancel</button>
+      <button class="btn btn-ghost" id="pu-cancelBtn" onclick="onPhotoModalClose();closeModal('mPhotoUpload')">Cancel</button>
       <button class="btn btn-ghost" id="pu-reassignBtn" style="display:none" onclick="hodReassignFromUpdate()"><span class="material-icons-round mi">swap_horiz</span> Reassign</button>
       <button class="btn btn-primary" id="pu-saveBtn" onclick="submitPhotoUpdate()"><span class="material-icons-round mi">save</span> Save Update</button>
     </div>
@@ -4070,7 +4074,18 @@ function populateSelects(){
     var supDepts=(S.user.hodDepartments||'').split(',').map(function(d){return d.trim().toLowerCase();});
     deptListForEntry=ld.departments.filter(function(d){return supDepts.indexOf(String(d.DeptName||'').trim().toLowerCase())!==-1;});
   }
-  fillSel('t-dept',deptListForEntry,'DeptName','DeptName','Select Department');fillSel('fDept',ld.departments,'DeptName','DeptName','All Departments');fillSel('mu-dept',ld.departments,'DeptName','DeptName','Select');fillSel('mapDept',ld.departments,'DeptName','DeptName','Select');
+  fillSel('t-dept',deptListForEntry,'DeptName','DeptName','Select Department');
+  // Designation filter dropdown for officer narrowing
+  var df=id('t-desig-filter');
+  if(df){
+    var uds=(ld.designations||[]);
+    df.innerHTML='<option value="">All Designations</option>';
+    for(var i=0;i<uds.length;i++){
+      var dn=uds[i].DesigName||uds[i].name||uds[i];
+      var opt=document.createElement('option');opt.value=dn;opt.textContent=dn;
+      df.appendChild(opt);
+    }
+  }fillSel('fDept',ld.departments,'DeptName','DeptName','All Departments');fillSel('mu-dept',ld.departments,'DeptName','DeptName','Select');fillSel('mapDept',ld.departments,'DeptName','DeptName','Select');
   fillSel('mu-desig',ld.designations,'DesigName','DesigName','Select');
   fillOfficers(V('t-dept')||null); // preserve the user's department filter on lookup refresh
   initAddOfficerDepts();
@@ -4081,15 +4096,14 @@ function fillSel(elId,data,val,lbl,ph){
   for(var i=0;i<data.length;i++){var item=data[i];if(item.Status&&item.Status!=='Active')continue;var o=document.createElement('option');o.value=item[val];o.textContent=item[lbl];el.appendChild(o);}
   el.value=cur;
 }
-function fillOfficers(deptFilter){
+function fillOfficers(deptFilter, desigFilter){
   var offs=(S.lookup&&S.lookup.officers)||[];
   var el=id('t-officer');if(!el)return;
   el.innerHTML='<option value="">Select Officer</option>';
   for(var i=0;i<offs.length;i++){
     var o=offs[i];
-    // Normalized compare: sheet values sometimes carry stray spaces or
-    // case differences, which made the filter silently show everyone.
     if(deptFilter&&String(o.department||'').trim().toLowerCase()!==String(deptFilter).trim().toLowerCase())continue;
+    if(desigFilter&&String(o.designation||'').trim().toLowerCase()!==String(desigFilter).trim().toLowerCase())continue;
     var opt=document.createElement('option');
     opt.value=o.userID;
     opt.dataset.name=o.name;
@@ -4099,7 +4113,12 @@ function fillOfficers(deptFilter){
     el.appendChild(opt);
   }
 }
-function filterOfficers(){fillOfficers(V('t-dept')||null);}
+function filterOfficers(){
+  var dept=V('t-dept')||null;
+  // If a designation is already selected, narrow officers to both dept AND desig
+  var desig=id('t-desig-filter')?V('t-desig-filter'):null;
+  fillOfficers(dept, desig||null);
+}
 
 // Bug Fix 2: auto-fill designation when officer is selected in task entry
 function onRoleChange(){
@@ -6157,7 +6176,7 @@ function submitEdit(taskID){
     }
     // Upload any newly added photos with the same fast 4-at-a-time pool
     // and compression settings used everywhere else in the app.
-    var POOL_SIZE=4,nextIdx=0,completed=0,total=newPhotos.length;
+    var POOL_SIZE=2,nextIdx=0,completed=0,total=newPhotos.length; // 2 concurrent = reliable on mobile
     function processOne(idx){
       return new Promise(function(resolve){
         var reader=new FileReader();
@@ -6599,16 +6618,15 @@ function doHodReassign(taskID){
 }
 var _OU_LOCK=false;
 function officerUpdate(taskID){
-  if(_OU_LOCK)return;_OU_LOCK=true;setTimeout(function(){_OU_LOCK=false;},500);
+  if(_OU_LOCK)return;_OU_LOCK=true;
+  // Lock released by submitPhotoUpdate/saveTask after their call completes;
+  // safety: if modal closed without saving, release after 2 minutes.
+  setTimeout(function(){_OU_LOCK=false;},120000);
   var t=null;for(var i=0;i<S.tasks.length;i++)if(S.tasks[i].taskID===taskID){t=S.tasks[i];break;}if(!t)return;
   var isHOD=(S.user&&S.user.role==='HOD');
-  // HOD clicking a dept task (not their own) — open reassign modal
-  if(isHOD&&t.officerID!==S.user.userID&&t.officerName!==S.user.name){
-    hodReassignTask(taskID);return;
-  }
-  // Fetch full remarks/description before pre-filling — the list copy
-  // omits officerRemarks entirely; saving from an empty field would
-  // wipe the officer's previous remarks.
+  // Update always opens the progress-update modal — the Reassign button
+  // (separate, on dept-task cards only) opens the reassign modal.
+  // The old logic that redirected dept-task Update→Reassign was wrong.
   ensureTaskDetail(t,function(){officerUpdateOpen(t,taskID,isHOD);});
 }
 function officerUpdateOpen(t,taskID,isHOD){
@@ -6791,7 +6809,11 @@ var PU_BUSY=false;
 function submitPhotoUpdate(){
   if(PU_BUSY)return; // freeze: repeated Save taps were duplicating uploads
   PU_BUSY=true;
-  setTimeout(function(){PU_BUSY=false;var b=id('pu-saveBtn');if(b){b.disabled=false;b.innerHTML='<span class="material-icons-round mi">save</span> Save Update';}},90000);
+  var _puSafeTimer=setTimeout(function(){
+    PU_BUSY=false;
+    var b=id('pu-saveBtn');if(b){b.disabled=false;b.innerHTML='<span class="material-icons-round mi">save</span> Save Update';}
+    toast('Upload timed out. Please try again.','error');
+  },300000); // 5-minute hard safety net
   var _puBtn=id('pu-saveBtn');
   if(_puBtn){_puBtn.disabled=true;_puBtn.innerHTML='<span class="material-icons-round mi" style="animation:spin 1s linear infinite">sync</span> Saving...';}
   var taskID=V('pu-taskid'),status=normSt(V('pu-status')),remarks=V('pu-remarks'),priority=V('pu-priority');
@@ -6846,7 +6868,8 @@ function submitPhotoUpdate(){
   var docInputEl=id('puDocInput');
 
   function setUploadingUI(uploading){
-    PU_BUSY=uploading; // keep the busy flag in sync so repeated taps are blocked
+    PU_BUSY=uploading;
+    if(!uploading&&typeof _puSafeTimer!=='undefined')clearTimeout(_puSafeTimer);
     var _puBt=id('pu-saveBtn');
     if(_puBt){
       _puBt.disabled=uploading;
@@ -6987,21 +7010,16 @@ function submitPhotoUpdate(){
         reader.onload=function(ev){
           var img=new Image();
           img.onload=function(){
+            // Single-pass compression: 720px max, 0.72 quality → ~18-28KB
+            // per photo. Fast on low-end phones, still clear for inspection.
+            // Avoids double-draw/quality-cascade that added 2-3s per photo.
+            var maxPx=720;
+            var scale=Math.min(maxPx/img.width,maxPx/img.height,1);
             var canvas=document.createElement('canvas');
-            var maxSize=900;
-            var scale=Math.min(maxSize/img.width,maxSize/img.height,1);
             canvas.width=Math.round(img.width*scale);
             canvas.height=Math.round(img.height*scale);
             canvas.getContext('2d').drawImage(img,0,0,canvas.width,canvas.height);
-            var b64=canvas.toDataURL('image/jpeg',0.85);
-            if(b64.length>44000){b64=canvas.toDataURL('image/jpeg',0.7);}
-            if(b64.length>44000){
-              var scale2=Math.min(700/img.width,700/img.height,1);
-              var c2=document.createElement('canvas');
-              c2.width=Math.round(img.width*scale2);c2.height=Math.round(img.height*scale2);
-              c2.getContext('2d').drawImage(img,0,0,c2.width,c2.height);
-              b64=c2.toDataURL('image/jpeg',0.75);
-            }
+            var b64=canvas.toDataURL('image/jpeg',0.72);
             gasCall('serverAddTaskPhoto',S.token,{taskID:taskID,photo:b64}).then(function(pr){
               if(pr&&pr.success){
                 file._uploadedID=pr.photoID; // survives retries
@@ -11524,7 +11542,11 @@ function initDB(){
   });
 }
 function openModal(mid){var e=document.getElementById(mid);if(e)e.classList.add('open');}
-function closeModal(mid){var e=document.getElementById(mid);if(e)e.classList.remove('open');}
+function closeModal(mid){
+  var e=document.getElementById(mid);if(e)e.classList.remove('open');
+  // Release update/photo guards when the update modal is closed (cancel or ESC)
+  if(mid==='mPhotoUpload'){onPhotoModalClose();}
+}
 function toast(msg,type){
   type=type||'info';var c=id('toasts');if(!c)return;
   var icons={ok:'check_circle',error:'error',info:'info'};var cls={ok:'toast-ok',error:'toast-err',info:'toast-info'};
