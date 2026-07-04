@@ -7024,7 +7024,8 @@ function submitPhotoUpdate(){
               if(pr&&pr.success){
                 file._uploadedID=pr.photoID; // survives retries
                 photoEntry.photoID=pr.photoID;
-                photoEntry.photoData=b64;
+                // Use Drive URL for display if available (faster load on next view)
+                photoEntry.photoData=pr.driveURL||b64;
                 photoEntry.pending=false;
                 photoEntry.failed=false;
               } else {
