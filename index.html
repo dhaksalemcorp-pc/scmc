@@ -1426,7 +1426,6 @@ tbody tr:hover { background: var(--surface2); }
       <div class="sb-item" data-page="about" onclick="go('about')"><span class="material-icons-round sb-i">info</span> About</div>
     </div>
     <div class="sb-footer">
-      <button class="sb-logout" id="langToggleBtn" onclick="toggleLanguage()" style="margin-bottom:6px"><span class="material-icons-round sb-i">translate</span> <span id="langToggleLbl">தமிழ்</span></button>
       <button class="sb-logout" onclick="doLogout()"><span class="material-icons-round sb-i">logout</span> <span data-i18n="signout">Sign Out</span></button>
     </div>
   </nav>
@@ -2217,6 +2216,7 @@ tbody tr:hover { background: var(--surface2); }
             <button class="pl-win-btn"        data-days="30" onclick="plSetWindow(30)" style="padding:4px 12px;border-radius:6px;border:none;font-size:12px;font-weight:600;cursor:pointer;transition:all .15s">30 days</button>
             <button class="pl-win-btn"        data-days="0"  onclick="plSetWindow(0)"  style="padding:4px 12px;border-radius:6px;border:none;font-size:12px;font-weight:600;cursor:pointer;transition:all .15s">This Month</button>
           </div>
+          <select id="plDeptFilter" class="f-sel" style="max-width:190px;padding:5px 8px;font-size:12.5px" onchange="plSetDeptFilter(this.value)"><option value="">All Departments</option></select>
           <span id="plWindowInfo" style="font-size:11.5px;color:var(--tx3);margin-left:4px"></span>
         </div>
         <!-- Improved Filter bar -->
@@ -3383,7 +3383,7 @@ tbody tr:hover { background: var(--surface2); }
 <div id="toasts"></div>
 <script>
 var LS={get:function(k){try{return localStorage.getItem(k);}catch(e){return null;}},set:function(k,v){try{localStorage.setItem(k,v);}catch(e){}},del:function(k){try{localStorage.removeItem(k);}catch(e){}}};
-var S={token:null,user:null,lookup:null,tasks:[],users:[],filtered:[],drillFilter:'',page:'dashboard',allowedPages:[],theme:LS.get('sc-theme')||'light',charts:{},exportCtx:'tracker',aiTasks:[],selPhotos:[],driveLinks:[],puDocs:[],sortCol:'updatedAt',sortDir:-1,taskWindow:90};
+var S={token:null,user:null,lookup:null,tasks:[],users:[],filtered:[],drillFilter:'',page:'dashboard',allowedPages:[],theme:LS.get('sc-theme')||'light',charts:{},exportCtx:'tracker',aiTasks:[],selPhotos:[],driveLinks:[],puDocs:[],sortCol:'updatedAt',sortDir:-1,taskWindow:90,showCompleted:false,showClosed:false};
 
 // ─── STALE-WHILE-REVALIDATE (instant display) ──────────────────
 // Saves the last-loaded data in localStorage so the NEXT visit renders
@@ -3492,8 +3492,12 @@ function gasCall(fn){
   // ── GitHub Pages mode: call GAS as a web API via fetch ──
   if(GAS_URL){
     function attempt(retriesLeft){
+      // Abort after 30s — failing fast with a clear message beats a hang
+      var ctrl=(typeof AbortController!=='undefined')?new AbortController():null;
+      var timer=ctrl?setTimeout(function(){try{ctrl.abort();}catch(e){}},30000):null;
       return fetch(GAS_URL,{
         method:'POST',
+        signal:ctrl?ctrl.signal:undefined,
         cache:'no-store', // prevents stale cached responses without triggering a
                            // CORS preflight (unlike custom Cache-Control/Pragma
                            // headers, which Apps Script's web app cannot answer —
@@ -3507,6 +3511,7 @@ function gasCall(fn){
         body:'fn='+encodeURIComponent(fn)+'&payload='+encodeURIComponent(JSON.stringify(args))+'&_ts='+Date.now()
       })
       .then(function(r){
+        if(timer)clearTimeout(timer);
         return r.text().then(function(txt){
           try{
             return JSON.parse(txt);
@@ -3527,6 +3532,7 @@ function gasCall(fn){
       })
       .then(function(r){return r||{success:false,message:'No response'};})
       .catch(function(e){
+        if(timer)clearTimeout(timer);
         // Genuine network-level failures (DNS hiccup, momentary drop, a
         // slow mobile connection timing out) are often transient — retry
         // once automatically before surfacing an error, since a silent
@@ -3664,10 +3670,41 @@ function demoFn(fn,args){
   }
   if(fn==='serverGetCouncilors')return{success:true,data:DEMO.councilors||[{id:'CNCL_PUBLIC',name:'Public / General Public',designation:''}]};
   if(fn==='serverGetUsers')return{success:true,data:DEMO.users};
-  if(fn==='serverGetTasks')return{success:true,data:DEMO.tasks};
+  if(fn==='serverGetTasks'){
+    var inc=args[1]&&args[1].includeCompleted,incC=args[1]&&args[1].includeClosed;
+    var outT=[],cc=0,zc=0;
+    for(var i=0;i<DEMO.tasks.length;i++){var st=DEMO.tasks[i].status;
+      if(st==='Completed'){cc++;if(!inc)continue;}
+      if(st==='Closed'){zc++;if(!incC)continue;}
+      outT.push(DEMO.tasks[i]);}
+    return{success:true,data:outT,totalCount:DEMO.tasks.length,windowDays:90,completedCount:cc,closedCount:zc,includeCompleted:!!inc,includeClosed:!!incC};
+  }
   if(fn==='serverGetOfficerTasks'){
-    var offT=[];for(var i=0;i<DEMO.tasks.length;i++){if(DEMO.tasks[i].officerID==='USR003'||DEMO.tasks[i].officerName==='Priya Nair')offT.push(DEMO.tasks[i]);}
-    return{success:true,data:offT};
+    var incO=args[1]&&args[1].includeCompleted,incOC=args[1]&&args[1].includeClosed;
+    var offT=[],ccO=0,zcO=0;
+    for(var i=0;i<DEMO.tasks.length;i++){
+      if(DEMO.tasks[i].officerID!=='USR003'&&DEMO.tasks[i].officerName!=='Priya Nair')continue;
+      var stO=DEMO.tasks[i].status;
+      if(stO==='Completed'){ccO++;if(!incO)continue;}
+      if(stO==='Closed'){zcO++;if(!incOC)continue;}
+      offT.push(DEMO.tasks[i]);}
+    return{success:true,data:offT,completedCount:ccO,closedCount:zcO,includeCompleted:!!incO,includeClosed:!!incOC};
+  }
+  if(fn==='serverGetHODTasks'){
+    var stats={total:0,completed:0,closed:0,pending:0,inProgress:0,review:0,overdue:0},om={};
+    var incH=args[1]&&args[1].includeCompleted,incHC=args[1]&&args[1].includeClosed;
+    var hT=[],ccH=0,zcH=0;
+    for(var i=0;i<DEMO.tasks.length;i++){var t=DEMO.tasks[i],st=t.status;
+      stats.total++;
+      if(st==='Completed')stats.completed++;else if(st==='Closed')stats.closed++;
+      else if(st==='In Progress')stats.inProgress++;else if(st==='Review Pending')stats.review++;else stats.pending++;
+      if(t.isOverdue)stats.overdue++;
+      var on=t.officerName||'Unknown';if(!om[on])om[on]={total:0,done:0};om[on].total++;
+      if(st==='Completed'||st==='Closed')om[on].done++;
+      if(st==='Completed'){ccH++;if(!incH)continue;}
+      if(st==='Closed'){zcH++;if(!incHC)continue;}
+      hT.push(t);}
+    return{success:true,data:hT,stats:stats,officerStats:om,completedCount:ccH,closedCount:zcH,includeCompleted:!!incH,includeClosed:!!incHC};
   }
   if(fn==='serverGetTaskDetail'){
     var dt=null;for(var i=0;i<DEMO.tasks.length;i++)if(DEMO.tasks[i].taskID===args[1]){dt=DEMO.tasks[i];break;}
@@ -3786,6 +3823,7 @@ function doLogin(){
   gasCall('serverLoginAndLoad',u,p).then(function(r){
     btn.disabled=false;btn.textContent='Sign In to System';
     if(r&&r.success){
+      resetSessionState(); // never carry the previous user's data forward
       S.token=r.token;S.user=r.user;
       // Lookup bundled in response since v103
       if(r.lookup&&r.lookup.success){S.lookup=r.lookup;populateSelects();}
@@ -3805,9 +3843,24 @@ function doLogin(){
     }
   });
 }
+// Wipes per-user in-memory state. Without this, the NEXT person to log
+// in on the same device briefly saw the PREVIOUS user's tasks until the
+// network refresh landed — admin data flashing in an officer's session.
+function resetSessionState(){
+  S.tasks=[];S.filtered=[];S.drillFilter='';
+  S.preloadedDash=null;
+  S.showCompleted=false;S.showClosed=false;S.taskWindow=90;
+  if(typeof TRK_RP_ON!=='undefined')TRK_RP_ON=false;
+  if(typeof TRK_COMP_ON!=='undefined')TRK_COMP_ON=false;
+  if(typeof PL!=='undefined'){PL.entries=[];PL.window=7;PL.deptFilter='';}
+  if(typeof GRV!=='undefined'&&GRV)GRV.list=[];
+  var tb=id('tBody');if(tb)tb.innerHTML='';
+  var tg=id('taskCardsGrid');if(tg)tg.innerHTML='';
+}
 function doLogout(){
   gasCall('serverLogout',S.token).then(function(){});
   S.token=null;S.user=null;LS.del('sc-tok');LS.del('sc-usr');
+  resetSessionState();
   var ap=id('app');if(ap)ap.style.display='none';
   var lp=id('loginPage');if(lp)lp.style.display='flex';
   var lu=id('loginUser');if(lu)lu.value='';
@@ -4009,7 +4062,7 @@ function populateSelects(){
   }
   fillSel('t-dept',deptListForEntry,'DeptName','DeptName','Select Department');fillSel('fDept',ld.departments,'DeptName','DeptName','All Departments');fillSel('mu-dept',ld.departments,'DeptName','DeptName','Select');fillSel('mapDept',ld.departments,'DeptName','DeptName','Select');
   fillSel('mu-desig',ld.designations,'DesigName','DesigName','Select');
-  fillOfficers(null);
+  fillOfficers(V('t-dept')||null); // preserve the user's department filter on lookup refresh
   initAddOfficerDepts();
 }
 function fillSel(elId,data,val,lbl,ph){
@@ -4024,7 +4077,9 @@ function fillOfficers(deptFilter){
   el.innerHTML='<option value="">Select Officer</option>';
   for(var i=0;i<offs.length;i++){
     var o=offs[i];
-    if(deptFilter&&o.department!==deptFilter)continue;
+    // Normalized compare: sheet values sometimes carry stray spaces or
+    // case differences, which made the filter silently show everyone.
+    if(deptFilter&&String(o.department||'').trim().toLowerCase()!==String(deptFilter).trim().toLowerCase())continue;
     var opt=document.createElement('option');
     opt.value=o.userID;
     opt.dataset.name=o.name;
@@ -4160,19 +4215,30 @@ function loadHODDashboard(){
     if(!r||!r.success)return;
     var allTasks=normalizeTaskList(r.data||[]);
     S.tasks=allTasks;S.filtered=allTasks.slice();
-    var total=allTasks.length,done=0,pending=0,inProg=0,overdue=0,review=0;
+    // v120: KPIs come from backend stats computed over the FULL set —
+    // the list now hides Completed/Closed by default, so counting the
+    // visible list would show Completed = 0.
+    var bs=r.stats||null;
+    var total,done,pending,inProg,overdue,review;
     var officerMap={};
-    for(var i=0;i<allTasks.length;i++){
-      var t=allTasks[i];
-      if(t.status==='Completed'||t.status==='Closed')done++;
-      else if(t.status==='In Progress')inProg++;
-      else if(t.status==='Pending')pending++;
-      else if(t.status==='Review Pending')review++;
-      if(t.isOverdue)overdue++;
-      var on=t.officerName||'Unknown';
-      if(!officerMap[on])officerMap[on]={total:0,done:0};
-      officerMap[on].total++;
-      if(t.status==='Completed'||t.status==='Closed')officerMap[on].done++;
+    if(bs){
+      total=bs.total;done=(bs.completed||0)+(bs.closed||0);
+      pending=bs.pending;inProg=bs.inProgress;review=bs.review;overdue=bs.overdue;
+      if(r.officerStats)officerMap=r.officerStats;
+    } else {
+      total=allTasks.length;done=0;pending=0;inProg=0;overdue=0;review=0;
+      for(var i=0;i<allTasks.length;i++){
+        var t=allTasks[i];
+        if(t.status==='Completed'||t.status==='Closed')done++;
+        else if(t.status==='In Progress')inProg++;
+        else if(t.status==='Pending')pending++;
+        else if(t.status==='Review Pending')review++;
+        if(t.isOverdue)overdue++;
+        var on=t.officerName||'Unknown';
+        if(!officerMap[on])officerMap[on]={total:0,done:0};
+        officerMap[on].total++;
+        if(t.status==='Completed'||t.status==='Closed')officerMap[on].done++;
+      }
     }
     // KPIs
     var ht=id('hod-total');if(ht)ht.textContent=total;
@@ -4266,24 +4332,30 @@ function loadSupervisionDashboard(){
     if(!r||!r.success)return;
     var allTasks=normalizeTaskList(r.data||[]);
     S.tasks=allTasks;S.filtered=allTasks.slice();
-    S.supOfficerMap=null; // reset cache, rebuilt below
-
-    var total=allTasks.length,done=0,pending=0,inProg=0,overdue=0;
+    // v120: KPIs come from backend stats computed over the FULL set —
+    // the list now hides Completed/Closed by default, so counting the
+    // visible list would show Completed = 0.
+    var bs=r.stats||null;
+    var total,done,pending,inProg,overdue,review;
     var officerMap={};
-    for(var i=0;i<allTasks.length;i++){
-      var t=allTasks[i];
-      if(t.status==='Completed'||t.status==='Closed')done++;
-      else if(t.status==='In Progress')inProg++;
-      else if(t.status==='Pending')pending++;
-      if(t.isOverdue)overdue++;
-      var on=t.officerName||'Unassigned';
-      if(!officerMap[on])officerMap[on]={total:0,done:0,inProg:0,pending:0,overdue:0,tasks:[]};
-      officerMap[on].total++;
-      officerMap[on].tasks.push(t);
-      if(t.status==='Completed'||t.status==='Closed')officerMap[on].done++;
-      else if(t.status==='In Progress')officerMap[on].inProg++;
-      else if(t.status==='Pending')officerMap[on].pending++;
-      if(t.isOverdue)officerMap[on].overdue++;
+    if(bs){
+      total=bs.total;done=(bs.completed||0)+(bs.closed||0);
+      pending=bs.pending;inProg=bs.inProgress;review=bs.review;overdue=bs.overdue;
+      if(r.officerStats)officerMap=r.officerStats;
+    } else {
+      total=allTasks.length;done=0;pending=0;inProg=0;overdue=0;review=0;
+      for(var i=0;i<allTasks.length;i++){
+        var t=allTasks[i];
+        if(t.status==='Completed'||t.status==='Closed')done++;
+        else if(t.status==='In Progress')inProg++;
+        else if(t.status==='Pending')pending++;
+        else if(t.status==='Review Pending')review++;
+        if(t.isOverdue)overdue++;
+        var on=t.officerName||'Unknown';
+        if(!officerMap[on])officerMap[on]={total:0,done:0};
+        officerMap[on].total++;
+        if(t.status==='Completed'||t.status==='Closed')officerMap[on].done++;
+      }
     }
     S.supOfficerMap=officerMap;
 
@@ -4759,15 +4831,83 @@ function loadUsageAnalytics(){
   });
 }
 
+var TRK_RP_ON=false,TRK_COMP_ON=false;
+function trkRenderNoteBar(){
+  var note=id('trkOlderNote');if(!note)return;
+  var meta=S._trkMeta||{};
+  var parts=[];
+  var isAdm=(S.user&&(S.user.role==='Admin'||S.user.role==='Commissioner'));
+  var rpCount=0;
+  for(var ri=0;ri<S.tasks.length;ri++)if(S.tasks[ri].status==='Review Pending')rpCount++;
+  if(isAdm&&rpCount>0){
+    parts.push('<a onclick="trkFilterReviewPending()" style="cursor:pointer;color:#b45309;background:rgba(217,119,6,.12);padding:2px 10px;border-radius:999px;font-weight:700;text-decoration:none">\u23f3 '+rpCount+' awaiting review</a>');
+  }
+  var compCount=meta.completedCount||0;
+  if(compCount>0||TRK_COMP_ON){
+    if(TRK_COMP_ON){
+      parts.push('<a onclick="trkToggleCompletedView()" style="cursor:pointer;color:#fff;background:#059669;padding:2px 10px;border-radius:999px;font-weight:700;text-decoration:none">\u2714 Viewing completed ('+compCount+') \u2014 tap to go back</a>');
+    } else {
+      parts.push('<a onclick="trkToggleCompletedView()" style="cursor:pointer;color:#059669;background:rgba(5,150,105,.12);padding:2px 10px;border-radius:999px;font-weight:700;text-decoration:none">\u2714 '+compCount+' completed \u2014 view</a>');
+    }
+  }
+  var clCount=meta.closedCount||0;
+  if(clCount>0||S.showClosed){
+    if(S.showClosed){
+      parts.push('Closed shown. <a onclick="trkToggleClosed(false)" style="cursor:pointer;color:var(--c-blue);font-weight:600">Hide closed</a>');
+    } else {
+      parts.push('Closed hidden ('+clCount+'). <a onclick="trkToggleClosed(true)" style="cursor:pointer;color:var(--c-blue);font-weight:600">Show</a>');
+    }
+  }
+  if(meta.totalCount&&meta.totalCount>meta.shown&&S.taskWindow>0&&(S.showCompleted||S.showClosed)){
+    parts.push('Showing recent '+(meta.windowDays||90)+' days. <a onclick="S.taskWindow=0;loadTasks();" style="cursor:pointer;color:var(--c-blue);font-weight:600">Load all</a>');
+  }
+  if(parts.length){note.style.display='';note.innerHTML=parts.join(' \u00b7&nbsp; ');}
+  else note.style.display='none';
+}
+function trkFilterReviewPending(){
+  TRK_RP_ON=!TRK_RP_ON;
+  if(TRK_RP_ON){
+    S.filtered=S.tasks.filter(function(t){return t.status==='Review Pending';});
+    toast('Showing Review Pending only \u2014 tap the chip again to clear.','info');
+  } else { S.filtered=S.tasks.slice(); }
+  renderTable(S.filtered);renderKanban(S.filtered);updateTaskCount();
+}
+function trkToggleCompletedView(){
+  if(!TRK_COMP_ON){
+    TRK_COMP_ON=true;
+    var have=false;
+    for(var i=0;i<S.tasks.length;i++)if(S.tasks[i].status==='Completed'){have=true;break;}
+    if(!have){S.showCompleted=true;loadTasks();return;} // one fetch; filter applies on arrival
+    S.filtered=S.tasks.filter(function(t){return t.status==='Completed';});
+    renderTable(S.filtered);renderKanban(S.filtered);updateTaskCount();
+    trkRenderNoteBar();
+  } else {
+    TRK_COMP_ON=false;S.showCompleted=false;
+    S.tasks=S.tasks.filter(function(t){return t.status!=='Completed';});
+    S.filtered=S.tasks.slice();
+    renderTable(S.filtered);renderKanban(S.filtered);updateTaskCount();
+    trkRenderNoteBar();
+  }
+}
+function trkToggleClosed(show){
+  if(show){S.showClosed=true;loadTasks();return;}
+  S.showClosed=false;
+  S.tasks=S.tasks.filter(function(t){return t.status!=='Closed';});
+  S.filtered=S.filtered.filter(function(t){return t.status!=='Closed';});
+  renderTable(S.filtered);renderKanban(S.filtered);updateTaskCount();
+  trkRenderNoteBar();
+}
 function loadTasks(){
+  TRK_RP_ON=false;
   var role=S.user?S.user.role:'';
   var fn,args;
+  var reqOpts={includeCompleted:S.showCompleted,includeClosed:S.showClosed};
   if(role==='Officer'){
-    fn='serverGetOfficerTasks';args=[S.token];
+    fn='serverGetOfficerTasks';args=[S.token,reqOpts];
   } else if(role==='HOD'){
-    fn='serverGetHODTasks';args=[S.token];
+    fn='serverGetHODTasks';args=[S.token,reqOpts];
   } else {
-    fn='serverGetTasks';args=[S.token,{days:S.taskWindow}];
+    fn='serverGetTasks';args=[S.token,{days:S.taskWindow,includeCompleted:S.showCompleted,includeClosed:S.showClosed}];
   }
 
   // ── INSTANT DISPLAY: render last-known tasks from localStorage ──
@@ -4817,17 +4957,15 @@ function loadTasks(){
     if(S.drillFilter) applyDrillFilter();
     else{renderTable(S.filtered);renderKanban(S.filtered);updateTaskCount();}
     if(advFilterOpen) populateOfficerFilter();
-    // Show "Load all" note if older completed tasks were trimmed by the window
-    var note=id('trkOlderNote');
-    if(note){
-      if(r.totalCount&&r.totalCount>data.length&&S.taskWindow>0){
-        note.style.display='';
-        note.innerHTML='Showing recent '+(r.windowDays||90)+' days ('+data.length+' of '+r.totalCount+' total). Old completed tasks are hidden. '
-          +'<a href="javascript:void(0)" onclick="S.taskWindow=0;loadTasks();" style="color:var(--c-blue);font-weight:600">Load all tasks</a>';
-      } else {
-        note.style.display='none';
-      }
+    // Chips: review queue + completed viewer + closed link (v120)
+    S._trkMeta={completedCount:(typeof r.completedCount==='number'?r.completedCount:0),
+                closedCount:(typeof r.closedCount==='number'?r.closedCount:0),
+                totalCount:r.totalCount||0,windowDays:r.windowDays||90,shown:data.length};
+    if(TRK_COMP_ON){
+      S.filtered=S.tasks.filter(function(t){return t.status==='Completed';});
+      renderTable(S.filtered);renderKanban(S.filtered);updateTaskCount();
     }
+    trkRenderNoteBar();
   }).catch(function(e){
     hideLoader();
     if(!renderedFromCache)showTrackerError('Unexpected error: '+(e&&e.message?e.message:String(e)));
@@ -5016,16 +5154,17 @@ function fillSelZone(selId,zones,label){
   fillSel(selId,sorted,'ZoneName','ZoneName',label||'All Zones');
 }
 function sortBy(col){
-  if(S.sortCol===col){S.sortDir*=-1;}else{S.sortCol=col;S.sortDir=-1;} // default descending for dates, ascending for others
-  if(col==='priority'||col==='taskID')S.sortDir=(S.sortCol===col&&S.sortDir===1)?-1:1; // flip for these
-  // Update sort indicators in column headers
+  // Simplified: the tracker sorts by Last Updated only (newest on top).
+  // Clicking the Updated header flips direction; other headers ignored.
+  if(col!=='updatedAt')return;
+  S.sortCol='updatedAt';
+  S.sortDir*=-1;
   var cols=['taskID','taskType','zone','department','officerName','priority','dateAssigned','dueDate','status','updatedAt','createdAt'];
   for(var i=0;i<cols.length;i++){var el=id('sort-'+cols[i]);if(el)el.textContent='';}
-  var el=id('sort-'+col);if(el)el.textContent=S.sortDir===1?' ▲':' ▼';
+  var el=id('sort-updatedAt');if(el)el.textContent=S.sortDir===1?' \u25b2':' \u25bc';
   applyCurrentSort();
   renderTable(S.filtered);renderKanban(S.filtered);
 }
-// ── RENDER CARDS — pure DOM, zero innerHTML, crash-proof ─────
 function renderTable(tasks){ renderCards(tasks); } // alias for compatibility
 
 function makeTaskCard(t, isAdmin, isHOD, showReassign){
@@ -5395,7 +5534,9 @@ function validateTask(d){
   for(var i=0;i<req.length;i++){if(!d[req[i][0]]){toast('Please fill: '+req[i][1],'error');return false;}}
   return true;
 }
+var ST_BUSY=false;
 function saveTask(){
+  if(ST_BUSY)return; ST_BUSY=true; setTimeout(function(){ST_BUSY=false;},20000);
   // If officers added to list, use multi-save
   if(MO.officers.length>0){saveTaskMultiOfficer();return;}
   var d=getTaskForm();
@@ -5406,7 +5547,7 @@ function saveTask(){
   var btn=id('singleSaveBtn');
   if(btn){if(btn.disabled)return;btn.disabled=true;btn.style.opacity='.6';}
   showLoader('Saving task...');
-  gasCall('serverCreateTask',S.token,d).then(function(r){
+  gasCall('serverCreateTask',S.token,d).then(function(r){ST_BUSY=false;
     hideLoader();
     if(btn){btn.disabled=false;btn.style.opacity='1';}
     if(r&&r.success){
@@ -5460,60 +5601,67 @@ function ensureTaskDetail(t,cb){
   });
 }
 
+var TV_BUSY=false;
+function tvCloseTask(taskID){
+  if(TV_BUSY)return;TV_BUSY=true;
+  var b=id('tvCloseBtn');
+  if(b){b.disabled=true;b.innerHTML='<span class="material-icons-round mi" style="animation:spin 1s linear infinite">sync</span> Closing...';}
+  gasCall('serverUpdateTask',S.token,taskID,{status:'Closed'}).then(function(r){
+    TV_BUSY=false;
+    if(r&&r.success){
+      toast('Task '+taskID+' closed \u2713','ok');
+      closeModal('mTask');
+      loadTasks();
+    } else {
+      if(b){b.disabled=false;b.innerHTML='<span class="material-icons-round mi">task_alt</span> Mark Closed';}
+      toast((r&&r.message)||'Could not close the task.','error');
+    }
+  });
+}
 function viewTask(taskID){
   var t=null;for(var i=0;i<S.tasks.length;i++)if(S.tasks[i].taskID===taskID){t=S.tasks[i];break;}
   if(!t)return;
   var isAdmin=(S.user&&(S.user.role==='Admin'||S.user.role==='Commissioner'));
   id('mTaskTitle').textContent=taskID;id('mTaskBody').innerHTML=taskDetailHTML(t);
-  id('mTaskFt').innerHTML=isAdmin?'<button class="btn btn-ghost" onclick="closeModal(\'mTask\')">Close</button><button class="btn btn-primary" onclick="closeModal(\'mTask\');editTask(\''+taskID+'\')">Edit All Fields</button>':'<button class="btn btn-ghost" onclick="closeModal(\'mTask\')">Close</button><button class="btn btn-primary" onclick="closeModal(\'mTask\');officerUpdate(\''+taskID+'\')">Update Progress</button>';
+  // v120: one-tap Close for Admin/Commissioner on Completed tasks — no
+  // more Edit -> dropdown -> Closed -> Save just to sign off reviewed work.
+  var tvClose=(isAdmin&&t.status==='Completed')?'<button class="btn" id="tvCloseBtn" style="background:#059669;color:#fff" onclick="tvCloseTask(\''+taskID+'\')"><span class="material-icons-round mi">task_alt</span> Mark Closed</button>':'';
+  id('mTaskFt').innerHTML=isAdmin?tvClose+'<button class="btn btn-ghost" onclick="closeModal(\'mTask\')">Close</button><button class="btn btn-primary" onclick="closeModal(\'mTask\');editTask(\''+taskID+'\')">Edit All Fields</button>':'<button class="btn btn-ghost" onclick="closeModal(\'mTask\')">Close</button><button class="btn btn-primary" onclick="closeModal(\'mTask\');officerUpdate(\''+taskID+'\')">Update Progress</button>';
   openModal('mTask');
 
   // Load full task detail on-demand (heavy fields: officerRemarks,
   // photoLinks, updatedBy, completedAt, full description).
   // These are omitted from the list payload to keep it slim.
   // Cache on t._detail so re-opening the same task is instant.
-  if(!t._detail){
+  // v120: ONE call brings detail + photos + documents + history together.
+  // Previously three separate 1-3s round-trips made every task view feel
+  // slow, and a failed attachments call left "Loading documents..." forever.
+  var needsFetch=(!t._detail)||(typeof t.docsData==='undefined')||(!t.newPhotos);
+  if(needsFetch){
     gasCall('serverGetTaskDetail',S.token,taskID).then(function(r){
       if(r&&r.success){
         t._detail=r.task;
-        // Merge detail fields back into the task object
         t.description=r.task.description;   // FULL description (list is truncated)
         t.officerRemarks=r.task.officerRemarks;
         t.completedAt=r.task.completedAt;
         t.updatedBy=r.task.updatedBy;
         t.photoLinks=r.task.photoLinks;
         if(r.task.history)t._history=r.task.history;
-        // Only update if this task's modal is still open
+        t.newPhotos=r.task.photos||t.newPhotos||[];
+        t.docsData=r.task.attachments||t.docsData||[];
         if(id('mTaskTitle')&&id('mTaskTitle').textContent===taskID){
           id('mTaskBody').innerHTML=taskDetailHTML(t);
-          // Re-attach doc list after re-render
           var dl=id('taskDetailDocsList');
-          if(dl&&typeof t.docsData!=='undefined')renderTaskDocList(dl,t.docsData);
+          if(dl)renderTaskDocList(dl,t.docsData||[]);
         }
+      } else {
+        var dl2=id('taskDetailDocsList');
+        if(dl2)dl2.textContent='Could not load documents \u2014 close and reopen the task.';
       }
     });
-  }
-
-  // Photo and document loading (on-demand, already implemented)
-  if(!t.newPhotos){
-    gasCall('serverGetTaskPhotos',S.token,taskID).then(function(r){
-      if(r&&r.success){
-        t.newPhotos=r.data||[];
-        if(id('mTaskTitle')&&id('mTaskTitle').textContent===taskID){
-          id('mTaskBody').innerHTML=taskDetailHTML(t);
-        }
-      }
-    });
-  }
-  var list=id('taskDetailDocsList');
-  if(typeof t.docsData !== 'undefined'){
-    if(list) renderTaskDocList(list, t.docsData);
   } else {
-    gasCall('serverGetTaskAttachments',S.token,taskID).then(function(r){
-      t.docsData=(r&&r.success)?(r.data||[]):[];
-      var list2=id('taskDetailDocsList');
-      if(list2) renderTaskDocList(list2, t.docsData);
-    });
+    var list=id('taskDetailDocsList');
+    if(list)renderTaskDocList(list,t.docsData||[]);
   }
 }
 function renderTaskDocList(el, docs){
@@ -5740,11 +5888,11 @@ function editTaskAddDocs(files){
   var rem=5-EDIT_TASK.newDocs.length,skipped=0,wrongType=0;
   for(var i=0;i<arr.length&&i<rem;i++){
     if(arr[i].type!=='application/pdf'){wrongType++;continue;}
-    if(arr[i].size>15*1024*1024){skipped++;continue;}
+    if(arr[i].size>8*1024*1024){skipped++;continue;}
     EDIT_TASK.newDocs.push(arr[i]);
   }
   if(wrongType)toast(wrongType+' file(s) skipped \u2014 only PDF is accepted.','info');
-  if(skipped)toast(skipped+' file(s) skipped \u2014 max 15MB each.','info');
+  if(skipped)toast(skipped+' file(s) skipped \u2014 max 8MB \u2014 large PDFs fail on mobile networks; please compress or split each.','info');
   var prev=id('editTaskNewDocPreview');if(!prev)return;
   prev.innerHTML='';
   EDIT_TASK.newDocs.forEach(function(f,idx){
@@ -6272,7 +6420,7 @@ function hodReassignTask(taskID){
   html+='<div class="f-group"><label class="f-label">Reason (optional)</label>'
     +'<textarea class="f-ctrl" id="raNote" rows="2" placeholder="e.g. Redistributing workload..."></textarea></div>'
     +'<div style="display:flex;gap:8px;margin-top:12px">'
-    +'<button class="btn btn-primary" onclick="doHodReassign(\''+taskID+'\')"><span class="material-icons-round mi">swap_horiz</span> Confirm Reassign</button>'
+    +'<button class="btn btn-primary" id="raConfirmBtn" onclick="doHodReassign(\''+taskID+'\')"><span class="material-icons-round mi">swap_horiz</span> Confirm Reassign</button>'
     +'<button class="btn btn-ghost" onclick="closeModal(\'mGeneric\')">Cancel</button>'
     +'</div></div>';
 
@@ -6281,13 +6429,22 @@ function hodReassignTask(taskID){
   openModal('mGeneric');
 }
 
+var RA_BUSY=false;
 function doHodReassign(taskID){
+  if(RA_BUSY)return; // a second tap mid-flight was creating duplicates
   var t=null;
   for(var i=0;i<S.tasks.length;i++){if(S.tasks[i].taskID===taskID){t=S.tasks[i];break;}}
   if(!t)return;
 
   var checks=document.querySelectorAll('.ra-target-cb:checked');
   if(!checks.length){toast('Please select at least one person to reassign to.','error');return;}
+  RA_BUSY=true;
+  var raBtn=id('raConfirmBtn');
+  if(raBtn){raBtn.disabled=true;raBtn.innerHTML='<span class="material-icons-round mi" style="animation:spin 1s linear infinite">sync</span> Reassigning...';}
+  function raRelease(failed){
+    RA_BUSY=false;
+    if(failed&&raBtn){raBtn.disabled=false;raBtn.innerHTML='<span class="material-icons-round mi">swap_horiz</span> Confirm Reassign';}
+  }
 
   var targets=[];
   for(var i=0;i<checks.length;i++){
@@ -6321,12 +6478,14 @@ function doHodReassign(taskID){
   gasCall('serverUpdateTask',S.token,taskID,updatePayload).then(function(r){
     if(!r||!r.success){
       hideLoader();closeModal('mGeneric');
+      raRelease(true);
       toast((r&&r.message)||'Reassign failed.','error');
       return;
     }
     var extras=targets.slice(1);
     if(!extras.length){
       hideLoader();closeModal('mGeneric');
+      raRelease(false);
       toast('Task reassigned to '+first.name+'!','ok');
       loadTasks();
       return;
@@ -6338,6 +6497,7 @@ function doHodReassign(taskID){
     function cloneNext(){
       if(idx>=extras.length){
         hideLoader();closeModal('mGeneric');
+        raRelease(false);
         toast('Reassigned to '+first.name+' + '+created+' more.','ok');
         loadTasks();
         return;
@@ -6434,11 +6594,11 @@ function handlePuDocSelect(files){
   var rem=5-S.puDocs.length,skipped=0,wrongType=0;
   for(var i=0;i<arr.length&&i<rem;i++){
     if(arr[i].type!=='application/pdf'){wrongType++;continue;}
-    if(arr[i].size>15*1024*1024){skipped++;continue;}
+    if(arr[i].size>8*1024*1024){skipped++;continue;}
     S.puDocs.push(arr[i]);
   }
   if(wrongType)toast(wrongType+' file(s) skipped \u2014 only PDF is accepted.','info');
-  if(skipped)toast(skipped+' file(s) skipped \u2014 max 15MB each.','info');
+  if(skipped)toast(skipped+' file(s) skipped \u2014 max 8MB \u2014 large PDFs fail on mobile networks; please compress or split each.','info');
   renderPuNewDocPreviews();
 }
 function renderPuNewDocPreviews(){
@@ -6547,7 +6707,11 @@ function renderPhotoPreview(){
   for(var i=0;i<S.driveLinks.length;i++){html+='<div style="position:relative;width:80px;height:80px;border-radius:8px;border:1px solid var(--border);flex-shrink:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;background:var(--surface2)"><span class="material-icons-round mi" style="font-size:24px;color:var(--c-teal)">link</span><div style="font-size:9px;color:var(--tx3);text-align:center">Drive Link</div><button onclick="removeDriveLink('+i+')" style="position:absolute;top:3px;right:3px;background:rgba(0,0,0,.5);border:none;border-radius:50%;width:18px;height:18px;color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0"><span class="material-icons-round" style="font-size:12px">close</span></button></div>';}
   pp.innerHTML=html;
 }
+var PU_BUSY=false;
 function submitPhotoUpdate(){
+  if(PU_BUSY)return; // freeze: repeated Save taps were duplicating uploads
+  PU_BUSY=true;
+  setTimeout(function(){PU_BUSY=false;},90000); // safety release
   var taskID=V('pu-taskid'),status=V('pu-status'),remarks=V('pu-remarks'),priority=V('pu-priority');
   if(!taskID||!status){toast('Please select a status.','error');return;}
 
@@ -6561,6 +6725,7 @@ function submitPhotoUpdate(){
     var btn=id('pu-saveBtn');if(btn)btn.disabled=true;
     gasCall('serverUpdateTask',S.token,taskID,{status:status,officerRemarks:remarks,priority:priority}).then(function(r){
       if(btn)btn.disabled=false;
+      PU_BUSY=false;
       if(r&&r.success){
         closeModal('mPhotoUpload');
         var t=null;for(var i=0;i<S.tasks.length;i++){if(S.tasks[i].taskID===taskID){t=S.tasks[i];break;}}
@@ -6573,7 +6738,7 @@ function submitPhotoUpdate(){
           // Keep the modal open so the person doesn't lose what they typed —
           // closing it here was exactly the kind of thing that made people
           // think their update vanished and try again from scratch.
-          toastWithRetry('Connection lost. Your changes are still here \u2014 tap Retry to save them.',submitPhotoUpdate);
+          toastWithRetry('Connection lost. Your changes are still here \u2014 tap Retry to save them.',function(){PU_BUSY=false;submitPhotoUpdate();});
         } else {
           closeModal('mPhotoUpload');
           toast(failMsg,'error');
@@ -6699,7 +6864,7 @@ function submitPhotoUpdate(){
       var failMsg=(r&&r.message)||'Update failed to save.';
       if(isLikelyConnectionDrop(failMsg)){
         toastWithRetry('Connection lost while saving. Tap Retry to try again \u2014 nothing has been uploaded twice.',function(){
-          submitPhotoUpdate();
+          PU_BUSY=false;submitPhotoUpdate();
         });
       } else {
         toast(failMsg+' Please try again.','error');
@@ -6720,6 +6885,12 @@ function submitPhotoUpdate(){
       return new Promise(function(resolve){
         var file=pickedPhotos[idx];
         var photoEntry=localPhotoEntries[idx];
+        // Retry-safe: this exact photo already reached the server in a
+        // previous attempt — never upload it a second time.
+        if(file._uploadedID){
+          photoEntry.photoID=file._uploadedID;photoEntry.pending=false;photoEntry.failed=false;
+          resolve();return;
+        }
         var reader=new FileReader();
         reader.onload=function(ev){
           var img=new Image();
@@ -6741,6 +6912,7 @@ function submitPhotoUpdate(){
             }
             gasCall('serverAddTaskPhoto',S.token,{taskID:taskID,photo:b64}).then(function(pr){
               if(pr&&pr.success){
+                file._uploadedID=pr.photoID; // survives retries
                 photoEntry.photoID=pr.photoID;
                 photoEntry.photoData=b64;
                 photoEntry.pending=false;
@@ -7498,7 +7670,8 @@ function saveTaskMultiOfficer(){
     tasks.push(t);
   }
   showLoader('Creating '+tasks.length+' tasks...');
-  gasCall('serverBulkCreateTasks',S.token,tasks).then(function(r){
+  if(window.AIB_BUSY)return;window.AIB_BUSY=true;setTimeout(function(){window.AIB_BUSY=false;},30000);
+  gasCall('serverBulkCreateTasks',S.token,tasks).then(function(r){window.AIB_BUSY=false;
     hideLoader();
     if(btn){btn.disabled=false;btn.style.opacity='1';}
     if(r&&r.success){
@@ -7515,7 +7688,7 @@ function clearMultiOfficerList(){
 }
 
 // ── PHOTO LOG ────────────────────────────────────────────────
-var PL={photos:[],pdfs:[],entries:[],editPhotos:[],editExistingPhotos:[],editRemovedPhotoIDs:[],editNoteID:null,editPdfs:[],editExistingAttachments:[],editRemovedAttachmentIDs:[],isAdmin:false,sortOrder:'desc',window:7};
+var PL={photos:[],pdfs:[],entries:[],editPhotos:[],editExistingPhotos:[],editRemovedPhotoIDs:[],editNoteID:null,editPdfs:[],editExistingAttachments:[],editRemovedAttachmentIDs:[],isAdmin:false,sortOrder:'desc',window:7,deptFilter:''};
 function plCheckAdmin(){
   // Add/Edit/Delete notes: Admin, Commissioner, HOD, Supervision.
   // Everyone else (Officers etc.) is read-only.
@@ -7574,7 +7747,23 @@ function plThisMonthDays(){
   return now.getDate(); // day of month = days since month start
 }
 
+function plSetDeptFilter(v){
+  PL.deptFilter=v||'';
+  plRenderCards(PL.entries);
+}
+function plPopulateDeptFilter(){
+  var sel=id('plDeptFilter');if(!sel)return;
+  var cur=PL.deptFilter||'';
+  var ds=(S.lookup&&S.lookup.departments)||[];
+  var html='<option value="">All Departments</option>';
+  for(var i=0;i<ds.length;i++){
+    var n=ds[i].DeptName||ds[i].name||ds[i];
+    html+='<option value="'+n+'"'+(String(n)===cur?' selected':'')+'>'+n+'</option>';
+  }
+  sel.innerHTML=html;
+}
 function loadPhotoLog(){
+  plPopulateDeptFilter();
   var isAdmin=(S.user&&(S.user.role==='Admin'||S.user.role==='Commissioner'));
   var canWriteNotes=(S.user&&(S.user.role==='Admin'||S.user.role==='Commissioner'||S.user.role==='HOD'||S.user.role==='Supervision'));
   PL.isAdmin=canWriteNotes;
@@ -7909,11 +8098,11 @@ function plAddPdfs(files){
   var rem=10-PL.pdfs.length,skipped=0,wrongType=0;
   for(var i=0;i<files.length&&i<rem;i++){
     if(files[i].type!=='application/pdf'){wrongType++;continue;}
-    if(files[i].size>15*1024*1024){skipped++;continue;}
+    if(files[i].size>8*1024*1024){skipped++;continue;}
     PL.pdfs.push(files[i]);
   }
   if(wrongType)toast(wrongType+' file(s) skipped \u2014 only PDF is accepted.','info');
-  if(skipped)toast(skipped+' PDF(s) skipped \u2014 max 15MB each.','info');
+  if(skipped)toast(skipped+' PDF(s) skipped \u2014 max 8MB \u2014 large PDFs fail on mobile networks; please compress or split each.','info');
   plRenderPdfPreview();
 }
 function plRenderPdfPreview(){
@@ -7987,7 +8176,9 @@ function savePlEntry(){
   plRenderCards(PL.entries); // photos visible THE INSTANT save is pressed
 
   // STEP 2 — save the note text to the server in the background
-  gasCall('serverCreateNote',S.token,{date:date,time:time,type:type,zone:zone,location:loc,notes:notes,officerName:officerName}).then(function(r){
+  if(window.NC_BUSY)return;window.NC_BUSY=true;setTimeout(function(){window.NC_BUSY=false;},20000);
+  var _nd='';(function(){var o=(S.lookup&&S.lookup.officers)||[];for(var i=0;i<o.length;i++)if(o[i].name===officerName){_nd=o[i].department||'';break;}})();
+  gasCall('serverCreateNote',S.token,{date:date,time:time,type:type,zone:zone,location:loc,notes:notes,officerName:officerName,department:_nd}).then(function(r){window.NC_BUSY=false;
     if(!r||!r.success){
       localEntry._saving=false;
       localEntry._failed=true;
@@ -8143,6 +8334,17 @@ function clearPlForm(){
 
 // ─── RENDER — pure DOM, no innerHTML for content, no lazy-load timers ──
 function plRenderCards(entries){
+  // Department filter for review: notes store department directly (new
+  // notes) or we derive it from the note's Officer Name (older notes).
+  if(PL.deptFilter){
+    var nameDept={};
+    var offsD=(S.lookup&&S.lookup.officers)||[];
+    for(var di=0;di<offsD.length;di++)nameDept[String(offsD[di].name)]=String(offsD[di].department||'');
+    entries=(entries||[]).filter(function(e){
+      var d=String(e.department||'')||nameDept[String(e.officerName||'')]||'';
+      return d===PL.deptFilter;
+    });
+  }
   entries=plSortEntries(entries); // always honor current sort order (default: newest first)
   var strip=id('plSummaryStrip');
   if(strip){
@@ -8793,10 +8995,15 @@ function plSaveEdit(noteID){
     // Step 5: upload any newly added PDF attachments (pool of 3 — PDFs are
     // larger files than compressed photos, so a slightly smaller pool)
     function uploadNewPdfs(){
-      var newPdfs=PL.editPdfs||[];
+      var newPdfs=(PL.editPdfs||[]).slice();
       if(!newPdfs.length){finishEdit(noteID,updated);return;}
-      var PDF_POOL=3,pdfIdx=0,pdfActive=0,pdfCompleted=0,pdfTotal=newPdfs.length;
-      var lm2=id('loaderMsg');
+      // NON-BLOCKING (v120): the text update is already saved — close the
+      // modal NOW and upload PDFs in the background. Previously a large
+      // scan held the "Saving..." loader hostage for minutes on mobile,
+      // which read as "unable to update".
+      finishEdit(noteID,updated);
+      toast('Uploading '+newPdfs.length+' document'+(newPdfs.length>1?'s':'')+' in background\u2026','info');
+      var PDF_POOL=2,pdfIdx=0,pdfActive=0,pdfCompleted=0,pdfFailed=0,pdfTotal=newPdfs.length;
 
       function processOnePdf(idx){
         return new Promise(function(resolve){
@@ -8805,22 +9012,30 @@ function plSaveEdit(noteID){
             var b64=ev.target.result.split(',')[1];
             gasCall('serverUploadNoteAttachment',S.token,{
               noteID:noteID, fileName:newPdfs[idx].name, mimeType:'application/pdf', base64Data:b64
-            }).then(function(){resolve();});
+            }).then(function(pr){
+              if(!pr||!pr.success)pdfFailed++;
+              resolve();
+            });
           };
-          reader.onerror=function(){resolve();};
+          reader.onerror=function(){pdfFailed++;resolve();};
           reader.readAsDataURL(newPdfs[idx]);
         });
       }
       function launchNextPdf(){
-        if(pdfIdx>=pdfTotal){if(pdfActive===0)finishEdit(noteID,updated);return;}
+        if(pdfIdx>=pdfTotal){if(pdfActive===0)pdfAllDone();return;}
         var myIdx=pdfIdx++;
         pdfActive++;
-        if(lm2)lm2.textContent='Uploading document '+pdfCompleted+' of '+pdfTotal+'...';
         processOnePdf(myIdx).then(function(){
           pdfActive--;pdfCompleted++;
-          if(lm2)lm2.textContent='Uploading document '+pdfCompleted+' of '+pdfTotal+'...';
-          if(pdfCompleted>=pdfTotal)finishEdit(noteID,updated);
+          if(pdfCompleted>=pdfTotal)pdfAllDone();
           else launchNextPdf();
+        });
+      }
+      function pdfAllDone(){
+        if(pdfFailed)toast(pdfFailed+' of '+pdfTotal+' document(s) failed \u2014 open Edit and re-add them.','error');
+        else toast('All '+pdfTotal+' document'+(pdfTotal>1?'s':'')+' uploaded \u2713','ok');
+        gasCall('serverGetNotes',S.token,PL.window||7).then(function(r){
+          if(r&&r.success){PL.entries=r.data||[];plRenderCards(PL.entries);}
         });
       }
       var pdfStart=Math.min(PDF_POOL,pdfTotal);
