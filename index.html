@@ -3386,7 +3386,7 @@ tbody tr:hover { background: var(--surface2); }
 <div id="toasts"></div>
 <script>
 var LS={get:function(k){try{return localStorage.getItem(k);}catch(e){return null;}},set:function(k,v){try{localStorage.setItem(k,v);}catch(e){}},del:function(k){try{localStorage.removeItem(k);}catch(e){}}};
-var S={token:null,user:null,lookup:null,tasks:[],users:[],filtered:[],drillFilter:'',page:'dashboard',allowedPages:[],theme:LS.get('sc-theme')||'light',charts:{},exportCtx:'tracker',aiTasks:[],selPhotos:[],driveLinks:[],puDocs:[],sortCol:'updatedAt',sortDir:-1,taskWindow:90,showCompleted:false,showClosed:false};
+var S={token:null,user:null,lookup:null,tasks:[],users:[],filtered:[],drillFilter:'',page:'dashboard',allowedPages:[],theme:LS.get('sc-theme')||'light',charts:{},exportCtx:'tracker',aiTasks:[],selPhotos:[],driveLinks:[],puDocs:[],sortCol:'updatedAt',sortDir:-1,taskWindow:90,showCompleted:false,showClosed:false,searchQ:''};
 
 // ─── STALE-WHILE-REVALIDATE (instant display) ──────────────────
 // Saves the last-loaded data in localStorage so the NEXT visit renders
@@ -3863,7 +3863,7 @@ function doLogin(){
 function resetSessionState(){
   S.tasks=[];S.filtered=[];S.drillFilter='';
   S.preloadedDash=null;
-  S.showCompleted=false;S.showClosed=false;S.taskWindow=90;
+  S.showCompleted=false;S.showClosed=false;S.taskWindow=90;S.searchQ='';
   if(typeof TRK_RP_ON!=='undefined')TRK_RP_ON=false;
   if(typeof TRK_COMP_ON!=='undefined')TRK_COMP_ON=false;
   if(typeof PL!=='undefined'){PL.entries=[];PL.window=7;PL.searchQ='';}
@@ -4008,7 +4008,15 @@ function go(page){
   closeSidebar();
   if(page==='dashboard')loadDashboard();
   else if(page==='taskEntry'){if(S.lookup)populateSelects();else loadLookup();}
-  else if(page==='tracker')loadTasks();
+  else if(page==='tracker'){
+    // Restore visible search bar text if user navigated away and came back
+    var srBar=id('trkUniversalSearch');
+    if(srBar&&S.searchQ&&!srBar.value){
+      srBar.value=S.searchQ;
+      var clrBtn=id('trkSearchClear');if(clrBtn)clrBtn.style.display='none';
+    }
+    loadTasks();
+  }
   else if(page==='commview')loadCommView();
   else if(page==='users')loadUsers();
   else if(page==='settings')loadSettings();
@@ -4892,6 +4900,11 @@ function trkRenderNoteBar(){
   var note=id('trkOlderNote');if(!note)return;
   var meta=S._trkMeta||{};
   var parts=[];
+  // Show search result summary when a search is active
+  if(S.searchQ){
+    parts.push('<span style="color:var(--c-blue);font-weight:600">\u2315 '+S.filtered.length+' result'+(S.filtered.length!==1?'s':'')+' for \u201c'+S.searchQ+'\u201d</span>'
+      +' \u00b7 <a onclick="clearUniversalSearch()" style="cursor:pointer;color:var(--tx3)">Clear</a>');
+  }
   var isAdm=(S.user&&(S.user.role==='Admin'||S.user.role==='Commissioner'));
   var rpCount=0;
   for(var ri=0;ri<S.tasks.length;ri++)if(S.tasks[ri].status==='Review Pending')rpCount++;
@@ -5026,7 +5039,16 @@ function loadTasks(){
     var data=r.data||[];
     S.tasks=normalizeTaskList(data);
     S.filtered=S.tasks.slice();
-    applyCurrentSort();
+    // Re-apply any active search term — loadTasks must never silently clear
+    // the user's search just because fresh data arrived in the background.
+    if(S.searchQ){
+      var hidden=id('fSearch');if(hidden)hidden.value=S.searchQ;
+      var bar=id('trkUniversalSearch');if(bar&&!bar.value)bar.value=S.searchQ;
+      var clrBtn=id('trkSearchClear');if(clrBtn)clrBtn.style.display='none';
+      filterTasks();
+    } else {
+      applyCurrentSort();
+    }
     // Save for instant display on the next visit/login
     swrSave('tasks',S.tasks);
     var bb=id('bulkBar');if(bb){bb.style.display='none';bb.classList.add('dn');}
@@ -5102,17 +5124,18 @@ function populateOfficerFilter(){
 // it works transparently with all existing filter logic — zone, status,
 // date range etc. still apply on top of the search query.
 function clearUniversalSearch(){
+  S.searchQ='';
   var bar=id('trkUniversalSearch');
   if(bar){bar.value='';bar.focus();}
-  onUniversalSearch('');
+  var hidden=id('fSearch');if(hidden)hidden.value='';
+  var clrBtn=id('trkSearchClear');if(clrBtn)clrBtn.style.display='none';
+  filterTasks();
 }
 function onUniversalSearch(val){
-  // Keep fSearch in sync so filterTasks() picks up the value correctly,
-  // and any filter summary tags also include the active search query.
-  var hidden=id('fSearch');if(hidden)hidden.value=val;
-  // Show/hide the clear ✕ button based on whether there's any text
+  S.searchQ=(val||'').trim(); // persist so loadTasks re-applies after refresh
+  var hidden=id('fSearch');if(hidden)hidden.value=S.searchQ;
   var clrBtn=id('trkSearchClear');
-  if(clrBtn)clrBtn.style.display=val?'':'none';
+  if(clrBtn)clrBtn.style.display=S.searchQ?'':'none';
   filterTasks();
 }
 function filterTasks(){
@@ -5133,8 +5156,28 @@ function filterTasks(){
     if(dueFrom&&t.dateAssigned&&t.dateAssigned<dueFrom)continue;
     if(dueTo&&t.dateAssigned&&t.dateAssigned>dueTo)continue;
     if(search){
-      var hay=(t.taskID+' '+t.description+' '+t.officerName+' '+t.zone+' '+t.department).toLowerCase();
-      if(hay.indexOf(search)===-1)continue;
+      // Multi-token search: ALL words must match somewhere in the task.
+      // Searches across every meaningful field including status, priority,
+      // task type, date strings and remarks (if loaded).
+      var hay=(
+        (t.taskID||'')+' '+
+        (t.description||'')+' '+
+        (t.officerName||'')+' '+
+        (t.zone||'')+' '+
+        (t.department||'')+' '+
+        (t.status||'')+' '+
+        (t.priority||'')+' '+
+        (t.taskType||'')+' '+
+        (t.source||'')+' '+
+        (t.dueDate||'')+' '+
+        (t.dateAssigned||'')+' '+
+        (t.officerRemarks||'')+' '+
+        (t.createdBy||'')
+      ).toLowerCase();
+      var tokens=search.split(/\s+/);
+      var allMatch=true;
+      for(var ti=0;ti<tokens.length;ti++){if(tokens[ti]&&hay.indexOf(tokens[ti])===-1){allMatch=false;break;}}
+      if(!allMatch)continue;
     }
     S.filtered.push(t);
   }
@@ -5160,6 +5203,18 @@ function filterTasks(){
 
 // Applies S.sortCol/S.sortDir to S.filtered in-place — called from
 // filterTasks() and loadTasks() so sort order is always consistent.
+// Highlights the search term within a string for visual feedback.
+// Returns plain text if no search is active, or HTML with <mark> on matches.
+function hlMatch(text){
+  if(!S.searchQ||!text)return text||'';
+  var tokens=S.searchQ.split(/\s+/).filter(Boolean);
+  var out=String(text);
+  for(var i=0;i<tokens.length;i++){
+    var re=new RegExp('('+tokens[i].replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+')','gi');
+    out=out.replace(re,'<mark style="background:#fef08a;color:#1a1a1a;border-radius:2px">$1</mark>');
+  }
+  return out;
+}
 function applyCurrentSort(){
   if(!S.sortCol)return;
   S.filtered.sort(function(a,b){
@@ -5194,6 +5249,7 @@ function clearFilters(){
   var fields=['fZone','fDept','fOfficer','fStatus','fPri','fSource','fDueFrom','fDueTo','fSearch'];
   for(var i=0;i<fields.length;i++){var el=id(fields[i]);if(el)el.value='';}
   // Also clear the always-visible universal search bar
+  S.searchQ='';
   var usBar=id('trkUniversalSearch');if(usBar)usBar.value='';
   var clrBtn=id('trkSearchClear');if(clrBtn)clrBtn.style.display='none';
   // Reset all chip groups to "All"
@@ -5301,25 +5357,29 @@ function makeTaskCard(t, isAdmin, isHOD, showReassign){
 
   var desc = document.createElement('div');
   desc.className = 'task-card-desc';
-  desc.textContent = t.description || '(no description)';
+  if(S.searchQ){
+    desc.innerHTML = hlMatch((t.description||'(no description)').slice(0,180));
+  } else {
+    desc.textContent = t.description || '(no description)';
+  }
 
   var meta = document.createElement('div');
   meta.className = 'task-card-meta';
 
-  function metaItem(icon, text){
+  function metaItem(icon, text, isHtml){
     var d = document.createElement('div');
     d.className = 'task-card-meta-item';
     var ic = document.createElement('span');
     ic.className = 'material-icons-round';
     ic.textContent = icon;
     var tx = document.createElement('span');
-    tx.textContent = text;
+    if(isHtml){tx.innerHTML=text;}else{tx.textContent=text;}
     d.appendChild(ic); d.appendChild(tx);
     return d;
   }
   if(t.zone)      meta.appendChild(metaItem('location_on', t.zone));
   if(t.department)meta.appendChild(metaItem('business', t.department));
-  if(t.officerName)meta.appendChild(metaItem('person', t.officerName));
+  if(t.officerName)meta.appendChild(metaItem('person', S.searchQ?hlMatch(t.officerName):t.officerName, !!S.searchQ));
   if(t.dateAssigned)meta.appendChild(metaItem('calendar_today', 'Insp: '+fDateShort(t.dateAssigned)));
   if(t.dueDate)   meta.appendChild(metaItem('event', 'Due: '+fDateShort(t.dueDate)));
 
@@ -7287,6 +7347,99 @@ function exportPDF(tasks,context){
   for(var i=0;i<zk.length;i++){var z=zk[i],s=zoneMap[z],r2=pct(s.completed,s.total);zoneRows+='<tr><td style="padding:7px 9px;font-weight:600">'+z+'</td><td style="padding:7px 9px;text-align:center;font-weight:700">'+s.total+'</td><td style="padding:7px 9px;text-align:center;color:#15803d;font-weight:700">'+s.completed+'</td><td style="padding:7px 9px;text-align:center;color:#b45309">'+s.notCompleted+'</td><td style="padding:7px 9px;text-align:center;color:'+(s.overdue>0?'#be123c':'#64748b')+';font-weight:'+(s.overdue>0?'700':'400')+'">'+s.overdue+'</td><td style="padding:7px 9px">'+progBar(r2)+'</td></tr>';}
   var deptRows='',dk=Object.keys(deptMap);
   for(var i=0;i<dk.length;i++){var d=dk[i],s=deptMap[d],r2=pct(s.completed,s.total);deptRows+='<tr><td style="padding:7px 9px;font-weight:600">'+d+'</td><td style="padding:7px 9px;text-align:center;font-weight:700">'+s.total+'</td><td style="padding:7px 9px;text-align:center;color:#15803d;font-weight:700">'+s.completed+'</td><td style="padding:7px 9px;text-align:center;color:#b45309">'+s.notCompleted+'</td><td style="padding:7px 9px;text-align:center;color:'+(s.overdue>0?'#be123c':'#64748b')+';font-weight:'+(s.overdue>0?'700':'400')+'">'+s.overdue+'</td><td style="padding:7px 9px">'+progBar(r2)+'</td></tr>';}
+  // ── OFFICER-WISE MAP ─────────────────────────────────────────
+  var officerMap={};
+  for(var i=0;i<tasks.length;i++){
+    var t=tasks[i];
+    var on=t.officerName||'Unassigned';
+    if(!officerMap[on])officerMap[on]={
+      name:on,department:t.department||'',designation:t.designation||'',
+      total:0,completed:0,closed:0,inProg:0,pending:0,review:0,overdue:0,tasks:[]
+    };
+    var om=officerMap[on];
+    om.total++;
+    if(t.status==='Completed')om.completed++;
+    else if(t.status==='Closed')om.closed++;
+    else if(t.status==='In Progress')om.inProg++;
+    else if(t.status==='Review Pending')om.review++;
+    else om.pending++;
+    if(t.isOverdue)om.overdue++;
+    om.tasks.push(t);
+  }
+  // Sort officers: most tasks first, then alphabetical
+  var officerKeys=Object.keys(officerMap).sort(function(a,b){
+    var diff=officerMap[b].total-officerMap[a].total;
+    return diff!==0?diff:a.localeCompare(b);
+  });
+
+  // ── BUILD OFFICER SECTION HTML ───────────────────────────────
+  var officerSection='';
+  for(var oi=0;oi<officerKeys.length;oi++){
+    var om=officerMap[officerKeys[oi]];
+    var omDone=om.completed+om.closed;
+    var omNotDone=om.total-omDone;
+    var omRate=om.total>0?Math.round(omDone/om.total*100):0;
+    var omBarColor=omRate>=70?'#22c55e':omRate>=40?'#f59e0b':'#ef4444';
+    // Officer header card
+    officerSection+='<div style="page-break-inside:avoid;margin-bottom:18px;border:1.5px solid #e2e8f0;border-radius:8px;overflow:hidden">';
+    officerSection+='<div style="background:linear-gradient(135deg,#0b1f45,#1a3a6b);color:#fff;padding:10px 14px;display:flex;justify-content:space-between;align-items:center">';
+    officerSection+='<div><div style="font-size:12px;font-weight:800;letter-spacing:.01em">'+om.name+'</div>';
+    officerSection+='<div style="font-size:9px;color:rgba(255,255,255,.65);margin-top:2px">';
+    if(om.designation)officerSection+=om.designation;
+    if(om.department)officerSection+=(om.designation?' · ':'')+om.department;
+    officerSection+='</div></div>';
+    officerSection+='<div style="text-align:right"><div style="font-size:20px;font-weight:900;line-height:1">'+om.total+'</div><div style="font-size:8px;color:rgba(255,255,255,.6);text-transform:uppercase;letter-spacing:.06em">Tasks</div></div></div>';
+    // KPI strip
+    officerSection+='<div style="display:flex;border-bottom:1px solid #e2e8f0">';
+    var kpis=[
+      {v:omDone,     l:'Completed/Closed', bg:'#f0fdf4',c:'#15803d'},
+      {v:om.pending, l:'Pending',           bg:'#fff7ed',c:'#c2410c'},
+      {v:om.inProg,  l:'In Progress',       bg:'#eff6ff',c:'#1d4ed8'},
+      {v:om.review,  l:'Review Pending',    bg:'#faf5ff',c:'#7e22ce'},
+      {v:om.overdue, l:'Overdue',           bg:(om.overdue>0?'#fff1f2':'#f8fafc'),c:(om.overdue>0?'#be123c':'#94a3b8')}
+    ];
+    for(var ki=0;ki<kpis.length;ki++){
+      var kp=kpis[ki];
+      officerSection+='<div style="flex:1;padding:8px 6px;text-align:center;background:'+kp.bg+';border-right:1px solid #e2e8f0">';
+      officerSection+='<div style="font-size:18px;font-weight:900;color:'+kp.c+'">'+kp.v+'</div>';
+      officerSection+='<div style="font-size:7.5px;font-weight:700;color:'+kp.c+';text-transform:uppercase;letter-spacing:.05em;margin-top:1px;line-height:1.2">'+kp.l+'</div></div>';
+    }
+    officerSection+='</div>';
+    // Completion bar
+    officerSection+='<div style="padding:8px 14px;background:#f8fafc;border-bottom:1px solid #e2e8f0;display:flex;align-items:center;gap:10px">';
+    officerSection+='<span style="font-size:9px;font-weight:600;color:#475569;min-width:90px">Completion Rate</span>';
+    officerSection+='<div style="flex:1;background:#e2e8f0;border-radius:999px;height:7px;overflow:hidden"><div style="height:100%;border-radius:999px;background:'+omBarColor+';width:'+omRate+'%"></div></div>';
+    officerSection+='<span style="font-size:10px;font-weight:800;color:'+omBarColor+';min-width:32px;text-align:right">'+omRate+'%</span></div>';
+    // Task table for this officer (pending/in-progress first, then completed)
+    var omTasks=om.tasks.slice().sort(function(a,b){
+      // Pending+overdue first, then In Progress, then Review, then Completed/Closed
+      var order={Pending:1,'In Progress':2,'Review Pending':3,Completed:4,Closed:5,Overdue:6};
+      var ao=(a.isOverdue?0:order[a.status]||9),bo=(b.isOverdue?0:order[b.status]||9);
+      return ao-bo;
+    });
+    officerSection+='<div style="overflow:hidden"><table style="width:100%;border-collapse:collapse"><thead><tr style="background:#f1f5f9">';
+    officerSection+='<th style="padding:5px 8px;text-align:left;font-size:8.5px;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid #e2e8f0">Task ID</th>';
+    officerSection+='<th style="padding:5px 8px;text-align:left;font-size:8.5px;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid #e2e8f0">Description</th>';
+    officerSection+='<th style="padding:5px 8px;text-align:left;font-size:8.5px;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid #e2e8f0">Zone</th>';
+    officerSection+='<th style="padding:5px 8px;text-align:left;font-size:8.5px;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid #e2e8f0">Priority</th>';
+    officerSection+='<th style="padding:5px 8px;text-align:left;font-size:8.5px;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid #e2e8f0">Due Date</th>';
+    officerSection+='<th style="padding:5px 8px;text-align:left;font-size:8.5px;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid #e2e8f0">Status</th>';
+    officerSection+='</tr></thead><tbody>';
+    for(var ti2=0;ti2<omTasks.length;ti2++){
+      var ot=omTasks[ti2];
+      var rowBg=ot.isOverdue?'#fff1f2':((ti2%2===0)?'#ffffff':'#f8fafc');
+      officerSection+='<tr style="background:'+rowBg+';border-bottom:1px solid #f1f5f9">';
+      officerSection+='<td style="padding:5px 8px;font-family:monospace;font-size:8.5px;color:#1d4ed8;font-weight:700;white-space:nowrap;vertical-align:top">'+ot.taskID+'</td>';
+      officerSection+='<td style="padding:5px 8px;font-size:9px;word-break:break-word;white-space:normal;vertical-align:top;max-width:200px">'+String(ot.description||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')+'</td>';
+      officerSection+='<td style="padding:5px 8px;font-size:9px;white-space:nowrap;vertical-align:top">'+( ot.zone||'—')+'</td>';
+      officerSection+='<td style="padding:5px 8px;font-size:9px;font-weight:700;color:'+priColor(ot.priority)+';white-space:nowrap;vertical-align:top">'+( ot.priority||'—')+'</td>';
+      officerSection+='<td style="padding:5px 8px;font-size:9px;white-space:nowrap;vertical-align:top;'+(ot.isOverdue?'color:#be123c;font-weight:700':'')+'">'+(ot.dueDate||'Not set')+(ot.isOverdue?' ⚠':'')+'</td>';
+      officerSection+='<td style="padding:5px 8px;vertical-align:top;white-space:nowrap"><span style="'+sStyle(ot.status)+'">'+ot.status+'</span></td>';
+      officerSection+='</tr>';
+    }
+    officerSection+='</tbody></table></div></div>';
+  }
+
   var overdueRows='',overdueTasks=[];for(var i=0;i<tasks.length;i++)if(tasks[i].isOverdue)overdueTasks.push(tasks[i]);
   for(var i=0;i<overdueTasks.length;i++){var t=overdueTasks[i],days=t.dueDate?Math.floor((new Date()-new Date(t.dueDate))/86400000):0;overdueRows+='<tr style="background:#fff1f2"><td style="padding:6px 9px;font-family:monospace;font-size:9px;color:#be123c;font-weight:700;vertical-align:top;white-space:nowrap">'+t.taskID+'</td><td style="padding:6px 9px;font-size:10px;word-break:break-word;white-space:normal;vertical-align:top">'+String(t.description||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')+'</td><td style="padding:6px 9px;vertical-align:top;white-space:nowrap">'+t.zone+'</td><td style="padding:6px 9px;vertical-align:top;white-space:nowrap">'+t.department+'</td><td style="padding:6px 9px;font-weight:700;vertical-align:top;white-space:nowrap">'+t.officerName+'</td><td style="padding:6px 9px;color:#be123c;font-weight:700;vertical-align:top;white-space:nowrap">'+(t.dueDate||'\u2014')+'</td><td style="padding:6px 9px;text-align:center;color:#be123c;font-weight:800;vertical-align:top;white-space:nowrap">'+days+' day'+(days!==1?'s':'')+'</td></tr>';}
   var taskRows='';
@@ -7326,7 +7479,9 @@ function exportPDF(tasks,context){
     +'<div class="kpirow"><div class="kbox knavy"><div class="knum">'+total+'</div><div class="klbl">Total Tasks</div></div><div class="kbox kgreen"><div class="knum">'+completed+'</div><div class="klbl">Completed</div></div><div class="kbox kgold"><div class="knum">'+inProg+'</div><div class="klbl">In Progress</div></div><div class="kbox kgold"><div class="knum">'+pending+'</div><div class="klbl">Pending</div></div><div class="kbox kred"><div class="knum">'+overdue+'</div><div class="klbl">Overdue</div></div><div class="kbox kteal"><div class="knum">'+notCompleted+'</div><div class="klbl">Not Completed</div></div><div class="kbox knavy"><div class="knum">'+rate+'%</div><div class="klbl">Completion Rate</div></div></div>'
     +'<div style="margin-bottom:14px;padding:10px 14px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:7px"><div style="display:flex;justify-content:space-between;margin-bottom:5px"><span style="font-size:10px;font-weight:700;color:#0b1f45">Overall Completion Rate</span><span style="font-size:11px;font-weight:800;color:'+(rate>=70?'#15803d':rate>=40?'#b45309':'#be123c')+'">'+rate+'%</span></div><div style="background:#e2e8f0;border-radius:999px;height:8px;overflow:hidden"><div style="height:100%;border-radius:999px;background:'+(rate>=70?'#22c55e':rate>=40?'#f59e0b':'#ef4444')+';width:'+rate+'%"></div></div></div>'
     +(overdue>0?'<div style="background:#fff1f2;border:1.5px solid #fecdd3;border-radius:7px;padding:9px 14px;margin-bottom:12px;font-size:10.5px;color:#be123c;font-weight:700">\u26a0 '+overdue+' task'+(overdue>1?'s are':' is')+' overdue and require'+(overdue===1?'s':'')+' immediate attention.</div>':'<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:7px;padding:9px 14px;margin-bottom:12px;font-size:10.5px;color:#15803d;font-weight:600">\u2713 No overdue tasks. All tasks are within their due dates.</div>')
-    +'<div class="sechd"><div class="secnum">2</div><h2>Zone &amp; Department Breakdown</h2></div>'
+    +'<div class="sechd pbreak"><div class="secnum">2</div><h2>Officer-wise Performance &amp; Task Breakdown</h2></div>'
+    +officerSection
+    +'<div class="sechd pbreak"><div class="secnum">3</div><h2>Zone &amp; Department Breakdown</h2></div>'
     +'<div class="bgrid"><div class="bcol"><div style="font-size:9.5px;font-weight:700;color:#0b1f45;margin-bottom:5px;text-transform:uppercase">Zone-wise Summary</div><div class="twrap"><table><thead><tr><th>Zone</th><th style="text-align:center">Total</th><th style="text-align:center">Completed</th><th style="text-align:center">Pending</th><th style="text-align:center">Overdue</th><th>Completion</th></tr></thead><tbody>'+zoneRows+'</tbody></table></div></div>'
     +'<div class="bcol"><div style="font-size:9.5px;font-weight:700;color:#0b1f45;margin-bottom:5px;text-transform:uppercase">Department-wise Summary</div><div class="twrap"><table><thead><tr><th>Department</th><th style="text-align:center">Total</th><th style="text-align:center">Completed</th><th style="text-align:center">Pending</th><th style="text-align:center">Overdue</th><th>Completion</th></tr></thead><tbody>'+deptRows+'</tbody></table></div></div></div>'
     +(overdueTasks.length>0?'<div class="sechd pbreak"><div class="secnum">3</div><h2>\u26a0 Overdue Tasks \u2014 Immediate Action Required</h2></div><div class="twrap" style="border-color:#fecdd3"><table><thead style="background:#be123c"><tr><th>Task ID</th><th>Description</th><th>Zone</th><th>Department</th><th>Officer</th><th>Due Date</th><th>Days Overdue</th></tr></thead><tbody>'+overdueRows+'</tbody></table></div>':'')
