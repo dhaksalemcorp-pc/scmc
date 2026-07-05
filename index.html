@@ -3652,29 +3652,7 @@ function demoFn(fn,args){
     if(args[0]==='priya.nair'&&args[1]==='officer123')return{success:true,token:'tok-off',user:{userID:'USR003',name:'Priya Nair',designation:'City Health Officer',department:'Public Health',zone:'Ammapet Zone-3',role:'Officer',username:'priya.nair'}};
     return{success:false,message:'Invalid credentials.'};
   }
-  if(fn==='serverGetBootstrap'){
-    var role=S.user?S.user.role:'Admin';
-    var out={success:true,lookup:buildLookupData()};
-    if(role==='Officer'){
-      out.dashData={success:true,stats:{total:5,pending:2,inProgress:1,completed:2,overdue:1,dueToday:0,highPriority:1},completionRate:40,recentTasks:[]};
-      var bo=[],bc=0,bz=0;
-      for(var bi=0;bi<DEMO.tasks.length;bi++){var bt=DEMO.tasks[bi];
-        if(bt.officerID!=='USR003'&&bt.officerName!=='Priya Nair')continue;
-        if(bt.status==='Completed'){bc++;continue;}
-        if(bt.status==='Closed'){bz++;continue;}
-        bo.push(bt);}
-      out.tasksData={success:true,data:bo,completedCount:bc,closedCount:bz,includeCompleted:false,includeClosed:false};
-    } else {
-      out.dashData={success:true,stats:{total:5,pending:2,inProgress:1,completed:2,overdue:1,dueToday:0,highPriority:1},completionRate:40,zoneStats:{},deptStats:{},officerStats:{}};
-      var ba=[],bc2=0,bz2=0;
-      for(var bj=0;bj<DEMO.tasks.length;bj++){var bt2=DEMO.tasks[bj];
-        if(bt2.status==='Completed'){bc2++;continue;}
-        if(bt2.status==='Closed'){bz2++;continue;}
-        ba.push(bt2);}
-      out.tasksData={success:true,data:ba,totalCount:DEMO.tasks.length,windowDays:90,completedCount:bc2,closedCount:bz2,includeCompleted:false,includeClosed:false};
-    }
-    return out;
-  }
+
   if(fn==='serverLoginAndLoad'){
     // Demo: same as serverLogin but also includes dashboard data
     var lu2=buildLookupData();
@@ -3845,8 +3823,6 @@ window.addEventListener('load',function(){
       if(savedUser&&savedUser.userID){
         S.token=tok;S.user=savedUser;
         resetSessionState();
-        BOOT_TRIES=0;
-        startBootstrap();
         showApp();
       } else {
         LS.del('sc-tok');LS.del('sc-usr');
@@ -3870,7 +3846,7 @@ function doLogin(){
   // weak connections. The app appears IMMEDIATELY (dashboard and tasks
   // render from device cache), while lookup + fresh dashboard + tasks
   // arrive via one background bootstrap call the user never waits on.
-  gasCall('serverLoginLight',u,p).then(function(r){
+  gasCall('serverLoginAndLoad',u,p).then(function(r){
     btn.disabled=false;btn.textContent='Sign In to System';
     if(r&&r.success){
       resetSessionState(); // never carry the previous user's data forward
@@ -3878,8 +3854,6 @@ function doLogin(){
       var rem=id('rememberMe');if(rem&&rem.checked){LS.set('sc-tok',r.token);LS.set('sc-usr',JSON.stringify(r.user));}
       // Fire the bootstrap BEFORE showApp so BOOT_PENDING is set when the
       // dashboard renders — it then skips its own duplicate fetch.
-      BOOT_TRIES=0;
-      startBootstrap();
       showApp();
     }else{
       var failMsg=(r&&r.message)?r.message:'Login failed. Check your credentials.';
@@ -3915,6 +3889,11 @@ function resetSessionState(){
 var FRONTEND_VERSION='v119';
 var BOOT_TRIES=0;
 var BOOT_PENDING=false;
+function startBootstrap(){
+  // serverGetBootstrap not deployed — skip silently
+  BOOT_PENDING=false;
+}
+
 function startBootstrap(){
   BOOT_PENDING=true;
   gasCall('serverGetBootstrap',S.token).then(function(r){
