@@ -8119,7 +8119,7 @@ function plToggleView(view){
     if(lv)lv.style.display='block';
     if(!PL.entries||!PL.entries.length){
       showLoader('Loading notes...');
-      gasCall('serverGetNotes',S.token,PL.window||7).then(function(r){
+      gasCall('serverGetNotes',S.token,0).then(function(r){
         hideLoader();
         if(r&&r.success){PL.entries=r.data||[];}
         plRenderCards(PL.entries);
@@ -9174,7 +9174,7 @@ function plSaveEdit(noteID){
       function pdfAllDone(){
         if(pdfFailed)toast(pdfFailed+' of '+pdfTotal+' document(s) failed \u2014 open Edit and re-add them.','error');
         else toast('All '+pdfTotal+' document'+(pdfTotal>1?'s':'')+' uploaded \u2713','ok');
-        gasCall('serverGetNotes',S.token,PL.window||7).then(function(r){
+        gasCall('serverGetNotes',S.token,0).then(function(r){
           if(r&&r.success){PL.entries=r.data||[];plRenderCards(PL.entries);}
         });
       }
@@ -9190,7 +9190,7 @@ function finishEdit(noteID,updated){
   hideLoader();closeModal('mGeneric');
   toast('Entry updated!','ok');
   // Refresh from server so the photo list reflects deletions/additions accurately
-  gasCall('serverGetNotes',S.token,PL.window||7).then(function(r){
+  gasCall('serverGetNotes',S.token,0).then(function(r){
     if(r&&r.success){PL.entries=r.data||[];}
     PL.editPhotos=[];PL.editExistingPhotos=[];PL.editRemovedPhotoIDs=[];
     plRenderCards(PL.entries);
