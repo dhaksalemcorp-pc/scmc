@@ -1426,7 +1426,6 @@ tbody tr:hover { background: var(--surface2); }
       <div class="sb-item" data-page="about" onclick="go('about')"><span class="material-icons-round sb-i">info</span> About</div>
     </div>
     <div class="sb-footer">
-      <button class="sb-logout" id="langToggleBtn" onclick="toggleLanguage()" style="margin-bottom:6px"><span class="material-icons-round sb-i">translate</span> <span id="langToggleLbl">தமிழ்</span></button>
       <button class="sb-logout" onclick="doLogout()"><span class="material-icons-round sb-i">logout</span> <span data-i18n="signout">Sign Out</span></button>
     </div>
   </nav>
@@ -1924,7 +1923,6 @@ tbody tr:hover { background: var(--surface2); }
       <div class="flex-c gap8 mb12" style="flex-wrap:wrap;justify-content:space-between;align-items:center">
         <div class="tabs" id="trackerTabs">
           <button class="tab active" onclick="switchView('cards',this)"><span class="material-icons-round mi">view_agenda</span> Cards</button>
-          <button class="tab" onclick="switchView('kanban',this)"><span class="material-icons-round mi">view_kanban</span> Kanban</button>
         </div>
         <span class="c-muted" id="taskCount" style="flex-shrink:0">Loading...</span>
         <div style="display:flex;gap:4px;align-items:center;margin-left:auto">
@@ -1951,7 +1949,7 @@ tbody tr:hover { background: var(--surface2); }
       <!-- Card View (DOM-based, no innerHTML crash) -->
       <div id="viewCards"><div id="taskCardsGrid"></div></div>
       <!-- Kanban View -->
-      <div id="viewKanban" style="display:none"><div class="kanban" id="kanban"></div></div>
+
     </div>
 
     <!-- COMMISSIONER VIEW -->
@@ -2100,13 +2098,8 @@ tbody tr:hover { background: var(--surface2); }
     <div class="page" id="page-photolog">
       <div class="ph">
         <div class="ph-left"><h1>&#128247; Inspection / Meeting Notes</h1><p>Inspection records &amp; meeting notes for all staff</p></div>
-        <div class="ph-actions" id="plAdminActions">
+        <div class="ph-actions">
           <button class="btn btn-ghost btn-sm" onclick="plToggleView('form')"><span class="material-icons-round mi">add_circle</span> New Entry</button>
-          <button class="btn btn-ghost btn-sm" onclick="plToggleView('list')"><span class="material-icons-round mi">view_module</span> All Entries</button>
-          <button class="btn btn-ghost btn-sm" onclick="showPlDownloadModal()"><span class="material-icons-round mi">download</span> Download</button>
-        </div>
-        <div class="ph-actions" id="plViewActions" style="display:none">
-          <button class="btn btn-ghost btn-sm" onclick="plToggleView('list')"><span class="material-icons-round mi">view_module</span> View All Notes</button>
           <button class="btn btn-ghost btn-sm" onclick="showPlDownloadModal()"><span class="material-icons-round mi">download</span> Download</button>
         </div>
       </div>
@@ -2210,68 +2203,41 @@ tbody tr:hover { background: var(--surface2); }
 
       <!-- ENTRY LIST (View B) -->
       <div id="plListView" style="display:none">
-        <!-- Filter bar -->
-        <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin-bottom:10px">
-          <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap">
-            <div style="position:relative;flex:1;min-width:160px">
-              <span class="material-icons-round" style="position:absolute;left:9px;top:50%;transform:translateY(-50%);font-size:16px;color:var(--tx3);pointer-events:none">search</span>
-              <input id="plSearch" type="search" placeholder="Search notes, officer, zone..."
-                style="width:100%;padding:7px 28px 7px 32px;border:1.5px solid var(--border);border-radius:7px;background:var(--surface2);color:var(--tx1);font-size:12.5px;outline:none;box-sizing:border-box"
+        <div class="card mb12" style="padding:12px 14px">
+          <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px;flex-wrap:wrap">
+            <div style="position:relative;flex:1;min-width:180px">
+              <span class="material-icons-round" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:17px;color:var(--tx3);pointer-events:none">search</span>
+              <input id="plSearch" type="search" placeholder="Search notes, officer, zone, type, remarks..."
+                style="width:100%;padding:8px 32px 8px 35px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface2);color:var(--tx1);font-size:13px;outline:none;box-sizing:border-box"
                 oninput="plSetSearch(this.value)" onkeydown="if(event.key==='Escape'){this.value='';plSetSearch('');}" autocomplete="off">
             </div>
             <button id="plSortToggle" onclick="plToggleSort()"
-              style="display:flex;align-items:center;gap:4px;padding:6px 11px;border:1.5px solid var(--border);border-radius:7px;background:var(--surface2);color:var(--tx1);font-size:12px;font-weight:600;cursor:pointer;flex-shrink:0">
-              <span class="material-icons-round" style="font-size:15px">swap_vert</span>
+              style="display:flex;align-items:center;gap:5px;padding:7px 13px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface2);color:var(--tx1);font-size:12.5px;font-weight:600;cursor:pointer;white-space:nowrap;flex-shrink:0">
+              <span class="material-icons-round" style="font-size:16px">swap_vert</span>
               <span id="plSortLabel">Newest First</span>
             </button>
-            <select id="plFilterMonth" class="f-sel" style="font-size:12px;padding:5px 8px;flex-shrink:0" onchange="plApplyFilters()">
-              <option value="">All Months</option>
-            </select>
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:8px">
+            <div id="plZoneWrap" style="position:relative">
+              <button onclick="plToggleZone(event)" id="plZoneBtn"
+                style="display:flex;align-items:center;gap:5px;padding:5px 11px;border:1.5px solid var(--border);border-radius:7px;background:var(--surface2);color:var(--tx1);font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap">
+                <span id="plZoneLabel">All Zones/Dept</span>
+                <span class="material-icons-round" style="font-size:14px">expand_more</span>
+              </button>
+              <div id="plZoneList" style="display:none;position:absolute;top:calc(100% + 4px);left:0;z-index:300;background:var(--surface);border:1.5px solid var(--border);border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,.12);min-width:200px;max-height:240px;overflow-y:auto;padding:6px"></div>
+            </div>
+            <select id="plFilterMonth" class="f-sel" style="font-size:12px;padding:5px 8px" onchange="plApplyFilters()"><option value="">All Months</option></select>
             <span id="plActiveFilters" style="display:none;font-size:11.5px;color:var(--c-blue);font-weight:600;cursor:pointer" onclick="plClearFilters()">&#10005; Clear</span>
           </div>
-          <div style="display:flex;gap:5px;flex-wrap:wrap;align-items:center">
-            <span style="font-size:10.5px;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em">Type:</span>
+          <div style="display:flex;gap:5px;flex-wrap:wrap;align-items:center;padding-top:8px;border-top:1px solid var(--border)">
+            <span style="font-size:10.5px;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;flex-shrink:0">Type:</span>
             <div id="plTypeChips" style="display:flex;gap:5px;flex-wrap:wrap"></div>
           </div>
         </div>
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+        <div id="plStatsStrip" style="display:none;gap:10px;flex-wrap:wrap;margin-bottom:8px;padding:8px 12px;background:var(--surface2);border-radius:8px;font-size:12px;color:var(--tx2)"></div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+          <span id="plCount" style="font-size:13px;font-weight:700;color:var(--tx1)">—</span>
           <span id="plWindowInfo" style="font-size:11.5px;color:var(--tx3)"></span>
-          <select id="plDeptFilter" class="f-sel" onchange="plSetDeptFilter(this.value)" style="margin-left:auto;font-size:12px;padding:4px 8px;max-width:220px">
-            <option value="">All Departments</option>
-          </select>
-        </div>
-        <!-- Improved Filter bar -->
-        <div class="card mb12" style="border:1.5px solid var(--border)">
-          <div class="card-bd" style="padding:12px 14px">
-            <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--tx3);margin-bottom:8px">Filter Entries</div>
-            <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
-              <div style="display:flex;align-items:center;gap:6px;background:var(--surface2);border-radius:8px;padding:5px 10px;border:1px solid var(--border)">
-                <span class="material-icons-round" style="font-size:14px;color:var(--tx3)">category</span>
-                <select class="f-sel" id="plFType" onchange="plFilter()" style="border:none;background:transparent;padding:0;min-width:100px;font-size:13px">
-                  <option value="">All Types</option><option>Inspection</option><option>Meeting</option><option>Site Visit</option>
-                </select>
-              </div>
-              <div style="display:flex;align-items:center;gap:6px;background:var(--surface2);border-radius:8px;padding:5px 10px;border:1px solid var(--border)">
-                <span class="material-icons-round" style="font-size:14px;color:var(--tx3)">location_on</span>
-                <select class="f-sel" id="plFZone" onchange="plFilter()" style="border:none;background:transparent;padding:0;min-width:130px;font-size:13px">
-                  <option value="">All Zones</option><option>Main Office</option><option>Suramangalam Zone-1</option><option>Hasthampatti Zone-2</option><option>Ammapet Zone-3</option><option>Kondalampatti Zone-4</option>
-                </select>
-              </div>
-              <div style="display:flex;align-items:center;gap:6px;background:var(--surface2);border-radius:8px;padding:5px 10px;border:1px solid var(--border)">
-                <span class="material-icons-round" style="font-size:14px;color:var(--tx3)">calendar_month</span>
-                <select class="f-sel" id="plFMonth" onchange="plFilter()" style="border:none;background:transparent;padding:0;min-width:110px;font-size:13px">
-                  <option value="">All Months</option>
-                  <option value="01">January</option><option value="02">February</option><option value="03">March</option>
-                  <option value="04">April</option><option value="05">May</option><option value="06">June</option>
-                  <option value="07">July</option><option value="08">August</option><option value="09">September</option>
-                  <option value="10">October</option><option value="11">November</option><option value="12">December</option>
-                </select>
-              </div>
-              <button class="btn btn-ghost btn-sm" id="plSortBtn" onclick="plToggleSort()" title="Toggle sort order"><span class="material-icons-round mi" id="plSortIcon">arrow_downward</span> <span id="plSortLabel">Newest First</span></button>
-              <button class="btn btn-ghost btn-sm" onclick="plClearFilter()"><span class="material-icons-round mi">filter_alt_off</span> Clear</button>
-              <span id="plCount" style="font-size:12px;color:var(--tx3);margin-left:auto;font-weight:600"></span>
-            </div>
-          </div>
         </div>
         <div id="plCards"></div>
       </div>
@@ -2338,7 +2304,11 @@ tbody tr:hover { background: var(--surface2); }
               </div>
               <div class="f-group mb0">
                 <label class="f-label">Sort Order</label>
-                <select class="f-sel" id="pld-sort"><option value="asc">Oldest \u2192 Newest</option><option value="desc">Newest \u2192 Oldest</option></select>
+                <div style="display:flex;gap:12px;margin-top:4px">
+                  <label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-size:13px"><input type="radio" name="plsortR" value="desc" checked onchange="id('pld-sort').value=this.value"> Newest &#8594; Oldest</label>
+                  <label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-size:13px"><input type="radio" name="plsortR" value="asc" onchange="id('pld-sort').value=this.value"> Oldest &#8594; Newest</label>
+                </div>
+                <select style="display:none" id="pld-sort"><option value="asc">asc</option><option value="desc" selected>desc</option></select>
               </div>
             </div>
             <div id="pldPreview" style="margin-top:10px;font-size:12px;color:var(--tx3)"></div>
@@ -3404,7 +3374,7 @@ tbody tr:hover { background: var(--surface2); }
 <div id="toasts"></div>
 <script>
 var LS={get:function(k){try{return localStorage.getItem(k);}catch(e){return null;}},set:function(k,v){try{localStorage.setItem(k,v);}catch(e){}},del:function(k){try{localStorage.removeItem(k);}catch(e){}}};
-var S={token:null,user:null,lookup:null,tasks:[],users:[],filtered:[],drillFilter:'',page:'dashboard',allowedPages:[],theme:LS.get('sc-theme')||'light',charts:{},exportCtx:'tracker',aiTasks:[],selPhotos:[],driveLinks:[],puDocs:[],sortCol:'updatedAt',sortDir:-1,taskWindow:90,showCompleted:false,showClosed:false,searchQ:''};
+var S={token:null,user:null,lookup:null,tasks:[],users:[],filtered:[],drillFilter:'',page:'dashboard',allowedPages:[],theme:LS.get('sc-theme')||'light',charts:{},exportCtx:'tracker',aiTasks:[],selPhotos:[],driveLinks:[],puDocs:[],sortCol:'updatedAt',sortDir:-1,taskWindow:90,showCompleted:false,showClosed:false,searchQ:'',_trkMeta:null};
 
 // ─── STALE-WHILE-REVALIDATE (instant display) ──────────────────
 // Saves the last-loaded data in localStorage so the NEXT visit renders
@@ -3652,7 +3622,29 @@ function demoFn(fn,args){
     if(args[0]==='priya.nair'&&args[1]==='officer123')return{success:true,token:'tok-off',user:{userID:'USR003',name:'Priya Nair',designation:'City Health Officer',department:'Public Health',zone:'Ammapet Zone-3',role:'Officer',username:'priya.nair'}};
     return{success:false,message:'Invalid credentials.'};
   }
-
+  if(fn==='serverGetBootstrap'){
+    var role=S.user?S.user.role:'Admin';
+    var out={success:true,lookup:buildLookupData()};
+    if(role==='Officer'){
+      out.dashData={success:true,stats:{total:5,pending:2,inProgress:1,completed:2,overdue:1,dueToday:0,highPriority:1},completionRate:40,recentTasks:[]};
+      var bo=[],bc=0,bz=0;
+      for(var bi=0;bi<DEMO.tasks.length;bi++){var bt=DEMO.tasks[bi];
+        if(bt.officerID!=='USR003'&&bt.officerName!=='Priya Nair')continue;
+        if(bt.status==='Completed'){bc++;continue;}
+        if(bt.status==='Closed'){bz++;continue;}
+        bo.push(bt);}
+      out.tasksData={success:true,data:bo,completedCount:bc,closedCount:bz,includeCompleted:false,includeClosed:false};
+    } else {
+      out.dashData={success:true,stats:{total:5,pending:2,inProgress:1,completed:2,overdue:1,dueToday:0,highPriority:1},completionRate:40,zoneStats:{},deptStats:{},officerStats:{}};
+      var ba=[],bc2=0,bz2=0;
+      for(var bj=0;bj<DEMO.tasks.length;bj++){var bt2=DEMO.tasks[bj];
+        if(bt2.status==='Completed'){bc2++;continue;}
+        if(bt2.status==='Closed'){bz2++;continue;}
+        ba.push(bt2);}
+      out.tasksData={success:true,data:ba,totalCount:DEMO.tasks.length,windowDays:90,completedCount:bc2,closedCount:bz2,includeCompleted:false,includeClosed:false};
+    }
+    return out;
+  }
   if(fn==='serverLoginAndLoad'){
     // Demo: same as serverLogin but also includes dashboard data
     var lu2=buildLookupData();
@@ -3823,6 +3815,8 @@ window.addEventListener('load',function(){
       if(savedUser&&savedUser.userID){
         S.token=tok;S.user=savedUser;
         resetSessionState();
+        BOOT_TRIES=0;
+        startBootstrap();
         showApp();
       } else {
         LS.del('sc-tok');LS.del('sc-usr');
@@ -3854,6 +3848,8 @@ function doLogin(){
       var rem=id('rememberMe');if(rem&&rem.checked){LS.set('sc-tok',r.token);LS.set('sc-usr',JSON.stringify(r.user));}
       // Fire the bootstrap BEFORE showApp so BOOT_PENDING is set when the
       // dashboard renders — it then skips its own duplicate fetch.
+      BOOT_TRIES=0;
+      startBootstrap();
       showApp();
     }else{
       var failMsg=(r&&r.message)?r.message:'Login failed. Check your credentials.';
@@ -3876,7 +3872,7 @@ function resetSessionState(){
   S.showCompleted=false;S.showClosed=false;S.taskWindow=90;S.searchQ='';
   if(typeof TRK_COMP_ON!=='undefined')TRK_COMP_ON=false;S._fullList=null;S._trkMeta=null;
   if(typeof TRK_RP_ON!=='undefined')TRK_RP_ON=false;
-  if(typeof PL!=='undefined'){PL.entries=[];PL.window=7;}
+  if(typeof PL!=='undefined'){PL.entries=[];PL.window=0;PL.searchQ='';if(PL.filterTypes)PL.filterTypes.splice(0,PL.filterTypes.length);if(PL.filterZones)PL.filterZones.splice(0,PL.filterZones.length);}
   if(typeof GRV!=='undefined'&&GRV){GRV.list=[];}
   var tb=id('tBody');if(tb)tb.innerHTML='';
   var tg=id('taskCardsGrid');if(tg)tg.innerHTML='';
@@ -3889,11 +3885,6 @@ function resetSessionState(){
 var FRONTEND_VERSION='v119';
 var BOOT_TRIES=0;
 var BOOT_PENDING=false;
-function startBootstrap(){
-  // serverGetBootstrap not deployed — skip silently
-  BOOT_PENDING=false;
-}
-
 function startBootstrap(){
   BOOT_PENDING=true;
   gasCall('serverGetBootstrap',S.token).then(function(r){
@@ -4093,7 +4084,7 @@ function go(page){
   else if(page==='taskEntry'){if(S.lookup)populateSelects();else loadLookup();}
   else if(page==='tracker'){
     var srBar=id('trkUniversalSearch');
-    if(srBar&&S.searchQ&&!srBar.value){srBar.value=S.searchQ;var clrBtn2=id('trkSearchClear');if(clrBtn2)clrBtn2.style.display='none';}
+    if(srBar&&S.searchQ){srBar.value=S.searchQ;var clrBtn2=id('trkSearchClear');if(clrBtn2)clrBtn2.style.display=S.searchQ?'':'none';}
     loadTasks();
   }
   else if(page==='commview')loadCommView();
@@ -4813,12 +4804,48 @@ function buildZoneChart(zs){
     scales:{x:{stacked:true,grid:{display:false},ticks:{font:{size:10}}},y:{stacked:true,beginAtZero:true,ticks:{font:{size:10}}}},
     plugins:{legend:{position:'bottom',labels:{font:{size:11},padding:10}}}}});
 }
+function deptDrillTo(dept,status){
+  // Navigate to task tracker filtered by dept (and optional status)
+  go('tracker');
+  setTimeout(function(){
+    // Set dept filter dropdown
+    var fd=id('fDept');if(fd){fd.value=dept;}
+    var fs=id('fStatus');if(fs){fs.value=status||'';}
+    filterTasks();
+    // Scroll tracker to top
+    var content=id('content');if(content)content.scrollTop=0;
+  },150);
+}
 function buildDeptBreakdown(ds){
   var el=id('deptBreakdown');if(!el)return;
-  var depts=Object.keys(ds);if(!depts.length){el.innerHTML='<div class="empty"><span class="material-icons-round mi">bar_chart</span><p>No data yet</p></div>';return;}
+  var depts=Object.keys(ds);
+  if(!depts.length){el.innerHTML='<div class="empty"><span class="material-icons-round mi">bar_chart</span><p>No data yet</p></div>';return;}
   var html='';
-  for(var i=0;i<depts.length;i++){var d=depts[i],s=ds[d],rate=s.total>0?Math.round(s.completed/s.total*100):0,col=rate>60?'green':rate>30?'gold':'red';html+='<div style="margin-bottom:13px"><div class="flex-b mb8"><span style="font-size:13px;font-weight:600">'+d+'</span><span class="c-muted">'+s.completed+'/'+s.total+' ('+rate+'%)</span></div><div class="prog-wrap"><div class="prog-fill '+col+'" style="width:'+rate+'%"></div></div></div>';}
+  for(var i=0;i<depts.length;i++){
+    var d=depts[i],s=ds[d];
+    var rate=s.total>0?Math.round(s.completed/s.total*100):0;
+    var col=rate>60?'#22c55e':rate>30?'#f59e0b':'#ef4444';
+    var pending=s.total-s.completed;
+    html+='<div style="margin-bottom:14px;padding:10px 12px;background:var(--surface2);border-radius:8px;border:1px solid var(--border)">';
+    html+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:7px">';
+    html+='<span style="font-size:13px;font-weight:700;color:var(--tx1)">'+d+'</span>';
+    html+='<span style="font-size:11.5px;font-weight:700;color:'+col+'">'+rate+'%</span>';
+    html+='</div>';
+    html+='<div style="background:var(--border);border-radius:999px;height:6px;overflow:hidden;margin-bottom:8px">';
+    html+='<div style="height:100%;border-radius:999px;background:'+col+';width:'+rate+'%;transition:width .4s"></div></div>';
+    html+='<div style="display:flex;gap:6px;flex-wrap:wrap">';
+    // Clickable chips — navigate to tracker filtered by this dept+status
+    html+='<button class="dept-drill-btn" data-dept="'+d+'" data-status="" style="padding:2px 9px;border-radius:999px;border:1.5px solid var(--border);background:var(--surface);color:var(--tx2);font-size:11.5px;font-weight:600;cursor:pointer">All: '+s.total+'</button>';
+    if(pending>0)html+='<button class="dept-drill-btn" data-dept="'+d+'" data-status="Pending" style="padding:2px 9px;border-radius:999px;border:1.5px solid #fed7aa;background:#fff7ed;color:#c2410c;font-size:11.5px;font-weight:700;cursor:pointer">Pending: '+pending+'</button>';
+    if(s.completed>0)html+='<button class="dept-drill-btn" data-dept="'+d+'" data-status="Completed" style="padding:2px 9px;border-radius:999px;border:1.5px solid #bbf7d0;background:#f0fdf4;color:#15803d;font-size:11.5px;font-weight:700;cursor:pointer">Completed: '+s.completed+'</button>';
+    html+='</div></div>';
+  }
   el.innerHTML=html;
+  // Wire drill-down via event delegation (avoids onclick quoting issues)
+  el.onclick=function(ev){
+    var btn=ev.target.closest('.dept-drill-btn');
+    if(btn)deptDrillTo(btn.dataset.dept,btn.dataset.status);
+  };
 }
 function renderActivityPlaceholder(){
   var el=id('recentAct');if(!el)return;
@@ -5107,11 +5134,8 @@ function trkApplyResponse(r,fn,fromPreload){
     S.tasks=normalizeTaskList(data);
     if(r.includeCompleted)S._fullList=S.tasks.slice(); // instant re-show cache
     S.filtered=S.tasks.slice();
-    if(S.searchQ){
-      var hidden2=id('fSearch');if(hidden2)hidden2.value=S.searchQ;
-      var bar2=id('trkUniversalSearch');if(bar2&&!bar2.value)bar2.value=S.searchQ;
-      filterTasks();
-    } else { applyCurrentSort(); }
+    if(S.searchQ){var hidden2=id('fSearch');if(hidden2)hidden2.value=S.searchQ;var bar2=id('trkUniversalSearch');if(bar2&&!bar2.value)bar2.value=S.searchQ;filterTasks();}
+    else{applyCurrentSort();}
     // Save for instant display on the next visit/login (open tasks only —
     // don't bloat localStorage with completed history)
     if(!r.includeCompleted)swrSave('tasks',S.tasks);
@@ -5134,9 +5158,6 @@ function trkRenderNoteBar(){
   var note=id('trkOlderNote');if(!note)return;
   var meta=S._trkMeta||{};
   var parts=[];
-  if(S.searchQ){
-    parts.push('<span style="color:var(--c-blue);font-weight:600">&#8981; '+S.filtered.length+' result'+(S.filtered.length!==1?'s':'')+' for &#8220;'+S.searchQ+'&#8221;</span> &middot; <a onclick="clearUniversalSearch()" style="cursor:pointer;color:var(--tx3)">Clear</a>');
-  }
   var isAdm=(S.user&&(S.user.role==='Admin'||S.user.role==='Commissioner'));
   // Amber chip: tasks the admin pushed back, awaiting the officer
   var rpCount=0;
@@ -5229,10 +5250,12 @@ function clearUniversalSearch(){
   filterTasks();
 }
 function onUniversalSearch(val){
-  S.searchQ=(val||'').trim(); // persist so loadTasks re-applies after refresh
-  var hidden=id('fSearch');if(hidden)hidden.value=S.searchQ;
+  // Keep fSearch in sync so filterTasks() picks up the value correctly,
+  // and any filter summary tags also include the active search query.
+  var hidden=id('fSearch');if(hidden)hidden.value=val;
+  // Show/hide the clear ✕ button based on whether there's any text
   var clrBtn=id('trkSearchClear');
-  if(clrBtn)clrBtn.style.display=S.searchQ?'':'none';
+  if(clrBtn)clrBtn.style.display=val?'':'none';
   filterTasks();
 }
 function filterTasks(){
@@ -5253,8 +5276,8 @@ function filterTasks(){
     if(dueFrom&&t.dateAssigned&&t.dateAssigned<dueFrom)continue;
     if(dueTo&&t.dateAssigned&&t.dateAssigned>dueTo)continue;
     if(search){
-      var hay=((t.taskID||'')+' '+(t.description||'')+' '+(t.officerName||'')+' '+(t.zone||'')+' '+(t.department||'')+' '+(t.status||'')+' '+(t.priority||'')+' '+(t.taskType||'')+' '+(t.dueDate||'')+' '+(t.dateAssigned||'')+' '+(t.officerRemarks||'')).toLowerCase();
-      var tokens=search.split(/\s+/);var allMatch=true;
+      var hay=((t.taskID||'')+' '+(t.description||'')+' '+(t.officerName||'')+' '+(t.zone||'')+' '+(t.department||'')+' '+(t.status||'')+' '+(t.priority||'')+' '+(t.taskType||'')+' '+(t.dueDate||'')+' '+(t.officerRemarks||'')).toLowerCase();
+      var tokens=search.replace(/\s+/g,' ').split(' ');var allMatch=true;
       for(var ti=0;ti<tokens.length;ti++){if(tokens[ti]&&hay.indexOf(tokens[ti])<0){allMatch=false;break;}}
       if(!allMatch)continue;
     }
@@ -5284,7 +5307,7 @@ function filterTasks(){
 // filterTasks() and loadTasks() so sort order is always consistent.
 function hlMatch(text){
   if(!S.searchQ||!text)return text||'';
-  var tokens=S.searchQ.split(/\s+/).filter(Boolean);
+  var tokens=S.searchQ.replace(/\s+/g,' ').split(' ').filter(Boolean);
   var out=String(text);
   for(var i=0;i<tokens.length;i++){
     var re=new RegExp('('+tokens[i].replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+')','gi');
@@ -5479,16 +5502,6 @@ function makeTaskCard(t, isAdmin, isHOD, showReassign){
   }
 
   ftr.appendChild(btn('visibility','View','btn-ghost btn-icon', function(){ viewTask(t.taskID); }));
-  // WhatsApp share — Admin/Commissioner only (free wa.me deep link)
-  if(isAdmin){
-  var waBtn=document.createElement('button');
-  waBtn.className='btn btn-ghost btn-sm btn-icon';
-  waBtn.title='Share on WhatsApp';
-  waBtn.style.cssText='color:#25D366;border-color:#25D366';
-  waBtn.innerHTML='<svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor" style="display:block"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413"/></svg>';
-  waBtn.onclick=function(e){e.stopPropagation();waShareTask(t.taskID);};
-  ftr.appendChild(waBtn);
-  }
 
   if(isAdmin){
     ftr.appendChild(btn('update','Update','btn-ghost btn-icon', function(){ adminUpdate(t.taskID); }));
@@ -5758,6 +5771,7 @@ function validateTask(d){
   return true;
 }
 function saveTask(){
+  if(!btnFreeze('saveTask','singleSaveBtn','<span class="material-icons-round mi" style="animation:spin 1s linear infinite">sync</span> Saving...'))return;
   // If officers added to list, use multi-save
   if(MO.officers.length>0){saveTaskMultiOfficer();return;}
   var d=getTaskForm();
@@ -5769,6 +5783,7 @@ function saveTask(){
   if(btn){if(btn.disabled)return;btn.disabled=true;btn.style.opacity='.6';}
   showLoader('Saving task...');
   gasCall('serverCreateTask',S.token,d).then(function(r){
+    btnRelease('saveTask','singleSaveBtn');
     hideLoader();
     if(btn){btn.disabled=false;btn.style.opacity='1';}
     if(r&&r.success){
@@ -5822,50 +5837,36 @@ function ensureTaskDetail(t,cb){
   });
 }
 
-// ─── WHATSAPP SHARE ────────────────────────────────────────────
-// Uses WhatsApp's public click-to-chat URL (wa.me). Completely free,
-// no API, no business account, no setup. Opens WhatsApp (app on
-// mobile, WhatsApp Web on desktop) with the task pre-filled — the
-// user picks the recipient and taps Send from their own account.
-// Zero network cost in the app: it's a static link from on-screen data.
-function waShareTask(taskID){
-  var t=null;for(var i=0;i<S.tasks.length;i++)if(S.tasks[i].taskID===taskID){t=S.tasks[i];break;}
-  if(!t)return;
-  function buildUrl(){
-    var due=t.dueDate?new Date(t.dueDate).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'}):'\u2014';
-    var msg='\ud83d\udccb *Task '+t.taskID+'* \u2014 '+t.priority+' Priority\n'
-      +(t.description||'')+'\n\n'
-      +'\ud83d\udc64 Officer: '+(t.officerName||'\u2014')+(t.department?' ('+t.department+')':'')+'\n'
-      +'\ud83d\udccd Zone: '+(t.zone||'\u2014')+'\n'
-      +'\ud83d\udcc5 Due: '+due+' \u00b7 Status: '+(t.status||'Pending')+'\n\n'
-      +'\u2014 Salem Corporation TMS';
-    return 'https://wa.me/?text='+encodeURIComponent(msg);
-  }
-  // The task LIST carries a truncated description (120 chars) — fetch the
-  // full text before sharing so the WhatsApp message is never cropped.
-  if(t._detail){
-    window.open(buildUrl(),'_blank');
-    return;
-  }
-  // Open the window synchronously (inside the tap) so mobile popup
-  // blockers don't kill it, then point it at WhatsApp once the full
-  // description has loaded.
-  var win=null;
-  try{win=window.open('','_blank');}catch(we){win=null;}
-  ensureTaskDetail(t,function(){
-    var url=buildUrl();
-    if(win&&!win.closed){win.location=url;}
-    else{window.open(url,'_blank');}
-  });
-}
 
+// ── UNIVERSAL ACTION FREEZE ────────────────────────────────────
+// One function to freeze any button while an async action runs.
+// Usage:  if(!btnFreeze('myKey','myBtnId','Loading...'))return;
+//         ... call gasCall ...
+//         .then(function(){ btnRelease('myKey','myBtnId','Original label'); })
+// Returns false if already busy (caller should return immediately).
+var _BUSY={};
+function btnFreeze(key,btnId,loadingHtml,safetyMs){
+  if(_BUSY[key])return false;
+  _BUSY[key]=true;
+  var b=btnId?id(btnId):null;
+  if(b){b._prev=b.innerHTML;b.disabled=true;if(loadingHtml)b.innerHTML=loadingHtml;}
+  // Safety release so bugs never permanently brick a button
+  setTimeout(function(){btnRelease(key,btnId,null,true);},safetyMs||60000);
+  return true;
+}
+function btnRelease(key,btnId,newHtml,fromSafety){
+  if(fromSafety&&!_BUSY[key])return; // already released normally
+  _BUSY[key]=false;
+  var b=btnId?id(btnId):null;
+  if(b){b.disabled=false;b.innerHTML=newHtml||(b._prev||b.innerHTML);}
+}
 var TV_BUSY=false;
-function tvCloseTask(taskID){
+function tvCloseTask(elOrId){var taskID=(typeof elOrId==='string')?elOrId:(elOrId&&elOrId.dataset?elOrId.dataset.tid:elOrId);
   if(TV_BUSY)return;TV_BUSY=true;
   var b=id('tvCloseBtn');if(b){b.disabled=true;b.innerHTML='<span class="material-icons-round mi" style="animation:spin 1s linear infinite">sync</span> Closing...';}
   gasCall('serverUpdateTask',S.token,taskID,{status:'Closed'}).then(function(r){
     TV_BUSY=false;
-    if(r&&r.success){toast('Task '+taskID+' closed ✓','ok');closeModal('mTask');loadTasks();}
+    if(r&&r.success){toast('Task '+taskID+' closed \u2713','ok');closeModal('mTask');loadTasks();}
     else{if(b){b.disabled=false;b.innerHTML='<span class="material-icons-round mi">task_alt</span> Mark Closed';}toast((r&&r.message)||'Could not close.','error');}
   });
 }
@@ -5874,9 +5875,8 @@ function viewTask(taskID){
   if(!t)return;
   var isAdmin=(S.user&&(S.user.role==='Admin'||S.user.role==='Commissioner'));
   id('mTaskTitle').textContent=taskID;id('mTaskBody').innerHTML=taskDetailHTML(t);
-  var waFtBtn='<button class="btn btn-ghost" style="color:#25D366;border-color:#25D366" onclick="waShareTask(\''+taskID+'\')" title="Share on WhatsApp"><svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor" style="display:inline-block;vertical-align:-2px"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413"/></svg> Share</button>';
-    var tvClose=(isAdmin&&t&&t.status==='Completed')?'<button class="btn" id="tvCloseBtn" style="background:#059669;color:#fff;margin-right:4px" onclick="tvCloseTask(\''+taskID+'\')"><span class="material-icons-round mi">task_alt</span> Mark Closed</button>':'';
-  id('mTaskFt').innerHTML=isAdmin?tvClose+waFtBtn+'<button class="btn btn-ghost" onclick="closeModal(\'mTask\')">Close</button><button class="btn btn-primary" onclick="closeModal(\'mTask\');editTask(\''+taskID+'\')">Edit All Fields</button>':'<button class="btn btn-ghost" onclick="closeModal(\'mTask\')">Close</button><button class="btn btn-primary" onclick="closeModal(\'mTask\');officerUpdate(\''+taskID+'\')">Update Progress</button>';
+  var tvClose=(isAdmin&&t&&t.status==='Completed')?'<button class="btn" id="tvCloseBtn" style="background:#059669;color:#fff;margin-right:4px" data-tid="'+taskID+'" onclick="tvCloseTask(this.dataset.tid)"><span class="material-icons-round mi">task_alt</span> Mark Closed</button>':'';
+  id('mTaskFt').innerHTML=isAdmin?tvClose+'<button class="btn btn-ghost" onclick="closeModal(\'mTask\')">Close</button><button class="btn btn-primary" onclick="closeModal(\'mTask\');editTask(\''+taskID+'\')">Edit All Fields</button>':'<button class="btn btn-ghost" onclick="closeModal(\'mTask\')">Close</button><button class="btn btn-primary" onclick="closeModal(\'mTask\');officerUpdate(\''+taskID+'\')">Update Progress</button>';
   openModal('mTask');
 
   // Load full task detail on-demand (heavy fields: officerRemarks,
@@ -6447,6 +6447,7 @@ function clearSelection(){
 }
 
 function bulkDeleteSelected(){
+  if(!btnFreeze('bulkDelete',null,''))return;
   var ids=getSelectedIDs();
   if(!ids.length){toast('No tasks selected.','info');return;}
   // Show confirmation with task count and IDs preview
@@ -6570,13 +6571,14 @@ function updateDupDeleteCount(){
 }
 
 function deleteAllSelectedDuplicates(){
+  if(!btnFreeze('deleteDupes','dupDeleteAllBtn','<span class="material-icons-round mi" style="animation:spin 1s linear infinite">sync</span> Deleting...'))return;
   var ids=Object.keys(DUP_FINDER.selectedIDs);
   if(!ids.length){toast('No duplicates selected.','info');return;}
   if(!confirm('Delete '+ids.length+' duplicate task'+(ids.length!==1?'s':'')+'? This cannot be undone.'))return;
 
   showLoader('Removing '+ids.length+' duplicate task'+(ids.length!==1?'s':'')+'...');
   gasCall('serverBulkDeleteTasks',S.token,ids).then(function(r){
-    hideLoader();
+    btnRelease('bulkDelete');hideLoader();
     if(r&&r.success){
       toast('Removed '+r.deletedCount+' duplicate task'+(r.deletedCount!==1?'s':'')+'!','ok');
       closeModal('mDuplicateFinder');
@@ -7489,6 +7491,7 @@ function saveAllAI(){
   // actual root cause of AI-extraction duplicate tasks. The button is
   // disabled the instant Save is clicked and only re-enabled if validation
   // fails before any save actually starts.
+  if(!btnFreeze('saveAllAI',null,''))return;
   var saveBtn=document.querySelector('button[onclick="saveAllAI()"]');
   if(saveBtn){
     if(saveBtn.disabled)return; // already mid-save — ignore the extra click entirely
@@ -7602,7 +7605,6 @@ function exportPDF(tasks,context){
   for(var i=0;i<zk.length;i++){var z=zk[i],s=zoneMap[z],r2=pct(s.completed,s.total);zoneRows+='<tr><td style="padding:7px 9px;font-weight:600">'+z+'</td><td style="padding:7px 9px;text-align:center;font-weight:700">'+s.total+'</td><td style="padding:7px 9px;text-align:center;color:#15803d;font-weight:700">'+s.completed+'</td><td style="padding:7px 9px;text-align:center;color:#b45309">'+s.notCompleted+'</td><td style="padding:7px 9px;text-align:center;color:'+(s.overdue>0?'#be123c':'#64748b')+';font-weight:'+(s.overdue>0?'700':'400')+'">'+s.overdue+'</td><td style="padding:7px 9px">'+progBar(r2)+'</td></tr>';}
   var deptRows='',dk=Object.keys(deptMap);
   for(var i=0;i<dk.length;i++){var d=dk[i],s=deptMap[d],r2=pct(s.completed,s.total);deptRows+='<tr><td style="padding:7px 9px;font-weight:600">'+d+'</td><td style="padding:7px 9px;text-align:center;font-weight:700">'+s.total+'</td><td style="padding:7px 9px;text-align:center;color:#15803d;font-weight:700">'+s.completed+'</td><td style="padding:7px 9px;text-align:center;color:#b45309">'+s.notCompleted+'</td><td style="padding:7px 9px;text-align:center;color:'+(s.overdue>0?'#be123c':'#64748b')+';font-weight:'+(s.overdue>0?'700':'400')+'">'+s.overdue+'</td><td style="padding:7px 9px">'+progBar(r2)+'</td></tr>';}
-  // ── OFFICER-WISE SECTION ─────────────────────────────────────
   var officerMap={};
   for(var i=0;i<tasks.length;i++){
     var t=tasks[i];var on=t.officerName||'Unassigned';
@@ -7619,9 +7621,7 @@ function exportPDF(tasks,context){
     var omRate=om.total>0?Math.round(omDone/om.total*100):0;
     var omBar=omRate>=70?'#22c55e':omRate>=40?'#f59e0b':'#ef4444';
     officerSection+='<div style="page-break-inside:avoid;margin-bottom:16px;border:1.5px solid #e2e8f0;border-radius:8px;overflow:hidden">';
-    officerSection+='<div style="background:linear-gradient(135deg,#0b1f45,#1a3a6b);color:#fff;padding:9px 13px;display:flex;justify-content:space-between;align-items:center">';
-    officerSection+='<div><div style="font-size:12px;font-weight:800">'+om.name+'</div><div style="font-size:9px;color:rgba(255,255,255,.6);margin-top:1px">'+(om.designation||'')+(om.department?' &middot; '+om.department:'')+'</div></div>';
-    officerSection+='<div style="text-align:right"><div style="font-size:20px;font-weight:900">'+om.total+'</div><div style="font-size:8px;color:rgba(255,255,255,.5);text-transform:uppercase">Tasks</div></div></div>';
+    officerSection+='<div style="background:linear-gradient(135deg,#0b1f45,#1a3a6b);color:#fff;padding:9px 13px;display:flex;justify-content:space-between;align-items:center"><div><div style="font-size:12px;font-weight:800">'+om.name+'</div><div style="font-size:9px;color:rgba(255,255,255,.6);margin-top:1px">'+(om.designation||'')+(om.department?' &middot; '+om.department:'')+'</div></div><div style="text-align:right"><div style="font-size:20px;font-weight:900">'+om.total+'</div><div style="font-size:8px;color:rgba(255,255,255,.5);text-transform:uppercase">Tasks</div></div></div>';
     var kpis=[{v:omDone,l:'Done',bg:'#f0fdf4',c:'#15803d'},{v:om.pending,l:'Pending',bg:'#fff7ed',c:'#c2410c'},{v:om.inProg,l:'In Progress',bg:'#eff6ff',c:'#1d4ed8'},{v:om.review,l:'Review',bg:'#faf5ff',c:'#7e22ce'},{v:om.overdue,l:'Overdue',bg:om.overdue>0?'#fff1f2':'#f8fafc',c:om.overdue>0?'#be123c':'#94a3b8'}];
     officerSection+='<div style="display:flex;border-bottom:1px solid #e2e8f0">';
     for(var ki=0;ki<kpis.length;ki++){var kp=kpis[ki];officerSection+='<div style="flex:1;padding:7px 5px;text-align:center;background:'+kp.bg+';border-right:1px solid #e2e8f0"><div style="font-size:16px;font-weight:900;color:'+kp.c+'">'+kp.v+'</div><div style="font-size:7.5px;font-weight:700;color:'+kp.c+';text-transform:uppercase;line-height:1.2">'+kp.l+'</div></div>';}
@@ -7629,18 +7629,9 @@ function exportPDF(tasks,context){
     officerSection+='<div style="padding:6px 12px;background:#f8fafc;border-bottom:1px solid #e2e8f0;display:flex;align-items:center;gap:8px"><span style="font-size:9px;font-weight:600;color:#475569;min-width:80px">Completion</span><div style="flex:1;background:#e2e8f0;border-radius:999px;height:6px;overflow:hidden"><div style="height:100%;border-radius:999px;background:'+omBar+';width:'+omRate+'%"></div></div><span style="font-size:9px;font-weight:800;color:'+omBar+';min-width:28px;text-align:right">'+omRate+'%</span></div>';
     var omTasks=om.tasks.slice().sort(function(a,b){var order={Pending:1,'In Progress':2,'Review Pending':3,Completed:4,Closed:5};var ao=a.isOverdue?0:(order[a.status]||9),bo=b.isOverdue?0:(order[b.status]||9);return ao-bo;});
     officerSection+='<table style="width:100%;border-collapse:collapse"><thead><tr style="background:#f1f5f9"><th style="padding:5px 8px;text-align:left;font-size:8px;font-weight:700;color:#475569;text-transform:uppercase;border-bottom:1px solid #e2e8f0">Task ID</th><th style="padding:5px 8px;text-align:left;font-size:8px;font-weight:700;color:#475569;text-transform:uppercase;border-bottom:1px solid #e2e8f0">Description</th><th style="padding:5px 8px;text-align:left;font-size:8px;font-weight:700;color:#475569;text-transform:uppercase;border-bottom:1px solid #e2e8f0">Priority</th><th style="padding:5px 8px;text-align:left;font-size:8px;font-weight:700;color:#475569;text-transform:uppercase;border-bottom:1px solid #e2e8f0">Due</th><th style="padding:5px 8px;text-align:left;font-size:8px;font-weight:700;color:#475569;text-transform:uppercase;border-bottom:1px solid #e2e8f0">Status</th></tr></thead><tbody>';
-    for(var ti2=0;ti2<omTasks.length;ti2++){
-      var ot=omTasks[ti2];var rowBg=ot.isOverdue?'#fff1f2':(ti2%2===0?'#fff':'#f8fafc');
-      officerSection+='<tr style="background:'+rowBg+';border-bottom:1px solid #f1f5f9">';
-      officerSection+='<td style="padding:4px 8px;font-family:monospace;font-size:8px;color:#1d4ed8;font-weight:700;white-space:nowrap">'+ot.taskID+'</td>';
-      officerSection+='<td style="padding:4px 8px;font-size:8.5px;word-break:break-word;max-width:180px">'+String(ot.description||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').slice(0,100)+'</td>';
-      officerSection+='<td style="padding:4px 8px;font-size:8.5px;font-weight:700;color:'+priColor(ot.priority)+';white-space:nowrap">'+( ot.priority||'—')+'</td>';
-      officerSection+='<td style="padding:4px 8px;font-size:8.5px;white-space:nowrap;'+(ot.isOverdue?'color:#be123c;font-weight:700':'')+'">'+(ot.dueDate||'—')+(ot.isOverdue?' ⚠':'')+'</td>';
-      officerSection+='<td style="padding:4px 8px"><span style="'+sStyle(ot.status)+'">'+ot.status+'</span></td></tr>';
-    }
+    for(var ti2=0;ti2<omTasks.length;ti2++){var ot=omTasks[ti2];var rowBg=ot.isOverdue?'#fff1f2':(ti2%2===0?'#fff':'#f8fafc');officerSection+='<tr style="background:'+rowBg+';border-bottom:1px solid #f1f5f9"><td style="padding:4px 8px;font-family:monospace;font-size:8px;color:#1d4ed8;font-weight:700;white-space:nowrap">'+ot.taskID+'</td><td style="padding:4px 8px;font-size:8.5px;word-break:break-word;max-width:180px">'+String(ot.description||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').slice(0,100)+'</td><td style="padding:4px 8px;font-size:8.5px;font-weight:700;color:'+priColor(ot.priority)+';white-space:nowrap">'+(ot.priority||'—')+'</td><td style="padding:4px 8px;font-size:8.5px;white-space:nowrap;'+(ot.isOverdue?'color:#be123c;font-weight:700':'')+'">'+(ot.dueDate||'—')+(ot.isOverdue?' ⚠':'')+'</td><td style="padding:4px 8px"><span style="'+sStyle(ot.status)+'">'+ot.status+'</span></td></tr>';}
     officerSection+='</tbody></table></div>';
   }
-  // Renumber: overdue=4, tasks=5
   var overdueRows='',overdueTasks=[];for(var i=0;i<tasks.length;i++)if(tasks[i].isOverdue)overdueTasks.push(tasks[i]);
   for(var i=0;i<overdueTasks.length;i++){var t=overdueTasks[i],days=t.dueDate?Math.floor((new Date()-new Date(t.dueDate))/86400000):0;overdueRows+='<tr style="background:#fff1f2"><td style="padding:6px 9px;font-family:monospace;font-size:9px;color:#be123c;font-weight:700;vertical-align:top;white-space:nowrap">'+t.taskID+'</td><td style="padding:6px 9px;font-size:10px;word-break:break-word;white-space:normal;vertical-align:top">'+String(t.description||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')+'</td><td style="padding:6px 9px;vertical-align:top;white-space:nowrap">'+t.zone+'</td><td style="padding:6px 9px;vertical-align:top;white-space:nowrap">'+t.department+'</td><td style="padding:6px 9px;font-weight:700;vertical-align:top;white-space:nowrap">'+t.officerName+'</td><td style="padding:6px 9px;color:#be123c;font-weight:700;vertical-align:top;white-space:nowrap">'+(t.dueDate||'\u2014')+'</td><td style="padding:6px 9px;text-align:center;color:#be123c;font-weight:800;vertical-align:top;white-space:nowrap">'+days+' day'+(days!==1?'s':'')+'</td></tr>';}
   var taskRows='';
@@ -7673,7 +7664,7 @@ function exportPDF(tasks,context){
 
   var html='<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>Task Report \u2014 Salem Corporation</title><style>'+css+'</style></head><body>'
     +'<div class="watermark">SALEM CORPORATION</div>'
-    +'<div class="hband"><div class="gbar"></div><div class="hmain"><div style="display:flex;align-items:center;gap:14px">'+emblemHtml+'<div><div style="font-size:14px;font-weight:800;letter-spacing:.02em">Salem City Municipal Corporation</div><div style="font-size:9px;color:rgba(255,255,255,.6);margin-top:2px;text-transform:uppercase;letter-spacing:.05em">Tamil Nadu Government \u00b7 Urban Local Body</div></div></div><div style="text-align:right"><div style="background:rgba(245,158,11,.2);border:1px solid rgba(245,158,11,.4);color:#fbbf24;padding:3px 10px;border-radius:4px;font-size:8.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin-bottom:4px;display:inline-block">'+(isComm?'Commissioner Review Report':'Task Export Report')+'</div><div style="font-size:15px;font-weight:800">'+(isComm?'Task Performance Review':'Task Report')+'</div><div style="font-size:8.5px;color:rgba(255,255,255,.6);margin-top:3px;line-height:1.8">Report No: <strong>'+reportNo+'</strong><br>Date: <strong>'+dateStr+'</strong> \u00b7 Time: <strong>'+timeStr+'</strong></div></div></div></div>'
+    +'<div class="hband"><div class="gbar"></div><div class="hmain"><div style="display:flex;align-items:center;gap:14px">'+emblemHtml+'<div><div style="font-size:14px;font-weight:800;letter-spacing:.02em">Salem City Municipal Corporation</div><div style="font-size:9px;color:rgba(255,255,255,.6);margin-top:2px;text-transform:uppercase;letter-spacing:.05em">Tamil Nadu Government \u00b7 Urban Local Body</div></div></div><div style="text-align:right"><div style="background:rgba(245,158,11,.2);border:1px solid rgba(245,158,11,.4);color:#fbbf24;padding:3px 10px;border-radius:4px;font-size:8.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin-bottom:4px;display:inline-block">'+(isComm?'Commissioner Review Report':'Task Export Report')+'</div><div style="font-size:15px;font-weight:800">'+(isComm?'Task Performance Review':'Task Report')+'</div><div style="font-size:8.5px;color:rgba(255,255,255,.6);margin-top:3px;line-height:1.8">Report No: <strong>'+reportNo+'</strong><br>Date: <strong>'+dateStr+'</strong></div></div></div></div>'
     +'<div class="gdiv"></div>'
     +'<div class="metarow"><div>\ud83d\udccb Prepared by: <strong>'+preparedBy+'</strong></div><div>\ud83d\udd0d Filters: <strong>'+filterNote+'</strong></div><div>\ud83d\udcca Records: <strong>'+total+' tasks</strong></div></div>'
     +'<div class="sechd" style="margin-top:14px"><div class="secnum">1</div><h2>Executive Summary</h2></div>'
@@ -7962,6 +7953,7 @@ function renderMOList(){
   if(mt)mt.textContent='Save Task for '+MO.officers.length+' Officer'+(MO.officers.length>1?'s':'');
 }
 function saveTaskMultiOfficer(){
+  if(!btnFreeze('multiSave','multiSaveBtn','<span class="material-icons-round mi" style="animation:spin 1s linear infinite">sync</span> Saving...'))return;
   var baseForm=getTaskForm();
   // For multi-officer, description is required but dept/officer from list
   if(!baseForm.taskType||!baseForm.zone||!baseForm.priority||!baseForm.description){
@@ -7997,7 +7989,7 @@ function clearMultiOfficerList(){
 }
 
 // ── PHOTO LOG ────────────────────────────────────────────────
-var PL={photos:[],pdfs:[],entries:[],editPhotos:[],editExistingPhotos:[],editRemovedPhotoIDs:[],editNoteID:null,editPdfs:[],editExistingAttachments:[],editRemovedAttachmentIDs:[],isAdmin:false,sortOrder:'desc',window:0,searchQ:'',filterType:'',filterZone:'',filterMonth:'',filterTypes:[]};
+var PL={photos:[],pdfs:[],entries:[],editPhotos:[],editExistingPhotos:[],editRemovedPhotoIDs:[],editNoteID:null,editPdfs:[],editExistingAttachments:[],editRemovedAttachmentIDs:[],isAdmin:false,sortOrder:'desc',window:0};
 function plCheckAdmin(){
   // Add/Edit/Delete notes: Admin, Commissioner, HOD, Supervision.
   // Everyone else (Officers etc.) is read-only.
@@ -8017,102 +8009,128 @@ function plCheckAdmin(){
 // ─── DATE WINDOW SELECTOR ────────────────────────────────────
 // Called when user taps 7d / 15d / 30d / This Month buttons.
 // days=0 means "this calendar month" — calculated on the backend.
-function plToggleSort(){
-  PL.sortOrder=(PL.sortOrder==='desc')?'asc':'desc';
-  var lbl=id('plSortLabel');if(lbl)lbl.textContent=PL.sortOrder==='asc'?'Oldest First':'Newest First';
-  var btn=id('plSortToggle');if(btn)btn.style.background=PL.sortOrder==='asc'?'rgba(29,78,216,.08)':'var(--surface2)';
-  plRenderCards(PL.entries);
+function plSetWindow(days){PL.window=days;PL.entries=[];loadPhotoLog();}
+function plToggleZone(e){
+  e.stopPropagation();
+  var l=id('plZoneList');if(l)l.style.display=l.style.display==='none'?'block':'none';
+}
+function plUpdateZoneLabel(){
+  var lbl=id('plZoneLabel');if(!lbl)return;
+  if(!PL.filterZones||PL.filterZones.length===0)lbl.textContent='All Zones/Dept';
+  else if(PL.filterZones.length===1)lbl.textContent=PL.filterZones[0];
+  else lbl.textContent=PL.filterZones.length+' selected';
+}
+function plUpdateCount(n){
+  var pc=id('plCount');if(pc)pc.textContent=n+' entr'+(n===1?'y':'ies');
 }
 function plPopulateFilters(entries){
-  var types={},months={};
+  var types={},zones={},months={},typeCounts={};
   var mNames=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
   for(var i=0;i<entries.length;i++){
-    var e=entries[i];if(e.type)types[e.type]=1;
+    var e=entries[i];
+    if(e.type){types[e.type]=1;typeCounts[e.type]=(typeCounts[e.type]||0)+1;}
+    if(e.zone)zones[e.zone]=1;
+    if(e.department)zones[e.department]=1;
     if(e.date&&e.date.length>=7)months[e.date.slice(0,7)]=1;
   }
+  // Type chips with count badge
   var tc=id('plTypeChips');
   if(tc){
     tc.innerHTML='';
-    function chip(label,val){
+    function chip(label,val,count){
       var b=document.createElement('button');
       var active=(val===null)?(PL.filterTypes.length===0):(PL.filterTypes.indexOf(val)>=0);
       b.style.cssText='padding:3px 11px;border-radius:999px;border:1.5px solid '+(active?'var(--c-blue)':'var(--border)')+';background:'+(active?'var(--c-blue)':'var(--surface2)')+';color:'+(active?'#fff':'var(--tx1)')+';font-size:12px;font-weight:600;cursor:pointer;transition:all .15s';
-      b.textContent=label;
+      b.textContent=label+(count!==undefined?' ('+count+')':'');
       b.onclick=function(){
         if(val===null){PL.filterTypes.splice(0,PL.filterTypes.length);}
-        else{var idx2=PL.filterTypes.indexOf(val);if(idx2>=0)PL.filterTypes.splice(idx2,1);else PL.filterTypes.push(val);}
+        else{var idx=PL.filterTypes.indexOf(val);if(idx>=0)PL.filterTypes.splice(idx,1);else PL.filterTypes.push(val);}
         plApplyFilters();plPopulateFilters(PL.entries);
       };
       return b;
     }
     tc.appendChild(chip('All Entries',null));
-    Object.keys(types).sort().forEach(function(t){tc.appendChild(chip(t,t));});
+    Object.keys(types).sort().forEach(function(t){tc.appendChild(chip(t,t,typeCounts[t]));});
   }
-  var ms=id('plFilterMonth');
-  if(ms){
-    var mf=ms.options[0];ms.innerHTML='';ms.appendChild(mf);
-    Object.keys(months).sort().reverse().forEach(function(k){
-      var mo=document.createElement('option');mo.value=k;
-      var mp=k.split('-');mo.textContent=mNames[parseInt(mp[1],10)-1]+' '+mp[0];
-      if(k===PL.filterMonth)mo.selected=true;ms.appendChild(mo);
+  // Stats strip — count per type
+  var strip=id('plStatsStrip');
+  if(strip){
+    var parts=[];
+    Object.keys(typeCounts).sort().forEach(function(t){
+      parts.push('<span style="display:flex;align-items:center;gap:3px"><span class="material-icons-round" style="font-size:13px;color:var(--tx3)">label</span><strong>'+typeCounts[t]+'</strong>&nbsp;'+t+'</span>');
+    });
+    if(parts.length){strip.style.display='flex';strip.innerHTML=parts.join('<span style="color:var(--border);padding:0 4px">|</span>');}
+    else strip.style.display='none';
+  }
+  // Zone multi-select
+  var zl=id('plZoneList');
+  if(zl){
+    zl.innerHTML='';
+    var zKeys=Object.keys(zones).sort();
+    var allRow=document.createElement('label');
+    allRow.style.cssText='display:flex;align-items:center;gap:8px;padding:5px 8px;border-radius:6px;cursor:pointer;font-size:12.5px;font-weight:600';
+    var allCb=document.createElement('input');allCb.type='checkbox';allCb.checked=(PL.filterZones.length===0);
+    allCb.onchange=function(){
+      PL.filterZones.splice(0,PL.filterZones.length);
+      zl.querySelectorAll('input[type=checkbox]').forEach(function(cb){cb.checked=false;});
+      allCb.checked=true;plUpdateZoneLabel();plApplyFilters();
+    };
+    allRow.appendChild(allCb);allRow.appendChild(document.createTextNode('All Zones/Dept'));zl.appendChild(allRow);
+    var divider=document.createElement('div');divider.style.cssText='border-top:1px solid var(--border);margin:4px 0';zl.appendChild(divider);
+    zKeys.forEach(function(zk){
+      var row=document.createElement('label');
+      row.style.cssText='display:flex;align-items:center;gap:8px;padding:5px 8px;border-radius:6px;cursor:pointer;font-size:12.5px';
+      row.onmouseover=function(){this.style.background='var(--surface2)';};
+      row.onmouseout=function(){this.style.background='';};
+      var cb=document.createElement('input');cb.type='checkbox';cb.checked=PL.filterZones.indexOf(zk)>=0;
+      cb.onchange=(function(z,acb){return function(){
+        var idx2=PL.filterZones.indexOf(z);
+        if(this.checked&&idx2<0)PL.filterZones.push(z);
+        else if(!this.checked&&idx2>=0)PL.filterZones.splice(idx2,1);
+        acb.checked=PL.filterZones.length===0;
+        plUpdateZoneLabel();plApplyFilters();
+      };})(zk,allCb);
+      row.appendChild(cb);row.appendChild(document.createTextNode(zk));zl.appendChild(row);
     });
   }
+  // Month dropdown
+  var ms=id('plFilterMonth');
+  if(ms){
+    var mFirst=ms.options[0];ms.innerHTML='';ms.appendChild(mFirst);
+    Object.keys(months).sort().reverse().forEach(function(k){
+      var o=document.createElement('option');o.value=k;
+      var p=k.split('-');o.textContent=mNames[parseInt(p[1],10)-1]+' '+p[0];
+      if(k===PL.filterMonth)o.selected=true;ms.appendChild(o);
+    });
+  }
+  plUpdateZoneLabel();
 }
 function plSetSearch(v){
   PL.searchQ=(v||'').trim().toLowerCase();
-  var ac=(PL.filterTypes.length>0||PL.filterMonth||PL.searchQ)?1:0;
+  var ac=(PL.filterTypes.length>0||PL.filterZones.length>0||PL.filterMonth||PL.searchQ)?1:0;
   var af=id('plActiveFilters');if(af)af.style.display=ac?'':'none';
   plRenderCards(PL.entries);
 }
 function plApplyFilters(){
   PL.filterMonth=(id('plFilterMonth')||{value:''}).value;
-  var ac=(PL.filterTypes.length>0||PL.filterMonth||PL.searchQ)?1:0;
+  var ac=(PL.filterTypes.length>0||PL.filterZones.length>0||PL.filterMonth||PL.searchQ)?1:0;
   var af=id('plActiveFilters');if(af)af.style.display=ac?'':'none';
   plRenderCards(PL.entries);
 }
 function plClearFilters(){
   PL.filterType='';PL.filterZone='';PL.filterMonth='';PL.searchQ='';
-  PL.filterTypes.splice(0,PL.filterTypes.length);
+  if(PL.filterTypes)PL.filterTypes.splice(0,PL.filterTypes.length);
+  if(PL.filterZones)PL.filterZones.splice(0,PL.filterZones.length);
   var s=id('plSearch');if(s)s.value='';
   var ms2=id('plFilterMonth');if(ms2)ms2.value='';
   var af=id('plActiveFilters');if(af)af.style.display='none';
   plPopulateFilters(PL.entries);plRenderCards(PL.entries);
 }
-function plSetWindow(days){
-  PL.window=days;
-  PL.entries=[]; // clear cache so reload happens
-  // Update active button state
-  var btns=document.querySelectorAll('.pl-win-btn');
-  for(var i=0;i<btns.length;i++){
-    var bd=parseInt(btns[i].getAttribute('data-days'),10);
-    btns[i].classList.toggle('active', bd===days);
-  }
-  // Reload notes from backend with the new window
-  showLoader('Loading notes...');
-  var winDays = days || plThisMonthDays();
-  gasCall('serverGetNotes',S.token,winDays).then(function(r){
-    hideLoader();
-    if(r&&r.success){
-      PL.entries=r.data||[];
-      plPopulateFilters(PL.entries);
-      var totalCount=r.totalCount||PL.entries.length;
-      var pc=id('plCount');
-      if(pc)pc.textContent=PL.entries.length+' entr'+(PL.entries.length===1?'y':'ies');
-      var info=id('plWindowInfo');
-      if(info){
-        if(totalCount>PL.entries.length){
-          info.textContent=PL.entries.length+' of '+totalCount+' total notes';
-        } else {
-          info.textContent=PL.entries.length+' note'+(PL.entries.length===1?'':'s');
-        }
-      }
-    } else if(r&&r.message){
-      toast(r.message,'error');
-    }
-    plRenderCards(PL.entries);
-  });
-}
-// Returns days since start of current month (for "This Month" button)
+document.addEventListener('click',function(ev){
+  var wrap=id('plZoneWrap');
+  if(wrap&&!wrap.contains(ev.target)){var l=id('plZoneList');if(l)l.style.display='none';}
+});
+
 function plThisMonthDays(){
   var now=new Date();
   return now.getDate(); // day of month = days since month start
@@ -8144,8 +8162,7 @@ function loadPhotoLog(){
   // Moved to plToggleView('form') so it's lazy-loaded on demand.
 
   // Reset to default 7-day window on each page load and highlight button
-  PL.window=0;
-  var btns=document.querySelectorAll('.pl-win-btn');
+  PL.window=0; // all time
   for(var bi=0;bi<btns.length;bi++){
     btns[bi].classList.toggle('active', parseInt(btns[bi].getAttribute('data-days'),10)===7);
   }
@@ -8155,9 +8172,8 @@ function loadPhotoLog(){
     hideLoader();
     if(r&&r.success){
       PL.entries=r.data||[];
+      plPopulateFilters(PL.entries);
       var totalCount=r.totalCount||PL.entries.length;
-      var pc=id('plCount');
-      if(pc)pc.textContent=PL.entries.length+' entr'+(PL.entries.length===1?'y':'ies');
       // Update info label — shows "X of Y total" when filtered
       var info=id('plWindowInfo');
       if(info){
@@ -8517,6 +8533,7 @@ function plRenderPdfPreview(){
 //    Each photo has its own success/fail state; a failure on one
 //    photo never affects the others or hides the entry.
 function savePlEntry(){
+  if(!btnFreeze('savePlEntry',null,''))return;
   var date=V('pl-date'),time=V('pl-time'),type=V('pl-type'),zone=V('pl-zone'),
       loc=V('pl-location'),notes=id('pl-notes')?id('pl-notes').value:'',
       officerName=V('pl-officer'),dept=V('pl-dept');
@@ -8556,6 +8573,7 @@ function savePlEntry(){
   // STEP 2 — save the note text to the server in the background
   gasCall('serverCreateNote',S.token,{date:date,time:time,type:type,zone:zone,location:loc,notes:notes,officerName:officerName,department:dept}).then(function(r){
     if(!r||!r.success){
+      btnRelease('savePlEntry');
       localEntry._saving=false;
       localEntry._failed=true;
       plRenderCards(PL.entries);
@@ -8723,8 +8741,6 @@ function plRenderCards(entries){
       return d===PL.deptFilter;
     });
   }
-  if(PL.filterTypes&&PL.filterTypes.length>0){entries=(entries||[]).filter(function(e){return PL.filterTypes.indexOf(e.type)>=0;});}
-  if(PL.filterMonth){entries=(entries||[]).filter(function(e){return e.date&&e.date.slice(0,7)===PL.filterMonth;});}
   entries=plSortEntries(entries); // always honor current sort order (default: newest first)
   var strip=id('plSummaryStrip');
   if(strip){
@@ -10514,6 +10530,7 @@ function showUserModal(uid){
 }
 function editUser(uid){showUserModal(uid);}
 function saveUser(){
+  if(!btnFreeze('saveUser',null,''))return;
   var uid=V('mu-id');
   var role=V('mu-role');
   // For HOD/Supervision: get departments from checkboxes instead of single dept dropdown
@@ -10525,7 +10542,7 @@ function saveUser(){
   if(d.password&&d.password.length>0&&d.password.length<6){toast('Password must be at least 6 characters.','error');return;}
   showLoader('Saving user...');
   gasCall(uid?'serverUpdateUser':'serverCreateUser',S.token,d).then(function(r){
-    hideLoader();closeModal('mUser');
+    btnRelease('saveUser');hideLoader();closeModal('mUser');
     if(r&&r.success){toast(uid?'User updated!':'User created!','ok');loadUsers();loadLookup();}
     else toast((r&&r.message)||'Failed.','error');
   });
@@ -10949,6 +10966,7 @@ function grvAddLetterFiles(files){
 }
 
 function saveGrievance(){
+  if(!btnFreeze('saveGrievance','grvSaveBtn','<span class="material-icons-round mi" style="animation:spin 1s linear infinite">sync</span> Saving...'))return;
   var grievanceID=V('grv-id');
   var officerSel=id('grv-officer');
   var officerName=officerSel&&officerSel.selectedIndex>0?officerSel.options[officerSel.selectedIndex].getAttribute('data-name'):'';
@@ -11451,6 +11469,7 @@ function rptPickIcon(emoji){
   var el=id('rpt-icon');if(el)el.value=emoji;
 }
 function saveReportLink(){
+  if(!btnFreeze('saveReportLink','rptSaveBtn','<span class="material-icons-round mi" style="animation:spin 1s linear infinite">sync</span> Saving...'))return;
   var icon=V('rpt-icon').trim()||'\uD83D\uDCCB';
   var name=V('rpt-name').trim();
   var category=V('rpt-category').trim()||'General';
@@ -11470,7 +11489,7 @@ function saveReportLink(){
     : gasCall('serverAddReportLink',S.token,payload);
 
   call.then(function(r){
-    hideLoader();if(btn)btn.disabled=false;
+    btnRelease('saveReportLink','rptSaveBtn');hideLoader();if(btn)btn.disabled=false;
     if(r&&r.success){
       toast(REPORT_EDIT_ID?'Report updated!':'Report added!','ok');
       closeModal('mAddReport');
@@ -11700,6 +11719,7 @@ function calToggleAllDay(checkbox){
   if(tEl)tEl.style.display=isAllDay?'none':'';
 }
 function saveCalEvent(){
+  if(!btnFreeze('saveCalEvent',null,''))return;
   var title=V('cale-title').trim();
   var date=V('cale-date');
   var time=V('cale-time');
@@ -11727,6 +11747,7 @@ function saveCalEvent(){
   gasCall('serverCreateCalendarEvent',S.token,{
     title:title,start:startISO,end:endISO,allDay:allDay,location:location,description:desc
   }).then(function(r){
+    btnRelease('saveCalEvent');
     hideLoader();
     if(r&&r.success){
       toast('Meeting scheduled! It will also appear in your Google Calendar.','ok');
@@ -11756,10 +11777,12 @@ function calOpenEventView(ev){
   openModal('mCalViewEvent');
 }
 function deleteCalEvent(){
+  if(!btnFreeze('deleteCalEvent','calDeleteBtn','<span class="material-icons-round mi" style="animation:spin 1s linear infinite">sync</span>'))return;
   if(!CAL.viewingEvent)return;
   if(!confirm('Delete this meeting from the calendar? This cannot be undone.'))return;
   showLoader('Deleting...');
   gasCall('serverDeleteCalendarEvent',S.token,CAL.viewingEvent.id).then(function(r){
+    btnRelease('deleteCalEvent','calDeleteBtn');
     hideLoader();
     if(r&&r.success){
       toast('Meeting deleted.','ok');
@@ -11799,6 +11822,7 @@ function renderSettings(){
 }
 function showMappingModal(){if(S.lookup)fillSel('mapDept',S.lookup.departments,'DeptName','DeptName','Select');openModal('mMapping');}
 function saveMapping(){
+  if(!btnFreeze('saveMapping',null,''))return;
   var kw=V('mapKw').trim(),dept=V('mapDept'),pri=V('mapPri'),syns=V('mapSynonyms').trim();
   if(!kw||!dept){toast('Keyword and Department are required.','error');return;}
   showLoader('Saving...');
@@ -12336,7 +12360,7 @@ function generateCustomPDF(tasks,filterParts,label,from,to){
 
   var html='<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>'+label+' \u2014 Salem Corporation</title><style>'+css+'</style></head><body>'
     +'<div class="wm">SALEM CORPORATION</div>'
-    +'<div class="hband"><div class="gbar"></div><div class="hmain"><div style="display:flex;align-items:center;gap:14px"><div class="emblem">SC</div><div><div style="font-size:14px;font-weight:800">Salem City Municipal Corporation</div><div style="font-size:9px;color:rgba(255,255,255,.6);margin-top:2px;text-transform:uppercase;letter-spacing:.05em">Tamil Nadu Government \u00b7 Urban Local Body</div></div></div><div style="text-align:right"><div class="period-badge">'+(label.indexOf('Weekly')!==-1?'WEEKLY REPORT':'CUSTOM PERIOD REPORT')+'</div><div style="font-size:15px;font-weight:800">'+label+'</div><div style="font-size:8.5px;color:rgba(255,255,255,.6);margin-top:3px;line-height:1.8">Report No: <strong>'+reportNo+'</strong><br>Generated: <strong>'+dateStr+'</strong> \u00b7 <strong>'+timeStr+'</strong></div></div></div></div>'
+    +'<div class="hband"><div class="gbar"></div><div class="hmain"><div style="display:flex;align-items:center;gap:14px"><div class="emblem">SC</div><div><div style="font-size:14px;font-weight:800">Salem City Municipal Corporation</div><div style="font-size:9px;color:rgba(255,255,255,.6);margin-top:2px;text-transform:uppercase;letter-spacing:.05em">Tamil Nadu Government \u00b7 Urban Local Body</div></div></div><div style="text-align:right"><div class="period-badge">'+(label.indexOf('Weekly')!==-1?'WEEKLY REPORT':'CUSTOM PERIOD REPORT')+'</div><div style="font-size:15px;font-weight:800">'+label+'</div><div style="font-size:8.5px;color:rgba(255,255,255,.6);margin-top:3px;line-height:1.8">Report No: <strong>'+reportNo+'</strong><br>Generated: <strong>'+dateStr+'</strong> </div></div></div></div>'
     +'<div class="gdiv"></div>'
     +'<div class="metarow"><div>\ud83d\udcc5 Period: <strong>'+from+' to '+to+'</strong></div><div>\ud83d\udccb Prepared by: <strong>'+preparedBy+'</strong></div><div>\ud83d\udd0d '+filterParts.slice(1).join(' \u00b7 ')+'</div><div>\ud83d\udcca Records: <strong>'+total+' tasks</strong></div></div>'
     +'<div class="sechd" style="margin-top:14px"><div class="secnum">1</div><h2>Executive Summary</h2></div>'
