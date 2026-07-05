@@ -3404,7 +3404,7 @@ tbody tr:hover { background: var(--surface2); }
 <div id="toasts"></div>
 <script>
 var LS={get:function(k){try{return localStorage.getItem(k);}catch(e){return null;}},set:function(k,v){try{localStorage.setItem(k,v);}catch(e){}},del:function(k){try{localStorage.removeItem(k);}catch(e){}}};
-var S={token:null,user:null,lookup:null,tasks:[],users:[],filtered:[],drillFilter:'',page:'dashboard',allowedPages:[],theme:LS.get('sc-theme')||'light',charts:{},exportCtx:'tracker',aiTasks:[],selPhotos:[],driveLinks:[],puDocs:[],sortCol:'updatedAt',sortDir:-1,taskWindow:90,showCompleted:false,showClosed:false};
+var S={token:null,user:null,lookup:null,tasks:[],users:[],filtered:[],drillFilter:'',page:'dashboard',allowedPages:[],theme:LS.get('sc-theme')||'light',charts:{},exportCtx:'tracker',aiTasks:[],selPhotos:[],driveLinks:[],puDocs:[],sortCol:'updatedAt',sortDir:-1,taskWindow:90,showCompleted:false,showClosed:false,searchQ:''};
 
 // ─── STALE-WHILE-REVALIDATE (instant display) ──────────────────
 // Saves the last-loaded data in localStorage so the NEXT visit renders
@@ -3873,7 +3873,7 @@ function doLogin(){
 function resetSessionState(){
   S.tasks=[];S.filtered=[];S.drillFilter='';
   S.preloadedDash=null;S.preloadedTasks=null;
-  S.showCompleted=false;S.showClosed=false;S.taskWindow=90;
+  S.showCompleted=false;S.showClosed=false;S.taskWindow=90;S.searchQ='';
   if(typeof TRK_COMP_ON!=='undefined')TRK_COMP_ON=false;S._fullList=null;S._trkMeta=null;
   if(typeof TRK_RP_ON!=='undefined')TRK_RP_ON=false;
   if(typeof PL!=='undefined'){PL.entries=[];PL.window=7;}
@@ -4091,7 +4091,11 @@ function go(page){
   closeSidebar();
   if(page==='dashboard')loadDashboard();
   else if(page==='taskEntry'){if(S.lookup)populateSelects();else loadLookup();}
-  else if(page==='tracker')loadTasks();
+  else if(page==='tracker'){
+    var srBar=id('trkUniversalSearch');
+    if(srBar&&S.searchQ&&!srBar.value){srBar.value=S.searchQ;var clrBtn2=id('trkSearchClear');if(clrBtn2)clrBtn2.style.display='none';}
+    loadTasks();
+  }
   else if(page==='commview')loadCommView();
   else if(page==='users')loadUsers();
   else if(page==='settings')loadSettings();
@@ -5103,7 +5107,11 @@ function trkApplyResponse(r,fn,fromPreload){
     S.tasks=normalizeTaskList(data);
     if(r.includeCompleted)S._fullList=S.tasks.slice(); // instant re-show cache
     S.filtered=S.tasks.slice();
-    applyCurrentSort();
+    if(S.searchQ){
+      var hidden2=id('fSearch');if(hidden2)hidden2.value=S.searchQ;
+      var bar2=id('trkUniversalSearch');if(bar2&&!bar2.value)bar2.value=S.searchQ;
+      filterTasks();
+    } else { applyCurrentSort(); }
     // Save for instant display on the next visit/login (open tasks only —
     // don't bloat localStorage with completed history)
     if(!r.includeCompleted)swrSave('tasks',S.tasks);
@@ -5126,6 +5134,9 @@ function trkRenderNoteBar(){
   var note=id('trkOlderNote');if(!note)return;
   var meta=S._trkMeta||{};
   var parts=[];
+  if(S.searchQ){
+    parts.push('<span style="color:var(--c-blue);font-weight:600">&#8981; '+S.filtered.length+' result'+(S.filtered.length!==1?'s':'')+' for &#8220;'+S.searchQ+'&#8221;</span> &middot; <a onclick="clearUniversalSearch()" style="cursor:pointer;color:var(--tx3)">Clear</a>');
+  }
   var isAdm=(S.user&&(S.user.role==='Admin'||S.user.role==='Commissioner'));
   // Amber chip: tasks the admin pushed back, awaiting the officer
   var rpCount=0;
@@ -5211,17 +5222,17 @@ function populateOfficerFilter(){
 // it works transparently with all existing filter logic — zone, status,
 // date range etc. still apply on top of the search query.
 function clearUniversalSearch(){
-  var bar=id('trkUniversalSearch');
-  if(bar){bar.value='';bar.focus();}
-  onUniversalSearch('');
+  S.searchQ='';
+  var bar=id('trkUniversalSearch');if(bar){bar.value='';bar.focus();}
+  var hidden=id('fSearch');if(hidden)hidden.value='';
+  var clrBtn=id('trkSearchClear');if(clrBtn)clrBtn.style.display='none';
+  filterTasks();
 }
 function onUniversalSearch(val){
-  // Keep fSearch in sync so filterTasks() picks up the value correctly,
-  // and any filter summary tags also include the active search query.
-  var hidden=id('fSearch');if(hidden)hidden.value=val;
-  // Show/hide the clear ✕ button based on whether there's any text
+  S.searchQ=(val||'').trim(); // persist so loadTasks re-applies after refresh
+  var hidden=id('fSearch');if(hidden)hidden.value=S.searchQ;
   var clrBtn=id('trkSearchClear');
-  if(clrBtn)clrBtn.style.display=val?'':'none';
+  if(clrBtn)clrBtn.style.display=S.searchQ?'':'none';
   filterTasks();
 }
 function filterTasks(){
@@ -5242,8 +5253,10 @@ function filterTasks(){
     if(dueFrom&&t.dateAssigned&&t.dateAssigned<dueFrom)continue;
     if(dueTo&&t.dateAssigned&&t.dateAssigned>dueTo)continue;
     if(search){
-      var hay=(t.taskID+' '+t.description+' '+t.officerName+' '+t.zone+' '+t.department).toLowerCase();
-      if(hay.indexOf(search)===-1)continue;
+      var hay=((t.taskID||'')+' '+(t.description||'')+' '+(t.officerName||'')+' '+(t.zone||'')+' '+(t.department||'')+' '+(t.status||'')+' '+(t.priority||'')+' '+(t.taskType||'')+' '+(t.dueDate||'')+' '+(t.dateAssigned||'')+' '+(t.officerRemarks||'')).toLowerCase();
+      var tokens=search.split(/\s+/);var allMatch=true;
+      for(var ti=0;ti<tokens.length;ti++){if(tokens[ti]&&hay.indexOf(tokens[ti])<0){allMatch=false;break;}}
+      if(!allMatch)continue;
     }
     S.filtered.push(t);
   }
@@ -5269,6 +5282,16 @@ function filterTasks(){
 
 // Applies S.sortCol/S.sortDir to S.filtered in-place — called from
 // filterTasks() and loadTasks() so sort order is always consistent.
+function hlMatch(text){
+  if(!S.searchQ||!text)return text||'';
+  var tokens=S.searchQ.split(/\s+/).filter(Boolean);
+  var out=String(text);
+  for(var i=0;i<tokens.length;i++){
+    var re=new RegExp('('+tokens[i].replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+')','gi');
+    out=out.replace(re,'<mark style="background:#fef08a;color:#1a1a1a;border-radius:2px">$1</mark>');
+  }
+  return out;
+}
 function applyCurrentSort(){
   if(!S.sortCol)return;
   S.filtered.sort(function(a,b){
@@ -5412,7 +5435,8 @@ function makeTaskCard(t, isAdmin, isHOD, showReassign){
 
   var desc = document.createElement('div');
   desc.className = 'task-card-desc';
-  desc.textContent = t.description || '(no description)';
+  if(S.searchQ){desc.innerHTML=hlMatch((t.description||'(no description)').slice(0,180));}
+  else{desc.textContent=t.description||'(no description)';}
 
   var meta = document.createElement('div');
   meta.className = 'task-card-meta';
@@ -5835,13 +5859,24 @@ function waShareTask(taskID){
   });
 }
 
+var TV_BUSY=false;
+function tvCloseTask(taskID){
+  if(TV_BUSY)return;TV_BUSY=true;
+  var b=id('tvCloseBtn');if(b){b.disabled=true;b.innerHTML='<span class="material-icons-round mi" style="animation:spin 1s linear infinite">sync</span> Closing...';}
+  gasCall('serverUpdateTask',S.token,taskID,{status:'Closed'}).then(function(r){
+    TV_BUSY=false;
+    if(r&&r.success){toast('Task '+taskID+' closed ✓','ok');closeModal('mTask');loadTasks();}
+    else{if(b){b.disabled=false;b.innerHTML='<span class="material-icons-round mi">task_alt</span> Mark Closed';}toast((r&&r.message)||'Could not close.','error');}
+  });
+}
 function viewTask(taskID){
   var t=null;for(var i=0;i<S.tasks.length;i++)if(S.tasks[i].taskID===taskID){t=S.tasks[i];break;}
   if(!t)return;
   var isAdmin=(S.user&&(S.user.role==='Admin'||S.user.role==='Commissioner'));
   id('mTaskTitle').textContent=taskID;id('mTaskBody').innerHTML=taskDetailHTML(t);
   var waFtBtn='<button class="btn btn-ghost" style="color:#25D366;border-color:#25D366" onclick="waShareTask(\''+taskID+'\')" title="Share on WhatsApp"><svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor" style="display:inline-block;vertical-align:-2px"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413"/></svg> Share</button>';
-  id('mTaskFt').innerHTML=isAdmin?waFtBtn+'<button class="btn btn-ghost" onclick="closeModal(\'mTask\')">Close</button><button class="btn btn-primary" onclick="closeModal(\'mTask\');editTask(\''+taskID+'\')">Edit All Fields</button>':'<button class="btn btn-ghost" onclick="closeModal(\'mTask\')">Close</button><button class="btn btn-primary" onclick="closeModal(\'mTask\');officerUpdate(\''+taskID+'\')">Update Progress</button>';
+    var tvClose=(isAdmin&&t&&t.status==='Completed')?'<button class="btn" id="tvCloseBtn" style="background:#059669;color:#fff;margin-right:4px" onclick="tvCloseTask(\''+taskID+'\')"><span class="material-icons-round mi">task_alt</span> Mark Closed</button>':'';
+  id('mTaskFt').innerHTML=isAdmin?tvClose+waFtBtn+'<button class="btn btn-ghost" onclick="closeModal(\'mTask\')">Close</button><button class="btn btn-primary" onclick="closeModal(\'mTask\');editTask(\''+taskID+'\')">Edit All Fields</button>':'<button class="btn btn-ghost" onclick="closeModal(\'mTask\')">Close</button><button class="btn btn-primary" onclick="closeModal(\'mTask\');officerUpdate(\''+taskID+'\')">Update Progress</button>';
   openModal('mTask');
 
   // Load full task detail on-demand (heavy fields: officerRemarks,
@@ -7567,6 +7602,45 @@ function exportPDF(tasks,context){
   for(var i=0;i<zk.length;i++){var z=zk[i],s=zoneMap[z],r2=pct(s.completed,s.total);zoneRows+='<tr><td style="padding:7px 9px;font-weight:600">'+z+'</td><td style="padding:7px 9px;text-align:center;font-weight:700">'+s.total+'</td><td style="padding:7px 9px;text-align:center;color:#15803d;font-weight:700">'+s.completed+'</td><td style="padding:7px 9px;text-align:center;color:#b45309">'+s.notCompleted+'</td><td style="padding:7px 9px;text-align:center;color:'+(s.overdue>0?'#be123c':'#64748b')+';font-weight:'+(s.overdue>0?'700':'400')+'">'+s.overdue+'</td><td style="padding:7px 9px">'+progBar(r2)+'</td></tr>';}
   var deptRows='',dk=Object.keys(deptMap);
   for(var i=0;i<dk.length;i++){var d=dk[i],s=deptMap[d],r2=pct(s.completed,s.total);deptRows+='<tr><td style="padding:7px 9px;font-weight:600">'+d+'</td><td style="padding:7px 9px;text-align:center;font-weight:700">'+s.total+'</td><td style="padding:7px 9px;text-align:center;color:#15803d;font-weight:700">'+s.completed+'</td><td style="padding:7px 9px;text-align:center;color:#b45309">'+s.notCompleted+'</td><td style="padding:7px 9px;text-align:center;color:'+(s.overdue>0?'#be123c':'#64748b')+';font-weight:'+(s.overdue>0?'700':'400')+'">'+s.overdue+'</td><td style="padding:7px 9px">'+progBar(r2)+'</td></tr>';}
+  // ── OFFICER-WISE SECTION ─────────────────────────────────────
+  var officerMap={};
+  for(var i=0;i<tasks.length;i++){
+    var t=tasks[i];var on=t.officerName||'Unassigned';
+    if(!officerMap[on])officerMap[on]={name:on,department:t.department||'',designation:t.designation||'',total:0,completed:0,closed:0,inProg:0,pending:0,review:0,overdue:0,tasks:[]};
+    var om=officerMap[on];om.total++;
+    if(t.status==='Completed')om.completed++;else if(t.status==='Closed')om.closed++;
+    else if(t.status==='In Progress')om.inProg++;else if(t.status==='Review Pending')om.review++;else om.pending++;
+    if(t.isOverdue)om.overdue++;om.tasks.push(t);
+  }
+  var officerKeys=Object.keys(officerMap).sort(function(a,b){return officerMap[b].total-officerMap[a].total||a.localeCompare(b);});
+  var officerSection='';
+  for(var oi=0;oi<officerKeys.length;oi++){
+    var om=officerMap[officerKeys[oi]];var omDone=om.completed+om.closed;
+    var omRate=om.total>0?Math.round(omDone/om.total*100):0;
+    var omBar=omRate>=70?'#22c55e':omRate>=40?'#f59e0b':'#ef4444';
+    officerSection+='<div style="page-break-inside:avoid;margin-bottom:16px;border:1.5px solid #e2e8f0;border-radius:8px;overflow:hidden">';
+    officerSection+='<div style="background:linear-gradient(135deg,#0b1f45,#1a3a6b);color:#fff;padding:9px 13px;display:flex;justify-content:space-between;align-items:center">';
+    officerSection+='<div><div style="font-size:12px;font-weight:800">'+om.name+'</div><div style="font-size:9px;color:rgba(255,255,255,.6);margin-top:1px">'+(om.designation||'')+(om.department?' &middot; '+om.department:'')+'</div></div>';
+    officerSection+='<div style="text-align:right"><div style="font-size:20px;font-weight:900">'+om.total+'</div><div style="font-size:8px;color:rgba(255,255,255,.5);text-transform:uppercase">Tasks</div></div></div>';
+    var kpis=[{v:omDone,l:'Done',bg:'#f0fdf4',c:'#15803d'},{v:om.pending,l:'Pending',bg:'#fff7ed',c:'#c2410c'},{v:om.inProg,l:'In Progress',bg:'#eff6ff',c:'#1d4ed8'},{v:om.review,l:'Review',bg:'#faf5ff',c:'#7e22ce'},{v:om.overdue,l:'Overdue',bg:om.overdue>0?'#fff1f2':'#f8fafc',c:om.overdue>0?'#be123c':'#94a3b8'}];
+    officerSection+='<div style="display:flex;border-bottom:1px solid #e2e8f0">';
+    for(var ki=0;ki<kpis.length;ki++){var kp=kpis[ki];officerSection+='<div style="flex:1;padding:7px 5px;text-align:center;background:'+kp.bg+';border-right:1px solid #e2e8f0"><div style="font-size:16px;font-weight:900;color:'+kp.c+'">'+kp.v+'</div><div style="font-size:7.5px;font-weight:700;color:'+kp.c+';text-transform:uppercase;line-height:1.2">'+kp.l+'</div></div>';}
+    officerSection+='</div>';
+    officerSection+='<div style="padding:6px 12px;background:#f8fafc;border-bottom:1px solid #e2e8f0;display:flex;align-items:center;gap:8px"><span style="font-size:9px;font-weight:600;color:#475569;min-width:80px">Completion</span><div style="flex:1;background:#e2e8f0;border-radius:999px;height:6px;overflow:hidden"><div style="height:100%;border-radius:999px;background:'+omBar+';width:'+omRate+'%"></div></div><span style="font-size:9px;font-weight:800;color:'+omBar+';min-width:28px;text-align:right">'+omRate+'%</span></div>';
+    var omTasks=om.tasks.slice().sort(function(a,b){var order={Pending:1,'In Progress':2,'Review Pending':3,Completed:4,Closed:5};var ao=a.isOverdue?0:(order[a.status]||9),bo=b.isOverdue?0:(order[b.status]||9);return ao-bo;});
+    officerSection+='<table style="width:100%;border-collapse:collapse"><thead><tr style="background:#f1f5f9"><th style="padding:5px 8px;text-align:left;font-size:8px;font-weight:700;color:#475569;text-transform:uppercase;border-bottom:1px solid #e2e8f0">Task ID</th><th style="padding:5px 8px;text-align:left;font-size:8px;font-weight:700;color:#475569;text-transform:uppercase;border-bottom:1px solid #e2e8f0">Description</th><th style="padding:5px 8px;text-align:left;font-size:8px;font-weight:700;color:#475569;text-transform:uppercase;border-bottom:1px solid #e2e8f0">Priority</th><th style="padding:5px 8px;text-align:left;font-size:8px;font-weight:700;color:#475569;text-transform:uppercase;border-bottom:1px solid #e2e8f0">Due</th><th style="padding:5px 8px;text-align:left;font-size:8px;font-weight:700;color:#475569;text-transform:uppercase;border-bottom:1px solid #e2e8f0">Status</th></tr></thead><tbody>';
+    for(var ti2=0;ti2<omTasks.length;ti2++){
+      var ot=omTasks[ti2];var rowBg=ot.isOverdue?'#fff1f2':(ti2%2===0?'#fff':'#f8fafc');
+      officerSection+='<tr style="background:'+rowBg+';border-bottom:1px solid #f1f5f9">';
+      officerSection+='<td style="padding:4px 8px;font-family:monospace;font-size:8px;color:#1d4ed8;font-weight:700;white-space:nowrap">'+ot.taskID+'</td>';
+      officerSection+='<td style="padding:4px 8px;font-size:8.5px;word-break:break-word;max-width:180px">'+String(ot.description||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').slice(0,100)+'</td>';
+      officerSection+='<td style="padding:4px 8px;font-size:8.5px;font-weight:700;color:'+priColor(ot.priority)+';white-space:nowrap">'+( ot.priority||'—')+'</td>';
+      officerSection+='<td style="padding:4px 8px;font-size:8.5px;white-space:nowrap;'+(ot.isOverdue?'color:#be123c;font-weight:700':'')+'">'+(ot.dueDate||'—')+(ot.isOverdue?' ⚠':'')+'</td>';
+      officerSection+='<td style="padding:4px 8px"><span style="'+sStyle(ot.status)+'">'+ot.status+'</span></td></tr>';
+    }
+    officerSection+='</tbody></table></div>';
+  }
+  // Renumber: overdue=4, tasks=5
   var overdueRows='',overdueTasks=[];for(var i=0;i<tasks.length;i++)if(tasks[i].isOverdue)overdueTasks.push(tasks[i]);
   for(var i=0;i<overdueTasks.length;i++){var t=overdueTasks[i],days=t.dueDate?Math.floor((new Date()-new Date(t.dueDate))/86400000):0;overdueRows+='<tr style="background:#fff1f2"><td style="padding:6px 9px;font-family:monospace;font-size:9px;color:#be123c;font-weight:700;vertical-align:top;white-space:nowrap">'+t.taskID+'</td><td style="padding:6px 9px;font-size:10px;word-break:break-word;white-space:normal;vertical-align:top">'+String(t.description||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')+'</td><td style="padding:6px 9px;vertical-align:top;white-space:nowrap">'+t.zone+'</td><td style="padding:6px 9px;vertical-align:top;white-space:nowrap">'+t.department+'</td><td style="padding:6px 9px;font-weight:700;vertical-align:top;white-space:nowrap">'+t.officerName+'</td><td style="padding:6px 9px;color:#be123c;font-weight:700;vertical-align:top;white-space:nowrap">'+(t.dueDate||'\u2014')+'</td><td style="padding:6px 9px;text-align:center;color:#be123c;font-weight:800;vertical-align:top;white-space:nowrap">'+days+' day'+(days!==1?'s':'')+'</td></tr>';}
   var taskRows='';
@@ -7606,7 +7680,9 @@ function exportPDF(tasks,context){
     +'<div class="kpirow"><div class="kbox knavy"><div class="knum">'+total+'</div><div class="klbl">Total Tasks</div></div><div class="kbox kgreen"><div class="knum">'+completed+'</div><div class="klbl">Completed</div></div><div class="kbox kgold"><div class="knum">'+inProg+'</div><div class="klbl">In Progress</div></div><div class="kbox kgold"><div class="knum">'+pending+'</div><div class="klbl">Pending</div></div><div class="kbox kred"><div class="knum">'+overdue+'</div><div class="klbl">Overdue</div></div><div class="kbox kteal"><div class="knum">'+notCompleted+'</div><div class="klbl">Not Completed</div></div><div class="kbox knavy"><div class="knum">'+rate+'%</div><div class="klbl">Completion Rate</div></div></div>'
     +'<div style="margin-bottom:14px;padding:10px 14px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:7px"><div style="display:flex;justify-content:space-between;margin-bottom:5px"><span style="font-size:10px;font-weight:700;color:#0b1f45">Overall Completion Rate</span><span style="font-size:11px;font-weight:800;color:'+(rate>=70?'#15803d':rate>=40?'#b45309':'#be123c')+'">'+rate+'%</span></div><div style="background:#e2e8f0;border-radius:999px;height:8px;overflow:hidden"><div style="height:100%;border-radius:999px;background:'+(rate>=70?'#22c55e':rate>=40?'#f59e0b':'#ef4444')+';width:'+rate+'%"></div></div></div>'
     +(overdue>0?'<div style="background:#fff1f2;border:1.5px solid #fecdd3;border-radius:7px;padding:9px 14px;margin-bottom:12px;font-size:10.5px;color:#be123c;font-weight:700">\u26a0 '+overdue+' task'+(overdue>1?'s are':' is')+' overdue and require'+(overdue===1?'s':'')+' immediate attention.</div>':'<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:7px;padding:9px 14px;margin-bottom:12px;font-size:10.5px;color:#15803d;font-weight:600">\u2713 No overdue tasks. All tasks are within their due dates.</div>')
-    +'<div class="sechd"><div class="secnum">2</div><h2>Zone &amp; Department Breakdown</h2></div>'
+    +'<div class="sechd pbreak"><div class="secnum">2</div><h2>Officer-wise Performance &amp; Task Breakdown</h2></div>'
+    +officerSection
+    +'<div class="sechd pbreak"><div class="secnum">3</div><h2>Zone &amp; Department Breakdown</h2></div>'
     +'<div class="bgrid"><div class="bcol"><div style="font-size:9.5px;font-weight:700;color:#0b1f45;margin-bottom:5px;text-transform:uppercase">Zone-wise Summary</div><div class="twrap"><table><thead><tr><th>Zone</th><th style="text-align:center">Total</th><th style="text-align:center">Completed</th><th style="text-align:center">Pending</th><th style="text-align:center">Overdue</th><th>Completion</th></tr></thead><tbody>'+zoneRows+'</tbody></table></div></div>'
     +'<div class="bcol"><div style="font-size:9.5px;font-weight:700;color:#0b1f45;margin-bottom:5px;text-transform:uppercase">Department-wise Summary</div><div class="twrap"><table><thead><tr><th>Department</th><th style="text-align:center">Total</th><th style="text-align:center">Completed</th><th style="text-align:center">Pending</th><th style="text-align:center">Overdue</th><th>Completion</th></tr></thead><tbody>'+deptRows+'</tbody></table></div></div></div>'
     +(overdueTasks.length>0?'<div class="sechd pbreak"><div class="secnum">3</div><h2>\u26a0 Overdue Tasks \u2014 Immediate Action Required</h2></div><div class="twrap" style="border-color:#fecdd3"><table><thead style="background:#be123c"><tr><th>Task ID</th><th>Description</th><th>Zone</th><th>Department</th><th>Officer</th><th>Due Date</th><th>Days Overdue</th></tr></thead><tbody>'+overdueRows+'</tbody></table></div>':'')
