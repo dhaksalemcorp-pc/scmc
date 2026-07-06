@@ -1464,7 +1464,7 @@ tbody tr:hover { background: var(--surface2); }
           <div class="kpi blue" onclick="drillDown('all')" style="cursor:pointer"><div class="kpi-stripe"></div><div class="kpi-icon-wrap"><span class="material-icons-round mi">assignment</span></div><div class="kpi-val" id="k-total">&#8212;</div><div class="kpi-lbl">Total Tasks</div></div>
           <div class="kpi orange" onclick="drillDown('pending')" style="cursor:pointer"><div class="kpi-stripe"></div><div class="kpi-icon-wrap"><span class="material-icons-round mi">pending</span></div><div class="kpi-val" id="k-pending">&#8212;</div><div class="kpi-lbl">Pending</div></div>
           <div class="kpi teal" onclick="drillDown('inprogress')" style="cursor:pointer"><div class="kpi-stripe"></div><div class="kpi-icon-wrap"><span class="material-icons-round mi">sync</span></div><div class="kpi-val" id="k-progress">&#8212;</div><div class="kpi-lbl">In Progress</div></div>
-          <div class="kpi green" onclick="drillDown('completed')" style="cursor:pointer"><div class="kpi-stripe"></div><div class="kpi-icon-wrap"><span class="material-icons-round mi">check_circle</span></div><div class="kpi-val" id="k-done">&#8212;</div><div class="kpi-lbl">Completed</div></div>
+          <div class="kpi green" onclick="drillDown('completed')" style="cursor:pointer"><div class="kpi-stripe"></div><div class="kpi-icon-wrap"><span class="material-icons-round mi">check_circle</span></div><div class="kpi-val" id="k-done">&#8212;</div><div class="kpi-lbl">Completed/Closed</div></div>
           <div class="kpi red" onclick="drillDown('overdue')" style="cursor:pointer"><div class="kpi-stripe"></div><div class="kpi-icon-wrap"><span class="material-icons-round mi">warning</span></div><div class="kpi-val" id="k-overdue">&#8212;</div><div class="kpi-lbl">Overdue</div></div>
           <div class="kpi gold" onclick="drillDown('duetoday')" style="cursor:pointer"><div class="kpi-stripe"></div><div class="kpi-icon-wrap"><span class="material-icons-round mi">today</span></div><div class="kpi-val" id="k-today">&#8212;</div><div class="kpi-lbl">Due Today</div></div>
           <div class="kpi purple" onclick="drillDown('high')" style="cursor:pointer"><div class="kpi-stripe"></div><div class="kpi-icon-wrap"><span class="material-icons-round mi">priority_high</span></div><div class="kpi-val" id="k-high">&#8212;</div><div class="kpi-lbl">High Priority</div></div>
@@ -3886,20 +3886,13 @@ var FRONTEND_VERSION='v119';
 var BOOT_TRIES=0;
 var BOOT_PENDING=false;
 function startBootstrap(){
-  BOOT_PENDING=true;
-  gasCall('serverGetBootstrap',S.token).then(function(r){
-    BOOT_PENDING=false;
-    if(!r||(!r.success&&!r.invalidSession)){bootRetry();return;}
-    if(r.invalidSession){
-      toast('Your session has expired — please sign in again.','error');
-      doLogout();return;
-    }
-    applyBootstrap(r);
-  });
+  // serverGetBootstrap not deployed — skip silently.
+  BOOT_PENDING=false;
 }
 function bootRetry(){
-  if(BOOT_TRIES++<3)setTimeout(startBootstrap,3000);
-  else toast('Could not refresh data — showing last saved copy. Pull down or navigate to retry.','info');
+  // startBootstrap is disabled (serverGetBootstrap not in backend).
+  // Data loads fully via serverLoginAndLoad — no retry needed.
+  BOOT_PENDING=false;
 }
 function applyBootstrap(r){
   // Version sanity check — the #1 cause of "fix didn't work" is the
@@ -4805,14 +4798,17 @@ function buildZoneChart(zs){
     plugins:{legend:{position:'bottom',labels:{font:{size:11},padding:10}}}}});
 }
 function deptDrillTo(dept,status){
-  // Navigate to task tracker filtered by dept (and optional status)
   go('tracker');
   setTimeout(function(){
-    // Set dept filter dropdown
-    var fd=id('fDept');if(fd){fd.value=dept;}
-    var fs=id('fStatus');if(fs){fs.value=status||'';}
+    var fd=id('fDept');if(fd)fd.value=dept;
+    var fs=id('fStatus');if(fs)fs.value=status||'';
+    // If clicking "Pending" chip, show all non-completed tasks for this dept
+    if(status==='Pending'){
+      S.showCompleted=false;S.showClosed=false;
+    } else if(status==='Completed'){
+      S.showCompleted=true;S.showClosed=true;
+    }
     filterTasks();
-    // Scroll tracker to top
     var content=id('content');if(content)content.scrollTop=0;
   },150);
 }
@@ -4825,7 +4821,7 @@ function buildDeptBreakdown(ds){
     var d=depts[i],s=ds[d];
     var rate=s.total>0?Math.round(s.completed/s.total*100):0;
     var col=rate>60?'#22c55e':rate>30?'#f59e0b':'#ef4444';
-    var pending=s.total-s.completed;
+    var pending=s.pending||0; // backend now tracks pending directly
     html+='<div style="margin-bottom:14px;padding:10px 12px;background:var(--surface2);border-radius:8px;border:1px solid var(--border)">';
     html+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:7px">';
     html+='<span style="font-size:13px;font-weight:700;color:var(--tx1)">'+d+'</span>';
@@ -8140,9 +8136,9 @@ function loadPhotoLog(){
   var isAdmin=(S.user&&(S.user.role==='Admin'||S.user.role==='Commissioner'));
   var canWriteNotes=(S.user&&(S.user.role==='Admin'||S.user.role==='Commissioner'||S.user.role==='HOD'||S.user.role==='Supervision'));
   PL.isAdmin=canWriteNotes;
-  var adminAct=id('plAdminActions'),viewAct=id('plViewActions');
-  if(adminAct)adminAct.style.display=canWriteNotes?'':'none';
-  if(viewAct)viewAct.style.display=canWriteNotes?'none':'';
+  // ph-actions is now a single div (AI Diary removed); role-based visibility
+  // is handled by checking canWriteNotes before rendering the form.
+  var adminAct=id('plAdminActions');if(adminAct)adminAct.style.display=canWriteNotes?'':'none';
   // Note Type management stays Admin/Commissioner only — Supervision can
   // add and delete notes themselves, but not edit the master Type list.
   var manageBtn=id('plManageTypesBtn');if(manageBtn)manageBtn.style.display=isAdmin?'':'none';
@@ -8162,10 +8158,7 @@ function loadPhotoLog(){
   // Moved to plToggleView('form') so it's lazy-loaded on demand.
 
   // Reset to default 7-day window on each page load and highlight button
-  PL.window=0; // all time
-  for(var bi=0;bi<btns.length;bi++){
-    btns[bi].classList.toggle('active', parseInt(btns[bi].getAttribute('data-days'),10)===7);
-  }
+  PL.window=0; // all time — no window selector buttons any more
 
   showLoader('Loading notes...');
   gasCall('serverGetNotes',S.token,0).then(function(r){
@@ -8385,7 +8378,7 @@ function plToggleView(view){
     if(lv)lv.style.display='block';
     if(!PL.entries||!PL.entries.length){
       showLoader('Loading notes...');
-      gasCall('serverGetNotes',S.token,PL.window||7).then(function(r){
+      gasCall('serverGetNotes',S.token,0).then(function(r){
         hideLoader();
         if(r&&r.success){PL.entries=r.data||[];}
         plRenderCards(PL.entries);
@@ -8729,6 +8722,20 @@ function clearPlForm(){
 // ─── RENDER — pure DOM, no innerHTML for content, no lazy-load timers ──
 function plRenderCards(entries){
   // Department review filter — set from the dropdown in the list header
+  // New type/zone/month filters
+  if(PL.filterTypes&&PL.filterTypes.length>0){
+    entries=(entries||[]).filter(function(e){return PL.filterTypes.indexOf(e.type)>=0;});
+  }
+  if(PL.filterZones&&PL.filterZones.length>0){
+    entries=(entries||[]).filter(function(e){
+      return PL.filterZones.indexOf(e.zone)>=0||PL.filterZones.indexOf(e.department)>=0;
+    });
+  }
+  if(PL.filterMonth){
+    entries=(entries||[]).filter(function(e){
+      return e.date&&e.date.slice(0,7)===PL.filterMonth;
+    });
+  }
   if(PL.deptFilter){
     // Notes don't store a department column — derive it from the note's
     // Officer Name via the officer master list, so "Public Health" shows
@@ -9446,7 +9453,7 @@ function plSaveEdit(noteID){
         if(pdfFailed)toast(pdfFailed+' of '+pdfTotal+' document(s) failed to upload \u2014 open Edit and re-add them.','error');
         else toast('All '+pdfTotal+' document'+(pdfTotal>1?'s':'')+' uploaded \u2713','ok');
         // Silent refresh so attachment counts on the card are accurate
-        gasCall('serverGetNotes',S.token,PL.window||7).then(function(r){
+        gasCall('serverGetNotes',S.token,0).then(function(r){
           if(r&&r.success){PL.entries=r.data||[];plRenderCards(PL.entries);}
         });
       }
@@ -9462,7 +9469,7 @@ function finishEdit(noteID,updated){
   hideLoader();closeModal('mGeneric');
   toast('Entry updated!','ok');
   // Refresh from server so the photo list reflects deletions/additions accurately
-  gasCall('serverGetNotes',S.token,PL.window||7).then(function(r){
+  gasCall('serverGetNotes',S.token,0).then(function(r){
     if(r&&r.success){PL.entries=r.data||[];}
     PL.editPhotos=[];PL.editExistingPhotos=[];PL.editRemovedPhotoIDs=[];
     plRenderCards(PL.entries);
