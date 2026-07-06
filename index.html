@@ -4829,11 +4829,12 @@ function buildDeptBreakdown(ds){
     html+='</div>';
     html+='<div style="background:var(--border);border-radius:999px;height:6px;overflow:hidden;margin-bottom:8px">';
     html+='<div style="height:100%;border-radius:999px;background:'+col+';width:'+rate+'%;transition:width .4s"></div></div>';
-    html+='<div style="display:flex;gap:6px;flex-wrap:wrap">';
-    // Clickable chips — navigate to tracker filtered by this dept+status
+    html+='<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px">';
     html+='<button class="dept-drill-btn" data-dept="'+d+'" data-status="" style="padding:2px 9px;border-radius:999px;border:1.5px solid var(--border);background:var(--surface);color:var(--tx2);font-size:11.5px;font-weight:600;cursor:pointer">All: '+s.total+'</button>';
     if(pending>0)html+='<button class="dept-drill-btn" data-dept="'+d+'" data-status="Pending" style="padding:2px 9px;border-radius:999px;border:1.5px solid #fed7aa;background:#fff7ed;color:#c2410c;font-size:11.5px;font-weight:700;cursor:pointer">Pending: '+pending+'</button>';
+    if((s.inProgress||0)>0)html+='<button class="dept-drill-btn" data-dept="'+d+'" data-status="In Progress" style="padding:2px 9px;border-radius:999px;border:1.5px solid #bfdbfe;background:#eff6ff;color:#1d4ed8;font-size:11.5px;font-weight:700;cursor:pointer">In Progress: '+s.inProgress+'</button>';
     if(s.completed>0)html+='<button class="dept-drill-btn" data-dept="'+d+'" data-status="Completed" style="padding:2px 9px;border-radius:999px;border:1.5px solid #bbf7d0;background:#f0fdf4;color:#15803d;font-size:11.5px;font-weight:700;cursor:pointer">Completed: '+s.completed+'</button>';
+    if((s.overdue||0)>0)html+='<button class="dept-drill-btn" data-dept="'+d+'" data-status="Overdue" style="padding:2px 9px;border-radius:999px;border:1.5px solid #fecdd3;background:#fff1f2;color:#be123c;font-size:11.5px;font-weight:700;cursor:pointer">Overdue: '+s.overdue+'</button>';
     html+='</div></div>';
   }
   el.innerHTML=html;
@@ -8748,7 +8749,19 @@ function plRenderCards(entries){
       return d===PL.deptFilter;
     });
   }
-  entries=plSortEntries(entries); // always honor current sort order (default: newest first)
+  // Universal search — multi-token, searches all fields
+  if(PL.searchQ){
+    var tokens=PL.searchQ.split(' ').filter(function(x){return x.length>0;});
+    entries=(entries||[]).filter(function(e){
+      var hay=((e.notes||'')+' '+(e.officerName||'')+' '+(e.zone||'')+' '+
+               (e.type||'')+' '+(e.location||'')+' '+(e.department||'')+' '+
+               (e.date||'')+' '+(e.time||'')).toLowerCase();
+      for(var ti=0;ti<tokens.length;ti++){if(hay.indexOf(tokens[ti])<0)return false;}
+      return true;
+    });
+  }
+  plUpdateCount(entries.length);
+  entries=plSortEntries(entries);
   var strip=id('plSummaryStrip');
   if(strip){
     var ic=0,mc=0,sc=0,pc=0;
@@ -8760,6 +8773,7 @@ function plRenderCards(entries){
       +'<div style="background:rgba(5,150,105,.08);border:1px solid rgba(5,150,105,.2);border-radius:8px;padding:8px 14px;font-size:12.5px;color:#059669;display:flex;gap:4px;align-items:center"><span class="material-icons-round mi" style="font-size:14px">groups</span><strong>'+mc+'</strong> Meetings</div>'
       +(sc>0?'<div style="background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.2);border-radius:8px;padding:8px 14px;font-size:12.5px;color:#d97706;display:flex;gap:4px;align-items:center"><span class="material-icons-round mi" style="font-size:14px">location_on</span><strong>'+sc+'</strong> Site Visits</div>':'')
       +'<div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 14px;font-size:12.5px;color:var(--tx2);display:flex;gap:4px;align-items:center"><span class="material-icons-round mi" style="font-size:14px">photo_camera</span><strong>'+pc+'</strong> Photos</div>';
+    strip.style.display='flex';
   }
   var el=id('plCards');if(!el)return;
   var pc2=id('plCount');if(pc2)pc2.textContent=entries.length+' entr'+(entries.length===1?'y':'ies');
