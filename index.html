@@ -3495,12 +3495,23 @@ function gasCall(fn){
                            // headers, which Apps Script's web app cannot answer —
                            // those broke login entirely with "Failed to fetch")
         headers:{
-          'Content-Type':'application/x-www-form-urlencoded' // must stay a "simple" header/value
+          // text/plain is (like x-www-form-urlencoded) a CORS "safelisted"
+          // content type, so this still never triggers a preflight — but
+          // unlike form-urlencoded, it needs NO percent-encoding of the
+          // body. That matters a lot for photo uploads: encodeURIComponent
+          // triples every '+', '/', and '=' character in base64 data
+          // (they're the bulk of what makes base64 not URL-safe), so a
+          // ~40KB compressed photo was ballooning by another 20-30% before
+          // it even left the browser — the single biggest lever for
+          // getting oversized multi-photo requests into trouble. Sending
+          // the exact JSON bytes as text/plain removes that inflation
+          // entirely, on every request, not just photo uploads.
+          'Content-Type':'text/plain;charset=utf-8'
         },
         // _ts cache-buster ensures this exact URL+body is never treated as a
         // repeat of a previous request by any intermediate cache or proxy,
         // without needing extra headers that would trigger a preflight.
-        body:'fn='+encodeURIComponent(fn)+'&payload='+encodeURIComponent(JSON.stringify(args))+'&_ts='+Date.now()
+        body:JSON.stringify({fn:fn, payload:args, _ts:Date.now()})
       })
       .then(function(r){
         if(timer)clearTimeout(timer);
@@ -5867,6 +5878,7 @@ function clearTaskForm(){
 }
 function previewTask(){
   var d=getTaskForm();if(!validateTask(d))return;
+  S._taskDetailTab='details';S._taskDetailTaskID=null;
   id('mTaskTitle').textContent='Task Preview';id('mTaskBody').innerHTML=taskDetailHTML(d);
   id('mTaskFt').innerHTML='<button class="btn btn-ghost" onclick="closeModal(\'mTask\')">Close</button><button class="btn btn-primary" onclick="closeModal(\'mTask\');saveTask()">Confirm & Save</button>';
   openModal('mTask');
@@ -5932,6 +5944,10 @@ function tvCloseTask(elOrId){var taskID=(typeof elOrId==='string')?elOrId:(elOrI
 function viewTask(taskID){
   var t=null;for(var i=0;i<S.tasks.length;i++)if(S.tasks[i].taskID===taskID){t=S.tasks[i];break;}
   if(!t)return;
+  // Only reset to the Details tab when opening a DIFFERENT task than
+  // whatever was last viewed — reopening the same task (e.g. closing and
+  // immediately reopening it) keeps whichever tab was already selected.
+  if(S._taskDetailTaskID!==taskID){S._taskDetailTab='details';S._taskDetailTaskID=taskID;}
   var isAdmin=(S.user&&(S.user.role==='Admin'||S.user.role==='Commissioner'));
   id('mTaskTitle').textContent=taskID;id('mTaskBody').innerHTML=taskDetailHTML(t);
   var tvClose=(isAdmin&&t&&t.status==='Completed')?'<button class="btn" id="tvCloseBtn" style="background:#059669;color:#fff;margin-right:4px" data-tid="'+taskID+'" onclick="tvCloseTask(this.dataset.tid)"><span class="material-icons-round mi">task_alt</span> Mark Closed</button>':'';
@@ -6021,6 +6037,13 @@ function renderTaskDocList(el, docs){
   el.innerHTML=html;
 }
 function taskDetailHTML(t){
+  // Which tab is showing persists across re-renders of the SAME task
+  // (e.g. when the async detail/photos fetch resolves and the modal body
+  // gets rebuilt) so switching to Photos & Docs doesn't get silently
+  // reset back to Details the moment fresh data arrives. viewTask()
+  // resets this to 'details' whenever a DIFFERENT task is opened.
+  var activeTab=S._taskDetailTab||'details';
+
   var rows=[
     ['Task ID',t.taskID||'Auto'],
     ['Type',t.taskType||'\u2014'],
@@ -6038,27 +6061,25 @@ function taskDetailHTML(t){
   ];
   if(t.completedAt)rows.push(['Completed At',fDateShort(t.completedAt)]);
 
-  var html='<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px 16px;margin-bottom:14px">';
+  // ── DETAILS TAB ──────────────────────────────────────────────
+  var detailsHtml='<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px 16px;margin-bottom:14px">';
   for(var i=0;i<rows.length;i++){
-    html+='<div><div style="font-size:10px;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px">'+rows[i][0]+'</div>'
+    detailsHtml+='<div><div style="font-size:10px;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px">'+rows[i][0]+'</div>'
       +'<div style="font-size:13px;font-weight:500">'+(rows[i][1]||'\u2014')+'</div></div>';
   }
-  html+='</div>';
-
-  // Description
-  html+='<div style="margin-bottom:12px">'
+  detailsHtml+='</div>';
+  detailsHtml+='<div style="margin-bottom:12px">'
     +'<div style="font-size:10px;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px">Description</div>'
     +'<div style="background:var(--surface2);padding:11px;border-radius:8px;font-size:13px;line-height:1.6">'+(t.description||'\u2014')+'</div>'
     +'</div>';
-
-  // Officer remarks
   if(t.officerRemarks&&t.officerRemarks.trim()){
-    html+='<div style="margin-bottom:12px">'
+    detailsHtml+='<div style="margin-bottom:12px">'
       +'<div style="font-size:10px;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px">Officer Remarks</div>'
       +'<div style="background:rgba(5,150,105,.06);border:1px solid rgba(5,150,105,.2);padding:11px;border-radius:8px;font-size:13px;line-height:1.6">'+t.officerRemarks+'</div>'
       +'</div>';
   }
 
+  // ── PHOTOS & DOCS TAB ────────────────────────────────────────
   // Photos — combines OLD Drive-link photos (proxy fetched via GAS) with
   // NEW fast compressed photos (already in t.newPhotos, no extra fetch
   // needed) into a single gallery, so officers see everything together
@@ -6068,37 +6089,38 @@ function taskDetailHTML(t){
     :[];
   var newPhotos=t.newPhotos||[];
   var totalPhotoCount=oldLinks.length+newPhotos.length;
+  var docsCount=(t.docsData&&t.docsData.length)?t.docsData.length:0;
+
+  var mediaHtml='';
   if(totalPhotoCount>0){
     var tkPrefix='tk_'+String(t.taskID||'x').replace(/[^a-zA-Z0-9]/g,'');
-    html+='<div style="margin-top:12px">'
+    mediaHtml+='<div style="margin-bottom:12px">'
       +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">'
       +'<div style="font-size:10px;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em">&#128247; Officer Photos ('+totalPhotoCount+')</div>'
       +(t.updatedAt?'<div style="font-size:10.5px;color:var(--tx3)">Updated: '+fDateShort(t.updatedAt)+(t.updatedBy?' by <strong>'+t.updatedBy+'</strong>':'')+'</div>':'')
       +'</div>'
       +buildCombinedPhotoGrid(oldLinks,newPhotos,tkPrefix)
       +'</div>';
+  } else {
+    mediaHtml+='<div style="margin-bottom:12px;font-size:12px;color:var(--tx3)">No photos attached yet.</div>';
   }
-
-  // Attachment URL (old field)
   if(t.attachmentURL&&t.attachmentURL.trim()){
-    html+='<div style="margin-top:10px">'
+    mediaHtml+='<div style="margin-bottom:12px">'
       +'<a href="'+t.attachmentURL+'" target="_blank" style="display:inline-flex;align-items:center;gap:5px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:6px 12px;font-size:12px;color:var(--c-blue);text-decoration:none">'
       +'<span class="material-icons-round mi" style="font-size:16px">attachment</span>View Attachment'
       +'</a></div>';
   }
-
   // Documents — fetched on demand (same lazy pattern as photos), shown
   // in their own section so they're not confused with field photos.
-  html+='<div style="margin-top:12px" id="taskDetailDocsSection">'
+  mediaHtml+='<div id="taskDetailDocsSection">'
     +'<div style="font-size:10px;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">&#128196; Documents</div>'
     +'<div id="taskDetailDocsList" style="font-size:12px;color:var(--tx3)">Loading documents...</div>'
     +'</div>';
 
-  // History timeline — arrives with the on-demand detail fetch (t._history)
-  html+='<div style="margin-top:12px">'
-    +'<div style="font-size:10px;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">&#128337; History</div>';
+  // ── HISTORY TAB ──────────────────────────────────────────────
+  var historyHtml='';
   if(t._history&&t._history.length){
-    html+='<div style="border-left:2px solid var(--border);padding-left:12px;display:flex;flex-direction:column;gap:8px">';
+    historyHtml+='<div style="border-left:2px solid var(--border);padding-left:12px;display:flex;flex-direction:column;gap:8px">';
     // newest first
     for(var hi=t._history.length-1;hi>=0;hi--){
       var h=t._history[hi];
@@ -6108,21 +6130,47 @@ function taskDetailHTML(t){
       var line=h.action==='Status changed'
         ? htmlEsc(h.fromStatus)+' \u2192 <b>'+htmlEsc(h.toStatus)+'</b>'
         : htmlEsc(h.action);
-      html+='<div style="position:relative;font-size:12px">'
+      historyHtml+='<div style="position:relative;font-size:12px">'
         +'<span class="material-icons-round" style="position:absolute;left:-20px;top:0;font-size:14px;color:'+iconColor+';background:var(--surface);border-radius:50%">'+icon+'</span>'
         +'<div style="color:var(--tx1)">'+line+'</div>'
         +'<div style="font-size:11px;color:var(--tx3)">'+htmlEsc(h.by)+' \u00b7 '+when+(h.detail?' \u00b7 '+htmlEsc(h.detail.slice(0,80)):'')+'</div>'
         +'</div>';
     }
-    html+='</div>';
+    historyHtml+='</div>';
   } else if(typeof t._history!=='undefined'){
-    html+='<div style="font-size:12px;color:var(--tx3)">No history recorded yet (history starts from v112).</div>';
+    historyHtml='<div style="font-size:12px;color:var(--tx3)">No history recorded yet (history starts from v112).</div>';
   } else {
-    html+='<div style="font-size:12px;color:var(--tx3)">Loading history...</div>';
+    historyHtml='<div style="font-size:12px;color:var(--tx3)">Loading history...</div>';
   }
-  html+='</div>';
 
-  return html;
+  // ── TAB BAR ──────────────────────────────────────────────────
+  // Reuses the same .tabs/.tab classes as the Cards/Table toggle
+  // elsewhere, so this looks consistent with the rest of the app rather
+  // than introducing a one-off style.
+  var mediaBadge=(totalPhotoCount+docsCount)>0?' ('+(totalPhotoCount+docsCount)+')':'';
+  var historyBadge=(t._history&&t._history.length)?' ('+t._history.length+')':'';
+  var tabBar='<div class="tabs" id="taskDetailTabs" style="margin-bottom:14px">'
+    +'<button class="tab'+(activeTab==='details'?' active':'')+'" onclick="switchTaskDetailTab(\'details\')">Details</button>'
+    +'<button class="tab'+(activeTab==='media'?' active':'')+'" onclick="switchTaskDetailTab(\'media\')">Photos &amp; Docs'+mediaBadge+'</button>'
+    +'<button class="tab'+(activeTab==='history'?' active':'')+'" onclick="switchTaskDetailTab(\'history\')">History'+historyBadge+'</button>'
+    +'</div>';
+
+  return tabBar
+    +'<div id="taskDetailPane-details" style="display:'+(activeTab==='details'?'block':'none')+'">'+detailsHtml+'</div>'
+    +'<div id="taskDetailPane-media" style="display:'+(activeTab==='media'?'block':'none')+'">'+mediaHtml+'</div>'
+    +'<div id="taskDetailPane-history" style="display:'+(activeTab==='history'?'block':'none')+'">'+historyHtml+'</div>';
+}
+// Switches tabs by toggling display (not rebuilding HTML) so it's instant
+// and never disturbs any other state in the modal. Remembered on S so a
+// re-render triggered by async data arriving (photos/history loading in)
+// doesn't silently bounce the person back to the Details tab.
+function switchTaskDetailTab(tab){
+  S._taskDetailTab=tab;
+  var tabs=document.querySelectorAll('#taskDetailTabs .tab');
+  var names=['details','media','history'];
+  for(var i=0;i<tabs.length;i++)tabs[i].classList.toggle('active',names[i]===tab);
+  var panes={details:id('taskDetailPane-details'),media:id('taskDetailPane-media'),history:id('taskDetailPane-history')};
+  for(var k in panes){if(panes[k])panes[k].style.display=(k===tab)?'block':'none';}
 }
 var EDIT_TASK={newPhotos:[],newDocs:[],taskID:null};
 function editTask(taskID){
@@ -9756,6 +9804,32 @@ var _photoCache={};
 // render instantly) with OLD Drive-link photos (still need the proxy
 // fetch, same as before) into one unified gallery and one shared
 // prev/next viewer set.
+// Handles an <img> that failed to actually decode/display even though its
+// src looked valid — swaps it for a clean "unavailable" placeholder using
+// real DOM APIs (createElement + textContent), never innerHTML string
+// building. This is deliberate: building HTML by concatenating strings
+// that might contain quotes, then stuffing that into an inline onerror
+// attribute, is exactly what caused visible garbage text in testing.
+// MUST stay a top-level global function: inline onerror="..." attributes
+// resolve identifiers in the page's global scope when the event actually
+// fires, so nesting this inside buildCombinedPhotoGrid would make it
+// invisible to the browser at the moment an image fails to load.
+function photoImgLoadFailed(imgEl){
+  var wrap=imgEl&&imgEl.parentElement;
+  if(!wrap)return;
+  wrap.innerHTML='';
+  wrap.style.borderColor='var(--c-red)';
+  wrap.style.display='flex';
+  wrap.style.alignItems='center';
+  wrap.style.justifyContent='center';
+  var span=document.createElement('span');
+  span.className='material-icons-round';
+  span.style.fontSize='22px';
+  span.style.color='var(--c-red)';
+  span.title='Photo unavailable';
+  span.textContent='broken_image';
+  wrap.appendChild(span);
+}
 function buildCombinedPhotoGrid(oldLinks, newPhotos, idPrefix){
   oldLinks=oldLinks||[];newPhotos=newPhotos||[];
   var total=oldLinks.length+newPhotos.length;
@@ -9771,7 +9845,6 @@ function buildCombinedPhotoGrid(oldLinks, newPhotos, idPrefix){
 
   // NEW photos — render immediately, no spinner needed since the data is
   // already here (unless still mid-upload, tracked via .pending)
-  var BROKEN_PHOTO_HTML='<span class="material-icons-round" style="font-size:22px;color:var(--c-red)" title="Photo unavailable">broken_image</span>';
   for(var n=0;n<newPhotos.length;n++){
     var np=newPhotos[n];
     var uid=idPrefix+'_new'+n;
@@ -9790,13 +9863,19 @@ function buildCombinedPhotoGrid(oldLinks, newPhotos, idPrefix){
         +'<span class="material-icons-round" style="font-size:22px;color:var(--c-red)">error_outline</span>'
         +'</div>';
     } else {
-      // onerror is a second safety net: even if the string LOOKED like a
-      // valid data URI/URL above, if the browser still can't decode it
-      // for any reason, swap to the same clean "unavailable" state
-      // instead of ever showing the native broken-image icon.
+      // onerror calls a real, plain global FUNCTION (photoImgLoadFailed) —
+      // deliberately NOT an inline snippet of concatenated HTML/JS in a
+      // string attribute. A previous version tried to inline a fallback
+      // HTML string directly inside this onerror="..." attribute; that
+      // fallback string itself contained double quotes (class="...",
+      // style="..."), which prematurely closed the surrounding
+      // double-quoted attribute and spilled the rest of the JS out as
+      // literal visible text in the photo tile — exactly the
+      // ";this.parentElement..." garbage text seen in testing. Calling a
+      // named function avoids ever building HTML-inside-an-attribute again.
       html+='<div id="pw_'+uid+'" onclick="openTaskPhotoViewer(\''+idPrefix+'\','+n+')" '
         +'style="width:100px;height:100px;border-radius:10px;overflow:hidden;border:2px solid var(--border);cursor:pointer;background:var(--surface2);flex-shrink:0;display:flex;align-items:center;justify-content:center">'
-        +'<img src="'+np.photoData+'" style="width:100%;height:100%;object-fit:cover;display:block" alt="Photo '+(n+1)+'" onerror="this.parentElement.innerHTML=\''+BROKEN_PHOTO_HTML.replace(/'/g,"\\'")+'\';this.parentElement.style.borderColor=\'var(--c-red)\'">'
+        +'<img src="'+np.photoData+'" style="width:100%;height:100%;object-fit:cover;display:block" alt="Photo '+(n+1)+'" onerror="photoImgLoadFailed(this)">'
         +'</div>';
     }
   }
