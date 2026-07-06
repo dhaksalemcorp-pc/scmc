@@ -1392,7 +1392,7 @@ tbody tr:hover { background: var(--surface2); }
   <!-- SIDEBAR -->
   <nav class="sidebar" id="sidebar">
     <div class="sb-brand">
-      <div class="sb-logo"><span class="material-icons-round mi">account_balance</span></div>
+      <div class="sb-logo"><img id="sbLogoImg" src="" alt="" style="width:100%;height:100%;border-radius:50%;object-fit:cover;display:none"><span class="material-icons-round mi" id="sbLogoIcon">account_balance</span></div>
       <div class="sb-brand-txt">
         <div class="sb-brand-name">Salem Corporation</div>
         <div class="sb-brand-sub">Task Management</div>
@@ -2063,7 +2063,7 @@ tbody tr:hover { background: var(--surface2); }
           </div>
         </div>
       </div>
-      <div class="card mt24">
+      <div class="card mt24" id="calSettingsCard" style="display:none">
         <div class="card-hd"><span class="card-title">&#128197; Google Calendar Integration</span></div>
         <div class="card-bd">
           <p class="c-muted mb16">Connect Commissioner, Admin and HOD meeting schedules to Google Calendar. Add the Google account email here that will host the shared calendar \u2014 this makes the system portable for any organisation adopting it.</p>
@@ -2100,7 +2100,9 @@ tbody tr:hover { background: var(--surface2); }
       <div class="ph">
         <div class="ph-left"><h1>&#128247; Inspection / Meeting Notes</h1><p>Inspection records &amp; meeting notes for all staff</p></div>
         <div class="ph-actions">
-          <button class="btn btn-ghost btn-sm" onclick="plToggleView('form')"><span class="material-icons-round mi">add_circle</span> New Entry</button>
+          <div id="plAdminActions" style="display:contents">
+            <button class="btn btn-ghost btn-sm" onclick="plToggleView('form')"><span class="material-icons-round mi">add_circle</span> New Entry</button>
+          </div>
           <button class="btn btn-ghost btn-sm" onclick="showPlDownloadModal()"><span class="material-icons-round mi">download</span> Download</button>
         </div>
       </div>
@@ -2708,14 +2710,6 @@ tbody tr:hover { background: var(--surface2); }
               <div class="about-feat-card" onclick="go('tracker')" style="display:flex;align-items:flex-start;gap:10px;padding:10px;border-radius:10px;background:var(--surface2);cursor:pointer;transition:transform .15s,box-shadow .15s">
                 <span class="material-icons-round" style="font-size:18px;color:#059669;flex-shrink:0">photo_camera</span>
                 <div><div style="font-size:12.5px;font-weight:700;color:var(--tx1)">Photos &amp; Documents</div><div style="font-size:11px;color:var(--tx3)">Instant evidence, PDF attachments</div></div>
-              </div>
-              <div class="about-feat-card" onclick="go('calendar')" style="display:flex;align-items:flex-start;gap:10px;padding:10px;border-radius:10px;background:var(--surface2);cursor:pointer;transition:transform .15s,box-shadow .15s">
-                <span class="material-icons-round" style="font-size:18px;color:#0ea5e9;flex-shrink:0">event</span>
-                <div><div style="font-size:12.5px;font-weight:700;color:var(--tx1)">Google Calendar Sync</div><div style="font-size:11px;color:var(--tx3)">Two-way meeting scheduling</div></div>
-              </div>
-              <div class="about-feat-card" onclick="go('grievances')" style="display:flex;align-items:flex-start;gap:10px;padding:10px;border-radius:10px;background:var(--surface2);cursor:pointer;transition:transform .15s,box-shadow .15s">
-                <span class="material-icons-round" style="font-size:18px;color:#B45309;flex-shrink:0">gavel</span>
-                <div><div style="font-size:12.5px;font-weight:700;color:var(--tx1)">Grievance Management</div><div style="font-size:11px;color:var(--tx3)">Councilor letters, ATR tracking</div></div>
               </div>
               <div class="about-feat-card" onclick="go('dashboard')" style="display:flex;align-items:flex-start;gap:10px;padding:10px;border-radius:10px;background:var(--surface2);cursor:pointer;transition:transform .15s,box-shadow .15s">
                 <span class="material-icons-round" style="font-size:18px;color:#7c3aed;flex-shrink:0">query_stats</span>
@@ -3375,6 +3369,11 @@ tbody tr:hover { background: var(--surface2); }
 <div id="toasts"></div>
 <script>
 var LS={get:function(k){try{return localStorage.getItem(k);}catch(e){return null;}},set:function(k,v){try{localStorage.setItem(k,v);}catch(e){}},del:function(k){try{localStorage.removeItem(k);}catch(e){}}};
+// ── FEATURE TOGGLES ─────────────────────────────────────────────
+// Calendar and Grievance are fully built (frontend + backend) but not in
+// active use yet — flipped off here rather than deleted so both can be
+// switched back on later with a one-line change instead of rebuilding.
+var FEATURES={calendar:false, grievance:false};
 var S={token:null,user:null,lookup:null,tasks:[],users:[],filtered:[],drillFilter:'',page:'dashboard',allowedPages:[],theme:LS.get('sc-theme')||'light',charts:{},exportCtx:'tracker',aiTasks:[],selPhotos:[],driveLinks:[],puDocs:[],sortCol:'updatedAt',sortDir:-1,taskWindow:90,showCompleted:false,showClosed:false,searchQ:'',_trkMeta:null,_deptDrill:null};
 
 // ─── STALE-WHILE-REVALIDATE (instant display) ──────────────────
@@ -3768,6 +3767,8 @@ function demoFn(fn,args){
     return{success:true};
   }
   if(fn==='serverUploadPhoto')return{success:true,url:'https://drive.google.com/file/d/demo_'+Date.now()+'/view',fileId:'demo_'+Date.now()};
+  if(fn==='serverAddTaskPhoto')return{success:true,photoID:'TPH'+Date.now()};
+  if(fn==='serverAddTaskPhotosBatch'){var bd=args[1]||{};var n=(bd.photos||[]).length;var ids=[];for(var bi=0;bi<n;bi++)ids.push('TPH'+(Date.now()+bi));return{success:true,photoIDs:ids};}
   if(fn==='serverGetActivityLogs')return{success:true,data:[{username:'admin',action:'LOGIN',details:'User logged in successfully',timestamp:new Date().toISOString()},{username:'admin',action:'CREATE_TASK',details:'Task TSK2406001 created',timestamp:new Date().toISOString()}]};
   if(fn==='serverInitDatabase')return{success:true,message:'Database initialized successfully'};
   if(fn==='serverGetLogo'){var lv=LS.get('sc-logo')||'';return{success:true,value:lv};}
@@ -3994,7 +3995,7 @@ function applyRoleNav(role){
   show('snav-commview', isAdmin);
   show('snav-settings', isAdminOnly);
   show('snav-reports', isAdminOnly);
-  show('snav-grievances', isAdmin||isHOD||isSupervision);
+  show('snav-grievances', FEATURES.grievance&&(isAdmin||isHOD||isSupervision));
   show('snav-chgpw', true);
   show('snav-photolog', true); // All roles can view Notes/Photo Log
   show('snav-dashboard', true);
@@ -4013,6 +4014,7 @@ function applyRoleNav(role){
   // (included in serverGetLookupData since v99) so no extra network call needed.
   // If lookup isn't loaded yet for some reason, fall back to hiding the tab.
   (function(){
+    if(!FEATURES.calendar){ show('snav-calendar', false); return; }
     var rolesEnabled=(S.lookup&&S.lookup.calRolesEnabled)||[];
     var calOwnerEmail=(S.lookup&&S.lookup.calOwnerEmail)||'';
     // Hide Calendar entirely if no email is configured — calling the Google
@@ -4025,22 +4027,23 @@ function applyRoleNav(role){
   })();
 
   if(isOfficer){
-    S.allowedPages=['dashboard','tracker','photolog','grievances','about'];
+    S.allowedPages=['dashboard','tracker','photolog','about'];
   } else if(isHOD){
-    S.allowedPages=['dashboard','tracker','photolog','grievances','about'];
+    S.allowedPages=['dashboard','tracker','photolog','about'];
   } else if(isSupervision){
     // Supervision: dedicated dashboard for monitoring individual officers,
     // view + update tasks for assigned departments only (no reassignment),
     // manual Task Entry access (own department only — enforced server-side),
     // and full Notes create/delete access (enforced server-side).
-    S.allowedPages=['dashboard','taskEntry','tracker','photolog','grievances','about'];
+    S.allowedPages=['dashboard','taskEntry','tracker','photolog','about'];
   } else if(isAdminOnly){
-    S.allowedPages=['dashboard','taskEntry','tracker','commview','users','settings','reports','photolog','grievances','about'];
+    S.allowedPages=['dashboard','taskEntry','tracker','commview','users','settings','reports','photolog','about'];
   } else {
     // Commissioner: full visibility into tasks and analytics, but
     // User Management, Settings, and Reports remain Admin-only.
-    S.allowedPages=['dashboard','taskEntry','tracker','commview','photolog','grievances','about'];
+    S.allowedPages=['dashboard','taskEntry','tracker','commview','photolog','about'];
   }
+  if(FEATURES.grievance&&S.allowedPages.indexOf('grievances')===-1) S.allowedPages.push('grievances');
 
   var ad=id('adminDash'),od=id('officerDash'),hd=id('hodDash'),spd=id('supDash');
   if(isOfficer){
@@ -4676,6 +4679,7 @@ function applyOfficerDashData(r){
 }
 
 function renderOfficerGrievancesPlaceholder(){
+  if(!FEATURES.grievance) return;
   var card=id('offGrievanceCard'),wrap=id('offGrievanceList');
   if(!card||!wrap)return;
   card.style.display='block';
@@ -5559,6 +5563,30 @@ function renderCards(tasks){
     return;
   }
 
+  // ── PAGINATION ────────────────────────────────────────────────
+  // Building a full DOM card for every task on every render is fine at
+  // a few dozen tasks, but as tasks accumulate over months this becomes
+  // the main source of lag (thousands of DOM nodes rebuilt on every
+  // filter tweak). Render one page at a time with a "Load more" control
+  // instead — the count above still always reflects the TRUE total.
+  // Only resets back to page 1 when the actual result SET changes size
+  // (a new filter/search/tab), not on every re-render — so an in-place
+  // update (e.g. a photo upload finishing) never collapses what the
+  // person already scrolled through back down to the first page.
+  var TRACKER_PAGE_SIZE=50;
+  if(tasks.length!==S._trackerLastTotal){ S._trackerShown=TRACKER_PAGE_SIZE; }
+  S._trackerLastTotal=tasks.length;
+  function appendLoadMoreIfNeeded(list, shownCount){
+    if(list.length<=shownCount) return;
+    var remaining=list.length-shownCount;
+    var more=document.createElement('div');
+    more.className='card';
+    more.style.cssText='text-align:center;padding:14px';
+    more.innerHTML='<button class="btn btn-ghost btn-sm"><span class="material-icons-round mi">expand_more</span> Load '+Math.min(TRACKER_PAGE_SIZE,remaining)+' more &nbsp;(showing '+shownCount+' of '+list.length+')</button>';
+    more.onclick=function(){ S._trackerShown=(S._trackerShown||TRACKER_PAGE_SIZE)+TRACKER_PAGE_SIZE; renderCards(list); };
+    grid.appendChild(more);
+  }
+
   if(isHOD){
     var myTasks=[], deptTasks=[];
     for(var i=0;i<tasks.length;i++){
@@ -5618,19 +5646,23 @@ function renderCards(tasks){
 
   if(isSupervision){
     // Flat list, scoped to assigned departments — view + update only, no reassign
-    for(var i=0;i<tasks.length;i++){
+    var supShown=Math.min(S._trackerShown||TRACKER_PAGE_SIZE, tasks.length);
+    for(var i=0;i<supShown;i++){
       try{
         grid.appendChild(makeTaskCard(tasks[i], false, false, false));
       }catch(e){ console.error('Card error row '+i, e); }
     }
+    appendLoadMoreIfNeeded(tasks, supShown);
     return;
   }
 
-  for(var i=0;i<tasks.length;i++){
+  var shown=Math.min(S._trackerShown||TRACKER_PAGE_SIZE, tasks.length);
+  for(var i=0;i<shown;i++){
     try{
       grid.appendChild(makeTaskCard(tasks[i], isAdmin, false, false));
     }catch(e){ console.error('Card error row '+i, e); }
   }
+  appendLoadMoreIfNeeded(tasks, shown);
 
   updateBulkBar();
 }
@@ -5665,6 +5697,13 @@ function buildHODRows(tasks, canReassign){
 }
 function renderKanban(tasks){
   var board=id('kanban');if(!board)return;
+  // The card view and kanban view are always re-rendered together from
+  // every call site, but only one is ever visible at a time. Skip the
+  // (identical-cost) kanban rebuild entirely while it's hidden — switchView()
+  // already forces a fresh render with the current task list the moment
+  // someone switches to it, so nothing is ever stale when it becomes visible.
+  var kv=id('viewKanban');
+  if(kv && kv.style.display==='none') return;
   // Clear safely
   while(board.firstChild)board.removeChild(board.firstChild);
 
@@ -7151,13 +7190,17 @@ function submitPhotoUpdate(){
       uploadPendingDocs();
       return;
     }
-    runPool();
-
-    // STEP 3 — upload photos using a 4-at-a-time pool: compressed, stored
-    // directly (no Drive, no proxy fetch needed to view them later), and
-    // fast since several upload concurrently instead of one-by-one.
-    var POOL_SIZE=4,nextIdx=0;
-    function processOnePhoto(idx){
+    // STEP 3 — compress every photo client-side (CPU work, essentially free
+    // compared to network time) then upload the WHOLE batch in ONE network
+    // call. This is the key fix for slow uploads: previously each photo
+    // was its own round-trip to Apps Script, and every Apps Script call
+    // pays a fixed ~1-3s "spin up + open the spreadsheet" cost on top of
+    // the actual work — with 6-8 photos that fixed cost was paid 6-8
+    // times even running 4-at-a-time. Compressing in parallel and sending
+    // one combined request pays that fixed cost exactly once, no matter
+    // how many photos are attached.
+    var compressedB64=new Array(pickedPhotos.length);
+    function compressOne(idx){
       return new Promise(function(resolve){
         var file=pickedPhotos[idx];
         var photoEntry=localPhotoEntries[idx];
@@ -7180,86 +7223,66 @@ function submitPhotoUpdate(){
               c2.getContext('2d').drawImage(img,0,0,c2.width,c2.height);
               b64=c2.toDataURL('image/jpeg',0.75);
             }
-            gasCall('serverAddTaskPhoto',S.token,{taskID:taskID,photo:b64}).then(function(pr){
-              if(pr&&pr.success){
-                photoEntry.photoID=pr.photoID;
-                photoEntry.photoData=b64;
-                photoEntry.pending=false;
-                photoEntry.failed=false;
-              } else {
-                photoEntry.pending=false;
-                photoEntry.failed=true;
-                photoEntry.failMessage=(pr&&pr.message)||'';
-              }
-              if(typeof renderCards==='function'&&S.filtered)renderCards(S.filtered);
-              resolve();
-            });
+            compressedB64[idx]=b64;
+            photoEntry.photoData=b64; // swap local preview to the final compressed image
+            resolve();
           };
-          img.onerror=function(){photoEntry.pending=false;photoEntry.failed=true;resolve();};
+          img.onerror=function(){compressedB64[idx]=null;resolve();};
           img.src=ev.target.result;
         };
-        reader.onerror=function(){photoEntry.pending=false;photoEntry.failed=true;resolve();};
+        reader.onerror=function(){compressedB64[idx]=null;resolve();};
         reader.readAsDataURL(file);
       });
     }
-    function onAllPhotosSettled(){
-      if(localTask)localTask._photosSaving=false;
-      var anyFailed=localPhotoEntries.some(function(p){return p.failed;});
-      if(anyFailed){
+    function uploadCompressedBatch(){
+      var validB64=[];
+      for(var vi=0;vi<compressedB64.length;vi++){if(compressedB64[vi])validB64.push(compressedB64[vi]);}
+      if(!validB64.length){
+        if(localTask)localTask._photosSaving=false;
         setUploadingUI(false);
-        toastWithRetry('One or more photos could not be uploaded \u2014 likely a dropped connection. Tap Retry to try just the failed ones again.',retryFailedPhotosOnly);
-      } else {
-        uploadPendingDocs();
+        toastWithRetry('Photos could not be processed on this device. Tap Retry to try again.',retryPhotoBatch);
+        return;
       }
-    }
-    function runPool(){
-      var active=0,completed=0,total=pickedPhotos.length;
-      function launchNext(){
-        if(nextIdx>=total){
-          if(active===0)onAllPhotosSettled();
-          return;
+      gasCall('serverAddTaskPhotosBatch',S.token,{taskID:taskID,photos:validB64}).then(function(pr){
+        if(localTask)localTask._photosSaving=false;
+        if(pr&&pr.success){
+          for(var ei=0;ei<localPhotoEntries.length;ei++){localPhotoEntries[ei].pending=false;localPhotoEntries[ei].failed=false;}
+          if(typeof renderCards==='function'&&S.filtered)renderCards(S.filtered);
+          uploadPendingDocs();
+        } else {
+          for(var ej=0;ej<localPhotoEntries.length;ej++){localPhotoEntries[ej].pending=false;localPhotoEntries[ej].failed=true;}
+          if(typeof renderCards==='function'&&S.filtered)renderCards(S.filtered);
+          setUploadingUI(false);
+          toastWithRetry('One or more photos could not be uploaded \u2014 likely a dropped connection. Tap Retry to try again \u2014 nothing has been uploaded twice.',retryPhotoBatch);
         }
-        var myIdx=nextIdx++;
-        active++;
-        processOnePhoto(myIdx).then(function(){
-          active--;completed++;doneItems++;updateProgress();
-          if(completed>=total)onAllPhotosSettled();
-          else launchNext();
-        });
-      }
-      var startCount=Math.min(POOL_SIZE,total);
-      for(var s=0;s<startCount;s++)launchNext();
+      });
     }
-
-    // Re-attempts only the photos that genuinely failed (not the ones that
-    // already succeeded) — avoids ever re-uploading a photo that's already
-    // safely saved, which is exactly the duplication problem this whole
-    // feature exists to prevent.
-    function retryFailedPhotosOnly(){
+    // Retries resend the ALREADY-COMPRESSED batch as-is — no need to
+    // re-decode/re-compress images that were already processed fine.
+    function retryPhotoBatch(){
       setUploadingUI(true);
-      var failedIndexes=[];
-      for(var fi=0;fi<localPhotoEntries.length;fi++){if(localPhotoEntries[fi].failed)failedIndexes.push(fi);}
-      if(!failedIndexes.length){uploadPendingDocs();return;}
-      var fNext=0;
-      function launchFailedRetry(){
-        if(fNext>=failedIndexes.length){
-          var stillFailed=localPhotoEntries.some(function(p){return p.failed;});
-          if(stillFailed){
-            setUploadingUI(false);
-            toastWithRetry('Still having trouble uploading. Check your connection and tap Retry.',retryFailedPhotosOnly);
-          } else {
-            uploadPendingDocs();
-          }
-          return;
-        }
-        var idx=failedIndexes[fNext++];
-        localPhotoEntries[idx].failed=false;
-        localPhotoEntries[idx].pending=true;
-        if(typeof renderCards==='function'&&S.filtered)renderCards(S.filtered);
-        processOnePhoto(idx).then(function(){doneItems++;updateProgress();launchFailedRetry();});
-      }
-      launchFailedRetry();
+      for(var ri=0;ri<localPhotoEntries.length;ri++){localPhotoEntries[ri].failed=false;localPhotoEntries[ri].pending=true;}
+      if(typeof renderCards==='function'&&S.filtered)renderCards(S.filtered);
+      uploadCompressedBatch();
     }
+    // Compress with a small concurrency cap so several large camera
+    // photos aren't all decoded on the UI thread at the exact same instant.
+    var COMPRESS_POOL=3,cNext=0,cActive=0,cCompleted=0,cTotal=pickedPhotos.length;
+    function launchNextCompress(){
+      if(cNext>=cTotal){
+        if(cActive===0)uploadCompressedBatch();
+        return;
+      }
+      var myIdx=cNext++;
+      cActive++;
+      compressOne(myIdx).then(function(){
+        cActive--;cCompleted++;doneItems++;updateProgress();
+        if(cCompleted>=cTotal)uploadCompressedBatch();
+        else launchNextCompress();
+      });
+    }
+    var compStart=Math.min(COMPRESS_POOL,cTotal);
+    for(var cs=0;cs<compStart;cs++)launchNextCompress();
   });
 }
 function uploadPhotosSeq(taskID,photos,idx,urls,done){
@@ -7531,8 +7554,16 @@ function saveAllAI(){
 
   var saved=0,total=tasks.length;
   showLoader('Saving '+total+' tasks...');
+  function finishSaveAll(){
+    // Always release the button + busy flag once the save run is over,
+    // whether every task succeeded or not — otherwise the button is left
+    // disabled from this run and the NEXT AI extraction opens with
+    // "Save All Validated" permanently greyed out (the bug reported).
+    if(saveBtn){saveBtn.disabled=false;saveBtn.style.opacity='1';}
+    btnRelease('saveAllAI',null);
+  }
   function saveNext(idx){
-    if(idx>=tasks.length){hideLoader();toast('Saved '+saved+'/'+total+' tasks!','ok');clearAI();go('tracker');return;}
+    if(idx>=tasks.length){hideLoader();toast('Saved '+saved+'/'+total+' tasks!','ok');finishSaveAll();clearAI();go('tracker');return;}
     gasCall('serverCreateTask',S.token,tasks[idx]).then(function(r){if(r&&r.success)saved++;saveNext(idx+1);});
   }
   saveNext(0);
@@ -7989,7 +8020,16 @@ function clearMultiOfficerList(){
 }
 
 // ── PHOTO LOG ────────────────────────────────────────────────
-var PL={photos:[],pdfs:[],entries:[],editPhotos:[],editExistingPhotos:[],editRemovedPhotoIDs:[],editNoteID:null,editPdfs:[],editExistingAttachments:[],editRemovedAttachmentIDs:[],isAdmin:false,sortOrder:'desc',window:0};
+var PL={photos:[],pdfs:[],entries:[],editPhotos:[],editExistingPhotos:[],editRemovedPhotoIDs:[],editNoteID:null,editPdfs:[],editExistingAttachments:[],editRemovedAttachmentIDs:[],isAdmin:false,sortOrder:'desc',window:0,
+  // THE FIX: these four were read as arrays/strings everywhere below
+  // (PL.filterTypes.length, PL.filterZones.indexOf, etc.) but were never
+  // declared here. The very first call to plPopulateFilters() hit
+  // PL.filterTypes.length on undefined and threw — which silently aborted
+  // the rest of that render pass, including the plRenderCards() call right
+  // after it. That's why the list, search, zone/department dropdown, and
+  // month dropdown all appeared broken: one uncaught error was killing the
+  // whole Notes render every time the page loaded.
+  filterTypes:[],filterZones:[],filterMonth:'',filterType:'',filterZone:'',searchQ:'',deptFilter:''};
 function plCheckAdmin(){
   // Add/Edit/Delete notes: Admin, Commissioner, HOD, Supervision.
   // Everyone else (Officers etc.) is read-only.
@@ -8169,7 +8209,12 @@ function loadPhotoLog(){
     hideLoader();
     if(r&&r.success){
       PL.entries=r.data||[];
-      plPopulateFilters(PL.entries);
+      // Defensive: a bug in filter/dropdown population must never be able
+      // to silently prevent the note list itself from rendering (this is
+      // exactly how the search/dropdown/month bug was hiding the whole
+      // list before) — isolate it so the cards always render regardless.
+      try{ plPopulateFilters(PL.entries); }
+      catch(filterErr){ console.error('plPopulateFilters error', filterErr); }
       var totalCount=r.totalCount||PL.entries.length;
       // Update info label — shows "X of Y total" when filtered
       var info=id('plWindowInfo');
@@ -9843,8 +9888,9 @@ function plToggleSort(){
   var icon=id('plSortIcon'),label=id('plSortLabel');
   if(icon)icon.textContent=PL.sortOrder==='asc'?'arrow_upward':'arrow_downward';
   if(label)label.textContent=PL.sortOrder==='asc'?'Oldest First':'Newest First';
-  // Re-apply current filter (if any) so sort respects whatever's currently shown
-  plFilter();
+  // Re-render with the current entries — plRenderCards applies all the
+  // real active filters (type/zone/month/search) itself from PL state.
+  plRenderCards(PL.entries);
 }
 function plSortEntries(entries){
   var dir=(PL.sortOrder==='asc')?1:-1; // default desc (newest first)
@@ -10628,7 +10674,8 @@ function doResetPassword(){
 function loadSettings(){
   if(!S.lookup){loadLookup().then(function(){renderSettings();});return;}
   renderSettings();
-  loadCalendarSettingsUI();
+  show('calSettingsCard', FEATURES.calendar);
+  if(FEATURES.calendar) loadCalendarSettingsUI();
   gasCall('serverGetActivityLogs',S.token,15).then(function(r){
     var el=id('actLogs');if(!el)return;
     if(!r||!r.success||!r.data){el.innerHTML='No logs available.';return;}
