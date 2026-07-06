@@ -1976,6 +1976,7 @@ tbody tr:hover { background: var(--surface2); }
       </div>
       <div class="kpi-grid mb16">
         <div class="kpi blue"><div class="kpi-stripe"></div><div class="kpi-icon-wrap"><span class="material-icons-round mi">assignment</span></div><div class="kpi-val" id="cv-total">&#8212;</div><div class="kpi-lbl">Total Tasks</div></div>
+        <div class="kpi orange"><div class="kpi-stripe"></div><div class="kpi-icon-wrap"><span class="material-icons-round mi">pending_actions</span></div><div class="kpi-val" id="cv-pending">&#8212;</div><div class="kpi-lbl">Pending</div></div>
         <div class="kpi green"><div class="kpi-stripe"></div><div class="kpi-icon-wrap"><span class="material-icons-round mi">check_circle</span></div><div class="kpi-val" id="cv-done">&#8212;</div><div class="kpi-lbl">Completed</div></div>
         <div class="kpi red"><div class="kpi-stripe"></div><div class="kpi-icon-wrap"><span class="material-icons-round mi">warning</span></div><div class="kpi-val" id="cv-over">&#8212;</div><div class="kpi-lbl">Overdue</div></div>
         <div class="kpi gold"><div class="kpi-stripe"></div><div class="kpi-icon-wrap"><span class="material-icons-round mi">percent</span></div><div class="kpi-val" id="cv-rate">&#8212;</div><div class="kpi-lbl">Completion %</div></div>
@@ -3374,7 +3375,7 @@ tbody tr:hover { background: var(--surface2); }
 <div id="toasts"></div>
 <script>
 var LS={get:function(k){try{return localStorage.getItem(k);}catch(e){return null;}},set:function(k,v){try{localStorage.setItem(k,v);}catch(e){}},del:function(k){try{localStorage.removeItem(k);}catch(e){}}};
-var S={token:null,user:null,lookup:null,tasks:[],users:[],filtered:[],drillFilter:'',page:'dashboard',allowedPages:[],theme:LS.get('sc-theme')||'light',charts:{},exportCtx:'tracker',aiTasks:[],selPhotos:[],driveLinks:[],puDocs:[],sortCol:'updatedAt',sortDir:-1,taskWindow:90,showCompleted:false,showClosed:false,searchQ:'',_trkMeta:null};
+var S={token:null,user:null,lookup:null,tasks:[],users:[],filtered:[],drillFilter:'',page:'dashboard',allowedPages:[],theme:LS.get('sc-theme')||'light',charts:{},exportCtx:'tracker',aiTasks:[],selPhotos:[],driveLinks:[],puDocs:[],sortCol:'updatedAt',sortDir:-1,taskWindow:90,showCompleted:false,showClosed:false,searchQ:'',_trkMeta:null,_deptDrill:null};
 
 // ─── STALE-WHILE-REVALIDATE (instant display) ──────────────────
 // Saves the last-loaded data in localStorage so the NEXT visit renders
@@ -3867,7 +3868,7 @@ function doLogin(){
 // user's task list ("refreshing…") until their own data arrives —
 // which is exactly wrong for an officer following an admin session.
 function resetSessionState(){
-  S.tasks=[];S.filtered=[];S.drillFilter='';
+  S.tasks=[];S.filtered=[];S.drillFilter='';S._deptDrill=null;
   S.preloadedDash=null;S.preloadedTasks=null;
   S.showCompleted=false;S.showClosed=false;S.taskWindow=90;S.searchQ='';
   if(typeof TRK_COMP_ON!=='undefined')TRK_COMP_ON=false;S._fullList=null;S._trkMeta=null;
@@ -4798,19 +4799,18 @@ function buildZoneChart(zs){
     plugins:{legend:{position:'bottom',labels:{font:{size:11},padding:10}}}}});
 }
 function deptDrillTo(dept,status){
+  // Persist drill intent — trkApplyResponse re-applies after loadTasks returns
+  S._deptDrill={dept:dept,status:status};
+  if(status==='Completed'||status==='Closed'){S.showCompleted=true;S.showClosed=true;}
+  else{S.showCompleted=false;S.showClosed=false;}
   go('tracker');
-  setTimeout(function(){
-    var fd=id('fDept');if(fd)fd.value=dept;
-    var fs=id('fStatus');if(fs)fs.value=status||'';
-    // If clicking "Pending" chip, show all non-completed tasks for this dept
-    if(status==='Pending'){
-      S.showCompleted=false;S.showClosed=false;
-    } else if(status==='Completed'){
-      S.showCompleted=true;S.showClosed=true;
-    }
-    filterTasks();
-    var content=id('content');if(content)content.scrollTop=0;
-  },150);
+}
+function applyDeptDrill(){
+  if(!S._deptDrill)return;
+  var fd=id('fDept');if(fd)fd.value=S._deptDrill.dept;
+  var fs=id('fStatus');if(fs)fs.value=S._deptDrill.status||'';
+  filterTasks();
+  var content=id('content');if(content)content.scrollTop=0;
 }
 function buildDeptBreakdown(ds){
   var el=id('deptBreakdown');if(!el)return;
@@ -5138,7 +5138,8 @@ function trkApplyResponse(r,fn,fromPreload){
     if(!r.includeCompleted)swrSave('tasks',S.tasks);
     var bb=id('bulkBar');if(bb){bb.style.display='none';bb.classList.add('dn');}
     var chkAll=id('chkAll');if(chkAll){chkAll.checked=false;chkAll.indeterminate=false;}
-    if(S.drillFilter) applyDrillFilter();
+    if(S._deptDrill){applyDeptDrill();S._deptDrill=null;}
+    else if(S.drillFilter){applyDrillFilter();}
     else{renderTable(S.filtered);renderKanban(S.filtered);updateTaskCount();}
     if(advFilterOpen) populateOfficerFilter();
     // Green chip active: show ONLY the completed tasks (sign-off queue)
@@ -7716,8 +7717,10 @@ function renderCommViewForDept(dept){
     if(tasks[i].status==='Completed'||tasks[i].status==='Closed')completed++;
     if(tasks[i].isOverdue)overdue++;
   }
+  var pending2=total-completed;
   var rate=total>0?Math.round(completed/total*100):0;
   var kv=id('cv-total');if(kv)kv.textContent=total;
+  var kp2=id('cv-pending');if(kp2)kp2.textContent=pending2;
   var kd=id('cv-done');if(kd)kd.textContent=completed;
   var ko=id('cv-over');if(ko)ko.textContent=overdue;
   var kr=id('cv-rate');if(kr)kr.textContent=rate+'%';
@@ -8104,13 +8107,13 @@ function plPopulateFilters(entries){
 }
 function plSetSearch(v){
   PL.searchQ=(v||'').trim().toLowerCase();
-  var ac=(PL.filterTypes.length>0||PL.filterZones.length>0||PL.filterMonth||PL.searchQ)?1:0;
+  var ac=((PL.filterTypes&&PL.filterTypes.length>0)||(PL.filterZones&&PL.filterZones.length>0)||PL.filterMonth||PL.searchQ)?1:0;
   var af=id('plActiveFilters');if(af)af.style.display=ac?'':'none';
   plRenderCards(PL.entries);
 }
 function plApplyFilters(){
   PL.filterMonth=(id('plFilterMonth')||{value:''}).value;
-  var ac=(PL.filterTypes.length>0||PL.filterZones.length>0||PL.filterMonth||PL.searchQ)?1:0;
+  var ac=((PL.filterTypes&&PL.filterTypes.length>0)||(PL.filterZones&&PL.filterZones.length>0)||PL.filterMonth||PL.searchQ)?1:0;
   var af=id('plActiveFilters');if(af)af.style.display=ac?'':'none';
   plRenderCards(PL.entries);
 }
@@ -8376,6 +8379,8 @@ function plToggleView(view){
     }
   } else {
     if(fv)fv.style.display='none';
+    // Re-populate filters and re-render when switching to list view
+    if(PL.entries&&PL.entries.length>0){plPopulateFilters(PL.entries);}
     if(lv)lv.style.display='block';
     if(!PL.entries||!PL.entries.length){
       showLoader('Loading notes...');
