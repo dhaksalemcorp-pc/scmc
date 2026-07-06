@@ -1930,6 +1930,20 @@ tbody tr:hover { background: var(--surface2); }
           <button class="btn btn-ghost btn-sm" id="sortUpdBtn" onclick="sortBy('updatedAt')" style="font-size:11px;padding:3px 8px" title="Newest updates first — tap to reverse">Updated <span id="sort-updatedAt"> ▼</span></button>
         </div>
       </div>
+      <!-- QUICK FILTERS — one-tap access to the most common views, so
+           people don't have to open the Filters panel and set multiple
+           dropdowns just to see "what's overdue" or "what's mine".
+           Reuses the exact same .filt-btn classes/colors as the Filters
+           panel's own Status/Priority chips for visual consistency, and
+           quickFilter() drives those SAME underlying fields, so opening
+           the Filters panel afterward always shows the true current state
+           — never out of sync with what a quick chip set. -->
+      <div id="quickFilterRow" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">
+        <button class="filt-btn" data-qf="mine" onclick="quickFilter('mine')"><span class="material-icons-round mi" style="font-size:14px;vertical-align:-2px">person</span> My Tasks</button>
+        <button class="filt-btn filt-btn-danger" data-qf="overdue" onclick="quickFilter('overdue')"><span class="material-icons-round mi" style="font-size:14px;vertical-align:-2px">warning</span> Overdue</button>
+        <button class="filt-btn filt-btn-high" data-qf="highpri" onclick="quickFilter('highpri')"><span class="material-icons-round mi" style="font-size:14px;vertical-align:-2px">priority_high</span> High Priority</button>
+        <button class="filt-btn" data-qf="review" onclick="quickFilter('review')"><span class="material-icons-round mi" style="font-size:14px;vertical-align:-2px">rate_review</span> Pending Review</button>
+      </div>
       <!-- UNIVERSAL SEARCH BAR — always visible, no filter panel needed -->
       <div style="position:relative;margin-bottom:12px">
         <span class="material-icons-round" style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--tx3);font-size:18px;pointer-events:none">search</span>
@@ -3374,7 +3388,7 @@ var LS={get:function(k){try{return localStorage.getItem(k);}catch(e){return null
 // active use yet — flipped off here rather than deleted so both can be
 // switched back on later with a one-line change instead of rebuilding.
 var FEATURES={calendar:false, grievance:false};
-var S={token:null,user:null,lookup:null,tasks:[],users:[],filtered:[],drillFilter:'',page:'dashboard',allowedPages:[],theme:LS.get('sc-theme')||'light',charts:{},exportCtx:'tracker',aiTasks:[],selPhotos:[],driveLinks:[],puDocs:[],sortCol:'updatedAt',sortDir:-1,taskWindow:90,showCompleted:false,showClosed:false,searchQ:'',_trkMeta:null,_deptDrill:null};
+var S={token:null,user:null,lookup:null,tasks:[],users:[],filtered:[],drillFilter:'',page:'dashboard',allowedPages:[],theme:LS.get('sc-theme')||'light',charts:{},exportCtx:'tracker',aiTasks:[],selPhotos:[],driveLinks:[],puDocs:[],sortCol:'updatedAt',sortDir:-1,taskWindow:90,showCompleted:false,showClosed:false,searchQ:'',_trkMeta:null,_deptDrill:null,_qfMine:false};
 
 // ─── STALE-WHILE-REVALIDATE (instant display) ──────────────────
 // Saves the last-loaded data in localStorage so the NEXT visit renders
@@ -5293,9 +5307,11 @@ function filterTasks(){
   var zone=V('fZone'),dept=V('fDept'),officer=V('fOfficer');
   var status=V('fStatus'),priority=V('fPri'),source=V('fSource');
   var dueFrom=V('fDueFrom'),dueTo=V('fDueTo');
+  var myUID=S.user?S.user.userID:'',myName=S.user?S.user.name:'';
   S.filtered=[];
   for(var i=0;i<S.tasks.length;i++){
     var t=S.tasks[i];
+    if(S._qfMine&&!(t.officerID===myUID||t.officerName===myName))continue;
     if(zone&&t.zone!==zone)continue;
     if(dept&&t.department!==dept)continue;
     if(officer&&t.officerName!==officer)continue;
@@ -5317,6 +5333,7 @@ function filterTasks(){
   applyCurrentSort();
   // Show active filter summary
   var active=[];
+  if(S._qfMine)active.push('My Tasks');
   if(zone)active.push(zone);if(dept)active.push(dept);if(officer)active.push(officer);
   if(status)active.push(status);if(priority)active.push(priority);if(source)active.push(source);
   if(dueFrom)active.push('From '+dueFrom);if(dueTo)active.push('To '+dueTo);if(search)active.push('"'+search+'"');
@@ -5331,6 +5348,7 @@ function filterTasks(){
   var badge=id('filterCountBadge');
   if(badge){badge.textContent=active.length+' active';badge.style.display=active.length>0?'':'none';}
   renderTable(S.filtered);renderKanban(S.filtered);updateTaskCount();
+  syncQuickFilterRow();
 }
 
 // Applies S.sortCol/S.sortDir to S.filtered in-place — called from
@@ -5375,12 +5393,54 @@ function toggleChip(btn,hiddenId){
   var hidden=id(hiddenId);if(hidden)hidden.value=btn.dataset.val||'';
   filterTasks();
 }
+// One-tap quick filters. Rather than maintaining a separate copy of
+// filter state, these drive the EXACT SAME hidden fields (fStatus, fPri)
+// and chip buttons the Filters panel already uses — found via
+// data-val and clicked programmatically — so the two UIs can never drift
+// out of sync with each other. "My Tasks" is the one exception since
+// there's no existing filter dimension for "assigned to me"; it uses its
+// own S._qfMine flag instead.
+function quickFilter(kind){
+  if(kind==='mine'){
+    S._qfMine=!S._qfMine;
+    filterTasks();
+    return;
+  }
+  var groupId,targetVal;
+  if(kind==='overdue'){groupId='statusChips';targetVal='Overdue';}
+  else if(kind==='review'){groupId='statusChips';targetVal='Review Pending';}
+  else if(kind==='highpri'){groupId='priorityChips';targetVal='High';}
+  else return;
+  var group=id(groupId);if(!group)return;
+  var current=id(groupId==='statusChips'?'fStatus':'fPri');
+  var alreadyActive=current&&current.value===targetVal;
+  var wantVal=alreadyActive?'':targetVal; // tapping the same quick filter again clears it
+  var targetBtn=null;
+  var btns=group.querySelectorAll('.filt-btn');
+  for(var i=0;i<btns.length;i++){if((btns[i].dataset.val||'')===wantVal){targetBtn=btns[i];break;}}
+  if(targetBtn)toggleChip(targetBtn,groupId==='statusChips'?'fStatus':'fPri');
+}
+// Keeps the quick-filter row's own active/inactive appearance correct
+// regardless of WHAT changed the underlying filters — a quick chip tap,
+// the Filters panel's own chips, or Clear Filters. Called at the end of
+// filterTasks() so it's always in sync with true current state.
+function syncQuickFilterRow(){
+  var row=id('quickFilterRow');if(!row)return;
+  var status=V('fStatus'),pri=V('fPri');
+  var map={mine:!!S._qfMine,overdue:status==='Overdue',highpri:pri==='High',review:status==='Review Pending'};
+  var btns=row.querySelectorAll('[data-qf]');
+  for(var i=0;i<btns.length;i++){
+    var k=btns[i].dataset.qf;
+    btns[i].classList.toggle('active',!!map[k]);
+  }
+}
 function clearFilters(){
   var fields=['fZone','fDept','fOfficer','fStatus','fPri','fSource','fDueFrom','fDueTo','fSearch'];
   for(var i=0;i<fields.length;i++){var el=id(fields[i]);if(el)el.value='';}
   // Also clear the always-visible universal search bar
   var usBar=id('trkUniversalSearch');if(usBar)usBar.value='';
   var clrBtn=id('trkSearchClear');if(clrBtn)clrBtn.style.display='none';
+  S._qfMine=false;
   // Reset all chip groups to "All"
   var allChips=document.querySelectorAll('.filter-chip,.filt-btn');
   for(var i=0;i<allChips.length;i++){
@@ -5389,6 +5449,7 @@ function clearFilters(){
   }
   S.filtered=S.tasks.slice();
   renderTable(S.filtered);renderKanban(S.filtered);updateTaskCount();
+  syncQuickFilterRow();
   var fs=id('filterSummary');if(fs)fs.classList.add('dn');
   var badge=id('filterCountBadge');if(badge)badge.style.display='none';
 }
@@ -5510,6 +5571,15 @@ function makeTaskCard(t, isAdmin, isHOD, showReassign){
   if(t.officerName)meta.appendChild(metaItem('person', t.officerName));
   if(t.dateAssigned)meta.appendChild(metaItem('calendar_today', 'Insp: '+fDateShort(t.dateAssigned)));
   if(t.dueDate)   meta.appendChild(metaItem('event', 'Due: '+fDateShort(t.dueDate)));
+  // At-a-glance photo/document counts — lets someone see whether a task
+  // already has evidence attached without opening the detail view just
+  // to check. photoCount combines both the legacy PhotoLinks field and
+  // the newer fast-upload TaskPhotos sheet, so this is accurate regardless
+  // of which upload path was used.
+  var photoCount = typeof t.photoCount === 'number' ? t.photoCount : 0;
+  var docCount = typeof t.docCount === 'number' ? t.docCount : 0;
+  if(photoCount > 0) meta.appendChild(metaItem('photo_camera', String(photoCount)));
+  if(docCount > 0)   meta.appendChild(metaItem('description', String(docCount)));
 
   body.appendChild(desc);
   body.appendChild(meta);
@@ -5701,7 +5771,10 @@ function buildHODRows(tasks, canReassign){
     try{
       var t=tasks[i];
       var taskID=htmlEsc(t.taskID||'');
-      var photoIcon=(t.photoLinks||t.hasPhotos)?'<span class="material-icons-round mi" style="font-size:13px;color:var(--c-teal);margin-left:3px">attach_file</span>':'';
+      var photoCount=typeof t.photoCount==='number'?t.photoCount:((t.photoLinks||t.hasPhotos)?1:0);
+      var docCount=typeof t.docCount==='number'?t.docCount:0;
+      var photoIcon=photoCount>0?'<span style="display:inline-flex;align-items:center;gap:2px;margin-left:5px;font-size:11px;color:var(--c-teal)"><span class="material-icons-round mi" style="font-size:13px">photo_camera</span>'+photoCount+'</span>':'';
+      var docIcon=docCount>0?'<span style="display:inline-flex;align-items:center;gap:2px;margin-left:5px;font-size:11px;color:var(--tx3)"><span class="material-icons-round mi" style="font-size:13px">description</span>'+docCount+'</span>':'';
       var btns='<button class="btn btn-ghost btn-sm btn-icon" onclick="viewTask(\''+taskID+'\')" title="View"><span class="material-icons-round mi">visibility</span></button>'
         +'<button class="btn btn-primary btn-sm btn-icon" onclick="officerUpdate(\''+taskID+'\')" title="Update"><span class="material-icons-round mi">update</span></button>'
         +'<button class="btn btn-ghost btn-sm btn-icon" onclick="hodReassignTask(\''+taskID+'\')" title="Reassign" style="color:#059669;border-color:#059669"><span class="material-icons-round mi">swap_horiz</span></button>';
@@ -5709,7 +5782,7 @@ function buildHODRows(tasks, canReassign){
         +'<td></td>'
         +'<td><span class="mono" style="color:var(--c-blue)">'+taskID+'</span></td>'
         +'<td>'+htmlEsc(t.taskType||'')+'</td>'
-        +'<td style="max-width:180px" class="ellipsis">'+htmlEsc(t.description||'')+photoIcon+'</td>'
+        +'<td style="max-width:180px" class="ellipsis">'+htmlEsc(t.description||'')+photoIcon+docIcon+'</td>'
         +'<td class="nowrap">'+htmlEsc(t.zone||'')+'</td>'
         +'<td class="nowrap">'+htmlEsc(t.department||'')+'</td>'
         +'<td class="nowrap">'+htmlEsc(t.officerName||'')+'</td>'
