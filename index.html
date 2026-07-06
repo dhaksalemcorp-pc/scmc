@@ -1149,42 +1149,6 @@ tbody tr:hover { background: var(--surface2); }
 .g2 { display: grid; grid-template-columns: 1fr 1fr; gap: var(--gap); }
 .g3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: var(--gap); }
 
-/* Kanban */
-.kanban { display: flex; gap: 12px; overflow-x: auto; padding-bottom: 8px; -webkit-overflow-scrolling: touch; }
-.k-col {
-  background: var(--surface2);
-  border: 1px solid var(--border);
-  border-radius: var(--r-lg);
-  padding: 13px;
-  min-width: 230px; width: 230px; flex-shrink: 0;
-}
-.k-col-hd {
-  display: flex; align-items: center; justify-content: space-between;
-  margin-bottom: 10px;
-}
-.k-col-title { font-size: 12px; font-weight: 700; }
-.k-count {
-  background: var(--surface); border: 1px solid var(--border);
-  border-radius: 999px; padding: 1px 7px;
-  font-size: 10px; font-weight: 700; color: var(--tx3);
-}
-.k-card {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-left: 3px solid var(--border);
-  border-radius: 9px; padding: 12px;
-  margin-bottom: 8px; cursor: pointer;
-  transition: transform var(--ease), box-shadow var(--ease);
-}
-.k-card:hover { transform: translateY(-2px); box-shadow: var(--sh2); }
-.k-card.high   { border-left-color: var(--c-red); }
-.k-card.medium { border-left-color: var(--c-gold); }
-.k-card.low    { border-left-color: var(--c-green); }
-.k-card-id  { font-size: 10px; color: var(--tx3); font-weight: 600; font-family: monospace; margin-bottom: 5px; }
-.k-card-desc{ font-size: 12.5px; font-weight: 600; color: var(--tx1); margin-bottom: 7px; line-height: 1.4; }
-.k-card-ft  { display: flex; justify-content: space-between; font-size: 11px; color: var(--tx3); }
-.k-overdue  { color: var(--c-red) !important; }
-
 /* Report buttons */
 .rpt-grid {
   display: grid;
@@ -1426,7 +1390,7 @@ tbody tr:hover { background: var(--surface2); }
       <div class="sb-item" data-page="about" onclick="go('about')"><span class="material-icons-round sb-i">info</span> About</div>
     </div>
     <div class="sb-footer">
-      <button class="sb-logout" onclick="doLogout()"><span class="material-icons-round sb-i">logout</span> <span data-i18n="signout">Sign Out</span></button>
+      <button class="sb-logout" onclick="doLogout()"><span class="material-icons-round sb-i">logout</span> <span>Sign Out</span></button>
     </div>
   </nav>
 
@@ -1785,20 +1749,6 @@ tbody tr:hover { background: var(--surface2); }
         </div>
       </div>
 
-      <!-- Bulk Action Toolbar — shown only when tasks are selected -->
-      <div id="bulkBar" class="dn" style="background:linear-gradient(135deg,#0b1f45,#1a3a6b);border-radius:10px;padding:10px 16px;margin-bottom:12px;align-items:center;gap:12px;flex-wrap:wrap">
-        <div style="display:flex;align-items:center;gap:8px;flex:1;min-width:0">
-          <span class="material-icons-round mi" style="color:#fff;font-size:20px">checklist</span>
-          <span id="bulkCount" style="color:#fff;font-weight:700;font-size:13.5px">0 tasks selected</span>
-        </div>
-        <button class="btn btn-danger btn-sm" onclick="bulkDeleteSelected()">
-          <span class="material-icons-round mi">delete_forever</span> Delete Selected
-        </button>
-        <button class="btn btn-ghost btn-sm" onclick="clearSelection()" style="background:rgba(255,255,255,.12);border-color:rgba(255,255,255,.2);color:#fff">
-          <span class="material-icons-round mi">close</span> Clear Selection
-        </button>
-      </div>
-
       <!-- DUPLICATE FINDER MODAL -->
       <div class="modal-bg" id="mDuplicateFinder">
         <div class="modal-box" style="max-width:700px">
@@ -1847,15 +1797,15 @@ tbody tr:hover { background: var(--surface2); }
             <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
               <div>
                 <div class="filt-label">Zone</div>
-                <select class="f-sel filt-sel" id="fZone" onchange="filterTasks()"></select>
+                <select class="f-sel filt-sel" id="fZone" onchange="_debouncedFilterTasks()"></select>
               </div>
               <div>
                 <div class="filt-label">Department</div>
-                <select class="f-sel filt-sel" id="fDept" onchange="populateOfficerFilter();filterTasks()"></select>
+                <select class="f-sel filt-sel" id="fDept" onchange="populateOfficerFilter();_debouncedFilterTasks()"></select>
               </div>
               <div>
                 <div class="filt-label">Officer</div>
-                <select class="f-sel filt-sel" id="fOfficer" onchange="filterTasks()"><option value="">All Officers</option></select>
+                <select class="f-sel filt-sel" id="fOfficer" onchange="_debouncedFilterTasks()"><option value="">All Officers</option></select>
               </div>
             </div>
             <!-- Row 2: Status toggle buttons -->
@@ -1898,11 +1848,11 @@ tbody tr:hover { background: var(--surface2); }
             <div style="display:grid;grid-template-columns:1fr 1fr 2fr;gap:10px;align-items:end">
               <div>
                 <div class="filt-label">Date From</div>
-                <input type="date" class="f-ctrl" id="fDueFrom" onchange="filterTasks()" style="font-size:13px">
+                <input type="date" class="f-ctrl" id="fDueFrom" onchange="_debouncedFilterTasks()" style="font-size:13px">
               </div>
               <div>
                 <div class="filt-label">Date To</div>
-                <input type="date" class="f-ctrl" id="fDueTo" onchange="filterTasks()" style="font-size:13px">
+                <input type="date" class="f-ctrl" id="fDueTo" onchange="_debouncedFilterTasks()" style="font-size:13px">
               </div>
               <div>
                 <div class="filt-label">Search</div>
@@ -1939,8 +1889,12 @@ tbody tr:hover { background: var(--surface2); }
            the Filters panel afterward always shows the true current state
            — never out of sync with what a quick chip set. -->
       <div id="quickFilterRow" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">
-        <button class="filt-btn" data-qf="mine" onclick="quickFilter('mine')"><span class="material-icons-round mi" style="font-size:14px;vertical-align:-2px">person</span> My Tasks</button>
-        <button class="filt-btn filt-btn-danger" data-qf="overdue" onclick="quickFilter('overdue')"><span class="material-icons-round mi" style="font-size:14px;vertical-align:-2px">warning</span> Overdue</button>
+        <!-- Label/icon set by setupQuickFilterPrimaryChip() based on role:
+             Admin/Commissioner see "All Tasks" (shows literally everything,
+             including completed/closed, which are hidden by default);
+             every other role sees "My Tasks" (assigned to them). -->
+        <button class="filt-btn" data-qf="primary" id="qfPrimaryChip" onclick="quickFilter('primary')"><span class="material-icons-round mi" id="qfPrimaryIcon" style="font-size:14px;vertical-align:-2px">person</span> <span id="qfPrimaryLabel">My Tasks</span></button>
+        <button class="filt-btn" data-qf="pending" onclick="quickFilter('pending')"><span class="material-icons-round mi" style="font-size:14px;vertical-align:-2px">hourglass_empty</span> Pending</button>
         <button class="filt-btn filt-btn-high" data-qf="highpri" onclick="quickFilter('highpri')"><span class="material-icons-round mi" style="font-size:14px;vertical-align:-2px">priority_high</span> High Priority</button>
         <button class="filt-btn" data-qf="review" onclick="quickFilter('review')"><span class="material-icons-round mi" style="font-size:14px;vertical-align:-2px">rate_review</span> Pending Review</button>
       </div>
@@ -2075,6 +2029,21 @@ tbody tr:hover { background: var(--surface2); }
             <span class="material-icons-round mi" style="font-size:13px;vertical-align:middle">info</span>
             For best results across all devices, use a square PNG or JPG image. Logo is automatically resized to 200x200px when saved.
           </div>
+        </div>
+      </div>
+      <div class="card mt24">
+        <div class="card-hd"><span class="card-title">&#128247; Photo Data Cleanup</span></div>
+        <div class="card-bd">
+          <p style="font-size:12.5px;color:var(--tx3);margin-bottom:12px;line-height:1.5">
+            Removes task photos that were saved corrupted by a bug in an earlier version of this app
+            (truncated or invalid data that can never load, showing as a broken image with no fix).
+            This only affects already-broken, unrecoverable rows &mdash; valid photos are never touched.
+            Safe to run any time; it's a one-way cleanup, so there's no harm running it again later if needed.
+          </p>
+          <button class="btn btn-primary btn-sm" id="photoCleanupBtn" onclick="runPhotoCleanup()">
+            <span class="material-icons-round mi">cleaning_services</span> Scan &amp; Remove Corrupted Photos
+          </button>
+          <div id="photoCleanupResult" style="margin-top:10px;font-size:12.5px"></div>
         </div>
       </div>
       <div class="card mt24" id="calSettingsCard" style="display:none">
@@ -2230,7 +2199,7 @@ tbody tr:hover { background: var(--surface2); }
             </div>
             <button id="plSortToggle" onclick="plToggleSort()"
               style="display:flex;align-items:center;gap:5px;padding:7px 13px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface2);color:var(--tx1);font-size:12.5px;font-weight:600;cursor:pointer;white-space:nowrap;flex-shrink:0">
-              <span class="material-icons-round" style="font-size:16px">swap_vert</span>
+              <span class="material-icons-round" id="plSortIcon" style="font-size:16px">swap_vert</span>
               <span id="plSortLabel">Newest First</span>
             </button>
           </div>
@@ -3388,7 +3357,7 @@ var LS={get:function(k){try{return localStorage.getItem(k);}catch(e){return null
 // active use yet — flipped off here rather than deleted so both can be
 // switched back on later with a one-line change instead of rebuilding.
 var FEATURES={calendar:false, grievance:false};
-var S={token:null,user:null,lookup:null,tasks:[],users:[],filtered:[],drillFilter:'',page:'dashboard',allowedPages:[],theme:LS.get('sc-theme')||'light',charts:{},exportCtx:'tracker',aiTasks:[],selPhotos:[],driveLinks:[],puDocs:[],sortCol:'updatedAt',sortDir:-1,taskWindow:90,showCompleted:false,showClosed:false,searchQ:'',_trkMeta:null,_deptDrill:null,_qfMine:false};
+var S={token:null,user:null,lookup:null,tasks:[],users:[],filtered:[],drillFilter:'',page:'dashboard',allowedPages:[],theme:LS.get('sc-theme')||'light',charts:{},exportCtx:'tracker',aiTasks:[],selPhotos:[],driveLinks:[],puDocs:[],sortCol:'updatedAt',sortDir:-1,taskWindow:90,showCompleted:false,showClosed:false,searchQ:'',_trkMeta:null,_deptDrill:null,_qfMine:false,_qfAllMode:false};
 
 // ─── STALE-WHILE-REVALIDATE (instant display) ──────────────────
 // Saves the last-loaded data in localStorage so the NEXT visit renders
@@ -3407,54 +3376,6 @@ function swrSave(key,data){
 // Covers main navigation, page titles, and common buttons. Toggle
 // persists in localStorage per device. Dynamic data (task text, names,
 // remarks) stays as entered — only the app chrome is translated.
-var I18N_TA={
-  // Sidebar
-  'Dashboard':'\u0b95\u0bc1\u0bb1\u0bbf\u0baa\u0bcd\u0baa\u0bb2\u0b95\u0bc8','Task Entry':'\u0baa\u0ba3\u0bbf \u0baa\u0ba4\u0bbf\u0bb5\u0bc1','Task Tracker':'\u0baa\u0ba3\u0bbf \u0b95\u0ba3\u0bcd\u0b95\u0bbe\u0ba3\u0bbf\u0baa\u0bcd\u0baa\u0bc1',
-  'Commissioner View':'\u0b86\u0ba3\u0bc8\u0baf\u0bb0\u0bcd \u0baa\u0bbe\u0bb0\u0bcd\u0bb5\u0bc8','User Management':'\u0baa\u0baf\u0ba9\u0bb0\u0bcd \u0bae\u0bc7\u0bb2\u0bbe\u0ba3\u0bcd\u0bae\u0bc8','Settings':'\u0b85\u0bae\u0bc8\u0baa\u0bcd\u0baa\u0bc1\u0b95\u0bb3\u0bcd',
-  'My Profile':'\u0b8e\u0ba9\u0ba4\u0bc1 \u0b9a\u0bc1\u0baf\u0bb5\u0bbf\u0bb5\u0bb0\u0bae\u0bcd','Notes':'\u0b95\u0bc1\u0bb1\u0bbf\u0baa\u0bcd\u0baa\u0bc1\u0b95\u0bb3\u0bcd','Calendar':'\u0b95\u0bbe\u0bb2\u0ba3\u0bcd\u0b9f\u0bb0\u0bcd',
-  'Reports':'\u0b85\u0bb1\u0bbf\u0b95\u0bcd\u0b95\u0bc8\u0b95\u0bb3\u0bcd','Grievances':'\u0b95\u0bc1\u0bb1\u0bc8\u0b95\u0bb3\u0bcd','About':'\u0baa\u0bb1\u0bcd\u0bb1\u0bbf','Sign Out':'\u0bb5\u0bc6\u0bb3\u0bbf\u0baf\u0bc7\u0bb1\u0bc1',
-  'Main':'\u0bae\u0bc1\u0ba4\u0ba9\u0bcd\u0bae\u0bc8','Manage':'\u0bae\u0bc7\u0bb2\u0bbe\u0ba3\u0bcd\u0bae\u0bc8',
-  // Common buttons / labels
-  'New Task':'\u0baa\u0bc1\u0ba4\u0bbf\u0baf \u0baa\u0ba3\u0bbf','Filters':'\u0bb5\u0b9f\u0bbf\u0b95\u0b9f\u0bcd\u0b9f\u0bbf','Export':'\u0b8f\u0bb1\u0bcd\u0bb1\u0bc1\u0bae\u0ba4\u0bbf','Refresh':'\u0baa\u0bc1\u0ba4\u0bc1\u0baa\u0bcd\u0baa\u0bbf',
-  'Save':'\u0b9a\u0bc7\u0bae\u0bbf','Cancel':'\u0bb0\u0ba4\u0bcd\u0ba4\u0bc1','Edit':'\u0ba4\u0bbf\u0bb0\u0bc1\u0ba4\u0bcd\u0ba4\u0bc1','Delete':'\u0ba8\u0bc0\u0b95\u0bcd\u0b95\u0bc1','Close':'\u0bae\u0bc2\u0b9f\u0bc1',
-  'Pending':'\u0ba8\u0bbf\u0bb2\u0bc1\u0bb5\u0bc8','In Progress':'\u0ba8\u0b9f\u0bc8\u0baa\u0bc6\u0bb1\u0bc1\u0b95\u0bbf\u0bb1\u0ba4\u0bc1','Completed':'\u0bae\u0bc1\u0b9f\u0bbf\u0ba8\u0bcd\u0ba4\u0ba4\u0bc1','Overdue':'\u0ba4\u0bbe\u0bae\u0ba4\u0bae\u0bcd'
-};
-var I18N_ORIG={}; // element -> original English text, captured on first toggle
-function currentLang(){return LS.get('sc-lang')||'en';}
-function toggleLanguage(){
-  var next=currentLang()==='en'?'ta':'en';
-  LS.set('sc-lang',next);
-  applyLanguage();
-  toast(next==='ta'?'\u0ba4\u0bae\u0bbf\u0bb4\u0bcd \u0b87\u0b9f\u0bc8\u0bae\u0bc1\u0b95\u0baa\u0bcd\u0baa\u0bc1 \u0b87\u0baf\u0b95\u0bcd\u0b95\u0baa\u0bcd\u0baa\u0b9f\u0bcd\u0b9f\u0ba4\u0bc1':'Switched to English','ok');
-}
-function applyLanguage(){
-  var lang=currentLang();
-  var lbl=id('langToggleLbl');
-  if(lbl)lbl.textContent=lang==='en'?'\u0ba4\u0bae\u0bbf\u0bb4\u0bcd':'English';
-  // Translate sidebar items and section labels by matching their text
-  var nodes=document.querySelectorAll('.sb-item, .sb-section-lbl, .sb-logout span[data-i18n], .page-title, .tab, .btn');
-  for(var i=0;i<nodes.length;i++){
-    var el=nodes[i];
-    // Work on the LAST text node so icons inside are untouched
-    var tn=null;
-    for(var j=el.childNodes.length-1;j>=0;j--){
-      if(el.childNodes[j].nodeType===3&&el.childNodes[j].textContent.trim()){tn=el.childNodes[j];break;}
-    }
-    var target=tn||((el.children.length===0)?el:null);
-    if(!target)continue;
-    var curr=(tn?tn.textContent:el.textContent).trim();
-    if(lang==='ta'){
-      if(I18N_TA[curr]){
-        if(!el.dataset.i18nOrig)el.dataset.i18nOrig=curr;
-        if(tn)tn.textContent=' '+I18N_TA[curr];else el.textContent=I18N_TA[curr];
-      }
-    } else {
-      if(el.dataset.i18nOrig){
-        if(tn)tn.textContent=' '+el.dataset.i18nOrig;else el.textContent=el.dataset.i18nOrig;
-      }
-    }
-  }
-}
 function swrLoad(key,maxAgeMs){
   try{
     if(!S.user)return null;
@@ -3806,6 +3727,7 @@ function demoFn(fn,args){
   if(fn==='serverUploadPhoto')return{success:true,url:'https://drive.google.com/file/d/demo_'+Date.now()+'/view',fileId:'demo_'+Date.now()};
   if(fn==='serverAddTaskPhoto')return{success:true,photoID:'TPH'+Date.now()};
   if(fn==='serverAddTaskPhotosBatch'){var bd=args[1]||{};var n=(bd.photos||[]).length;var ids=[];for(var bi=0;bi<n;bi++)ids.push('TPH'+(Date.now()+bi));return{success:true,photoIDs:ids};}
+  if(fn==='serverCleanupInvalidTaskPhotos')return{success:true,removedCount:0,affectedTaskCount:0};
   if(fn==='serverGetActivityLogs')return{success:true,data:[{username:'admin',action:'LOGIN',details:'User logged in successfully',timestamp:new Date().toISOString()},{username:'admin',action:'CREATE_TASK',details:'Task TSK2406001 created',timestamp:new Date().toISOString()}]};
   if(fn==='serverInitDatabase')return{success:true,message:'Database initialized successfully'};
   if(fn==='serverGetLogo'){var lv=LS.get('sc-logo')||'';return{success:true,value:lv};}
@@ -3913,7 +3835,6 @@ function resetSessionState(){
   if(typeof TRK_RP_ON!=='undefined')TRK_RP_ON=false;
   if(typeof PL!=='undefined'){PL.entries=[];PL.window=0;PL.searchQ='';if(PL.filterTypes)PL.filterTypes.splice(0,PL.filterTypes.length);if(PL.filterZones)PL.filterZones.splice(0,PL.filterZones.length);}
   if(typeof GRV!=='undefined'&&GRV){GRV.list=[];}
-  var tb=id('tBody');if(tb)tb.innerHTML='';
   var tg=id('taskCardsGrid');if(tg)tg.innerHTML='';
 }
 // ─── BACKGROUND BOOTSTRAP (v117) ──────────────────────────────
@@ -3990,9 +3911,9 @@ function showApp(){
     var av=id('sbAvatarTxt');if(av)av.textContent=u.name.charAt(0).toUpperCase();
     var sn=id('sbName');if(sn)sn.textContent=u.name;
     var sr=id('sbRole');if(sr)sr.textContent=u.role;
-    var bd=id('sbBuildDate');if(bd)bd.textContent=''; // legacy element no longer in the DOM — safe no-op
     applyRoleNav(u.role);
-    applyLanguage(); // restore saved Tamil/English preference
+    renderOfflineQueueIndicator(); // shows immediately if anything was queued last session
+    flushOfflinePhotoQueue(); // try right away in case we're already back online
     // Lookup (departments/zones/officers) from device cache — selects
     // populate instantly; the background bootstrap refreshes them.
     if(!S.lookup){
@@ -4042,10 +3963,6 @@ function applyRoleNav(role){
   show('newTaskBtn', isAdmin||isSupervision);
   show('findDupBtn', isAdmin);
   show('aiExtractorTab', isAdmin); // Supervision gets manual entry only, no AI Extractor
-  var thChk=id('thChk');
-  if(thChk)thChk.innerHTML=isAdmin?'<input type="checkbox" id="chkAll" onchange="toggleSelectAll(this)" style="width:16px;height:16px;cursor:pointer" title="Select all">':'';
-  var thAct=id('thActions');if(thAct)thAct.style.display=(isOfficer||isSupervision)?'none':'';
-  if(!isAdmin&&!isHOD){var bb=id('bulkBar');if(bb)bb.classList.add('dn');}
 
   // Calendar tab — use calendar settings already bundled in S.lookup
   // (included in serverGetLookupData since v99) so no extra network call needed.
@@ -4119,6 +4036,7 @@ function go(page){
   else if(page==='tracker'){
     var srBar=id('trkUniversalSearch');
     if(srBar&&S.searchQ){srBar.value=S.searchQ;var clrBtn2=id('trkSearchClear');if(clrBtn2)clrBtn2.style.display=S.searchQ?'':'none';}
+    setupQuickFilterPrimaryChip();
     loadTasks();
   }
   else if(page==='commview')loadCommView();
@@ -4197,24 +4115,6 @@ function fillSel(elId,data,val,lbl,ph){
   for(var i=0;i<data.length;i++){var item=data[i];if(item.Status&&item.Status!=='Active')continue;var o=document.createElement('option');o.value=item[val];o.textContent=item[lbl];el.appendChild(o);}
   el.value=cur;
 }
-function fillOfficers(deptFilter){
-  var offs=(S.lookup&&S.lookup.officers)||[];
-  var el=id('t-officer');if(!el)return;
-  el.innerHTML='<option value="">Select Officer</option>';
-  for(var i=0;i<offs.length;i++){
-    var o=offs[i];
-    if(deptFilter&&o.department!==deptFilter)continue;
-    var opt=document.createElement('option');
-    opt.value=o.userID;
-    opt.dataset.name=o.name;
-    opt.dataset.designation=o.designation||'';
-    opt.dataset.department=o.department||'';
-    opt.textContent=o.name+' \u2014 '+o.designation+' ('+o.zone+')';
-    el.appendChild(opt);
-  }
-}
-function filterOfficers(){fillOfficers(V('t-dept')||null);}
-
 // Bug Fix 2: auto-fill designation when officer is selected in task entry
 function onRoleChange(){
   var role=V('mu-role');
@@ -4260,24 +4160,6 @@ function getHODSelectedDepts(){
   var checks=wrap.querySelectorAll('input[type=checkbox]:checked');
   var vals=[];for(var i=0;i<checks.length;i++)vals.push(checks[i].value);
   return vals.join(',');
-}
-function onOfficerChange(){
-  var el=id('t-officer');if(!el||!el.value)return;
-  var sel=el.selectedOptions&&el.selectedOptions[0];
-  if(!sel)return;
-  // Auto-set designation from officer data
-  var desigEl=id('t-desig');
-  if(desigEl&&sel.dataset.designation){
-    desigEl.value=sel.dataset.designation;
-    // If designation not found in dropdown options, add it temporarily
-    if(!desigEl.value){
-      var opt=document.createElement('option');
-      opt.value=sel.dataset.designation;
-      opt.textContent=sel.dataset.designation;
-      desigEl.appendChild(opt);
-      desigEl.value=sel.dataset.designation;
-    }
-  }
 }
 function loadDashboard(){
   var role=S.user?S.user.role:'';
@@ -5036,7 +4918,7 @@ function trkToggleCompletedView(){
     }
     S.filtered=S.tasks.filter(function(t){return t.status==='Completed';});
     applyCurrentSort();
-    renderTable(S.filtered);renderKanban(S.filtered);updateTaskCount();
+    renderTable(S.filtered);updateTaskCount();
     trkRenderNoteBar();
   } else {
     TRK_COMP_ON=false;
@@ -5050,7 +4932,7 @@ function trkToggleClosed(show){
   S.tasks=S.tasks.filter(function(t){return t.status!=='Closed';});
   if(S._fullList)S._fullList=S._fullList.filter(function(t){return t.status!=='Closed';});
   S.filtered=S.tasks.slice();applyCurrentSort();
-  renderTable(S.filtered);renderKanban(S.filtered);updateTaskCount();
+  renderTable(S.filtered);updateTaskCount();
   trkRenderNoteBar();
 }
 function trkFilterReviewPending(){
@@ -5061,7 +4943,7 @@ function trkFilterReviewPending(){
   } else {
     S.filtered=S.tasks.slice();
   }
-  renderTable(S.filtered);renderKanban(S.filtered);updateTaskCount();
+  renderTable(S.filtered);updateTaskCount();
 }
 function loadTasks(){
   TRK_RP_ON=false;
@@ -5087,7 +4969,7 @@ function loadTasks(){
     S.tasks=cached;
     S.filtered=S.tasks.slice();
     applyCurrentSort();
-    renderTable(S.filtered);renderKanban(S.filtered);updateTaskCount();
+    renderTable(S.filtered);updateTaskCount();
     // subtle refreshing indicator on the count label
     var tc0=id('taskCount');
     if(tc0)tc0.innerHTML=S.filtered.length+' tasks <span style="color:var(--c-blue);font-size:11px">· refreshing\u2026</span>';
@@ -5099,8 +4981,8 @@ function loadTasks(){
     if(tc1)tc1.innerHTML=S.filtered.length+' tasks <span style="color:var(--c-blue);font-size:11px">· refreshing\u2026</span>';
   } else {
     // Nothing cached at all (first ever load) — show the spinner
-    var tb=id('tBody');
-    if(tb)tb.innerHTML='<tr><td colspan="12"><div style="padding:40px;text-align:center"><div class="spinner" style="margin:0 auto 12px"></div><div style="color:var(--tx3)">Loading tasks...</div></div></td></tr>';
+    var tg0=id('taskCardsGrid');
+    if(tg0)tg0.innerHTML='<div style="padding:40px;text-align:center"><div class="spinner" style="margin:0 auto 12px"></div><div style="color:var(--tx3)">Loading tasks...</div></div>';
   }
 
   // Consume tasks bundled in the login response (Officer/HOD) — fresh
@@ -5141,7 +5023,7 @@ function trkToggleCompleted(show){
     if(S._fullList&&S._fullList.length){
       S.showCompleted=true;
       S.tasks=S._fullList.slice();S.filtered=S.tasks.slice();applyCurrentSort();
-      renderTable(S.filtered);renderKanban(S.filtered);updateTaskCount();
+      renderTable(S.filtered);updateTaskCount();
       trkRenderNoteBar();
       return;
     }
@@ -5153,7 +5035,7 @@ function trkToggleCompleted(show){
       if(!S._fullList)S._fullList=S.tasks.slice(); // remember for instant re-show
       S.tasks=S.tasks.filter(function(t){return t.status!=='Completed'&&t.status!=='Closed';});
       S.filtered=S.tasks.slice();applyCurrentSort();
-      renderTable(S.filtered);renderKanban(S.filtered);updateTaskCount();
+      renderTable(S.filtered);updateTaskCount();
       trkRenderNoteBar();
     } else {
       loadTasks();
@@ -5171,22 +5053,25 @@ function trkApplyResponse(r,fn,fromPreload){
     if(r.includeCompleted){S._fullList=null;/* rebuilt below after normalize */}
     S.tasks=normalizeTaskList(data);
     if(r.includeCompleted)S._fullList=S.tasks.slice(); // instant re-show cache
-    S.filtered=S.tasks.slice();
-    if(S.searchQ){var hidden2=id('fSearch');if(hidden2)hidden2.value=S.searchQ;var bar2=id('trkUniversalSearch');if(bar2&&!bar2.value)bar2.value=S.searchQ;filterTasks();}
-    else{applyCurrentSort();}
+    if(S.searchQ){var hidden2=id('fSearch');if(hidden2)hidden2.value=S.searchQ;var bar2=id('trkUniversalSearch');if(bar2&&!bar2.value)bar2.value=S.searchQ;}
+    // Always reapply whatever filters are currently active (zone, status,
+    // priority, quick filters like My Tasks / All Tasks, etc.) rather than
+    // only when a search query happens to be set — a refresh must never
+    // silently drop an active filter, and this is also what keeps the
+    // quick-filter chip row's highlighted state correct after a re-fetch
+    // (e.g. tapping "All Tasks", which triggers exactly this refresh path).
+    filterTasks();
     // Save for instant display on the next visit/login (open tasks only —
     // don't bloat localStorage with completed history)
     if(!r.includeCompleted)swrSave('tasks',S.tasks);
-    var bb=id('bulkBar');if(bb){bb.style.display='none';bb.classList.add('dn');}
-    var chkAll=id('chkAll');if(chkAll){chkAll.checked=false;chkAll.indeterminate=false;}
     if(S._deptDrill){applyDeptDrill();S._deptDrill=null;}
     else if(S.drillFilter){applyDrillFilter();}
-    else{renderTable(S.filtered);renderKanban(S.filtered);updateTaskCount();}
+    else{renderTable(S.filtered);updateTaskCount();}
     if(advFilterOpen) populateOfficerFilter();
     // Green chip active: show ONLY the completed tasks (sign-off queue)
     if(TRK_COMP_ON){
       S.filtered=S.tasks.filter(function(t){return t.status==='Completed';});
-      renderTable(S.filtered);renderKanban(S.filtered);updateTaskCount();
+      renderTable(S.filtered);updateTaskCount();
     }
     trkRenderNoteBar();
 }
@@ -5230,13 +5115,13 @@ function trkRenderNoteBar(){
   else note.style.display='none';
 }
 function showTrackerError(msg){
-  var tb=id('tBody');
-  if(tb)tb.innerHTML='<tr><td colspan="12"><div style="padding:40px;text-align:center">'
+  var tg=id('taskCardsGrid');
+  if(tg)tg.innerHTML='<div style="padding:40px;text-align:center">'
     +'<span class="material-icons-round" style="font-size:40px;color:var(--c-red)">error_outline</span>'
     +'<div style="font-size:15px;font-weight:600;margin:10px 0 6px">Could not load tasks</div>'
     +'<div style="font-size:13px;color:var(--tx3);margin-bottom:16px;max-width:400px;margin-left:auto;margin-right:auto">'+msg+'</div>'
     +'<button class="btn btn-primary" onclick="loadTasks()"><span class="material-icons-round mi">refresh</span> Retry</button>'
-    +'</div></td></tr>';
+    +'</div>';
 }
 function normalizeTaskList(data){
   var out=[];
@@ -5347,7 +5232,7 @@ function filterTasks(){
   }
   var badge=id('filterCountBadge');
   if(badge){badge.textContent=active.length+' active';badge.style.display=active.length>0?'':'none';}
-  renderTable(S.filtered);renderKanban(S.filtered);updateTaskCount();
+  renderTable(S.filtered);updateTaskCount();
   syncQuickFilterRow();
 }
 
@@ -5397,17 +5282,35 @@ function toggleChip(btn,hiddenId){
 // filter state, these drive the EXACT SAME hidden fields (fStatus, fPri)
 // and chip buttons the Filters panel already uses — found via
 // data-val and clicked programmatically — so the two UIs can never drift
-// out of sync with each other. "My Tasks" is the one exception since
-// there's no existing filter dimension for "assigned to me"; it uses its
-// own S._qfMine flag instead.
+// out of sync with each other.
 function quickFilter(kind){
-  if(kind==='mine'){
-    S._qfMine=!S._qfMine;
-    filterTasks();
+  if(kind==='primary'){
+    var isAdminLike=S.user&&(S.user.role==='Admin'||S.user.role==='Commissioner');
+    if(isAdminLike){
+      // "All Tasks" for Admin/Commissioner — the default tracker view
+      // deliberately hides old Completed/Closed tasks (90-day window) to
+      // keep the list focused on actionable work. This chip is the
+      // one-tap way to see LITERALLY everything, including those, by
+      // resetting every other filter and re-fetching with both inclusion
+      // flags on. Tapping again reverts to the normal actionable view.
+      S._qfAllMode=!S._qfAllMode;
+      if(S._qfAllMode){
+        resetFilterFieldsOnly();
+        S.showCompleted=true;S.showClosed=true;
+      } else {
+        S.showCompleted=false;S.showClosed=false;
+      }
+      loadTasks();
+    } else {
+      // Every other role: "My Tasks" — assigned to whoever's logged in.
+      // Pure client-side filter, no re-fetch needed.
+      S._qfMine=!S._qfMine;
+      filterTasks();
+    }
     return;
   }
   var groupId,targetVal;
-  if(kind==='overdue'){groupId='statusChips';targetVal='Overdue';}
+  if(kind==='pending'){groupId='statusChips';targetVal='Pending';}
   else if(kind==='review'){groupId='statusChips';targetVal='Review Pending';}
   else if(kind==='highpri'){groupId='priorityChips';targetVal='High';}
   else return;
@@ -5420,6 +5323,20 @@ function quickFilter(kind){
   for(var i=0;i<btns.length;i++){if((btns[i].dataset.val||'')===wantVal){targetBtn=btns[i];break;}}
   if(targetBtn)toggleChip(targetBtn,groupId==='statusChips'?'fStatus':'fPri');
 }
+// Sets the primary chip's icon/label based on role — Admin/Commissioner
+// get "All Tasks" (see everything, nothing hidden), everyone else gets
+// "My Tasks" (assigned to them). Called whenever the Tracker page opens.
+function setupQuickFilterPrimaryChip(){
+  var isAdminLike=S.user&&(S.user.role==='Admin'||S.user.role==='Commissioner');
+  var icon=id('qfPrimaryIcon'),label=id('qfPrimaryLabel');
+  if(isAdminLike){
+    if(icon)icon.textContent='list_alt';
+    if(label)label.textContent='All Tasks';
+  } else {
+    if(icon)icon.textContent='person';
+    if(label)label.textContent='My Tasks';
+  }
+}
 // Keeps the quick-filter row's own active/inactive appearance correct
 // regardless of WHAT changed the underlying filters — a quick chip tap,
 // the Filters panel's own chips, or Clear Filters. Called at the end of
@@ -5427,28 +5344,36 @@ function quickFilter(kind){
 function syncQuickFilterRow(){
   var row=id('quickFilterRow');if(!row)return;
   var status=V('fStatus'),pri=V('fPri');
-  var map={mine:!!S._qfMine,overdue:status==='Overdue',highpri:pri==='High',review:status==='Review Pending'};
+  var isAdminLike=S.user&&(S.user.role==='Admin'||S.user.role==='Commissioner');
+  var map={primary:isAdminLike?!!S._qfAllMode:!!S._qfMine,pending:status==='Pending',highpri:pri==='High',review:status==='Review Pending'};
   var btns=row.querySelectorAll('[data-qf]');
   for(var i=0;i<btns.length;i++){
     var k=btns[i].dataset.qf;
     btns[i].classList.toggle('active',!!map[k]);
   }
 }
-function clearFilters(){
+// Clears just the filter FIELDS (zone/dept/officer/status/priority/
+// source/dates/search) without touching showCompleted/showClosed or
+// triggering a render — shared by clearFilters() and the "All Tasks"
+// quick filter, which each decide separately what to do with
+// completed/closed visibility and whether to re-fetch.
+function resetFilterFieldsOnly(){
   var fields=['fZone','fDept','fOfficer','fStatus','fPri','fSource','fDueFrom','fDueTo','fSearch'];
   for(var i=0;i<fields.length;i++){var el=id(fields[i]);if(el)el.value='';}
-  // Also clear the always-visible universal search bar
   var usBar=id('trkUniversalSearch');if(usBar)usBar.value='';
   var clrBtn=id('trkSearchClear');if(clrBtn)clrBtn.style.display='none';
   S._qfMine=false;
-  // Reset all chip groups to "All"
   var allChips=document.querySelectorAll('.filter-chip,.filt-btn');
   for(var i=0;i<allChips.length;i++){
     allChips[i].classList.remove('active');
     if(allChips[i].dataset.val==='')allChips[i].classList.add('active');
   }
+}
+function clearFilters(){
+  resetFilterFieldsOnly();
+  S._qfAllMode=false;
   S.filtered=S.tasks.slice();
-  renderTable(S.filtered);renderKanban(S.filtered);updateTaskCount();
+  renderTable(S.filtered);updateTaskCount();
   syncQuickFilterRow();
   var fs=id('filterSummary');if(fs)fs.classList.add('dn');
   var badge=id('filterCountBadge');if(badge)badge.style.display='none';
@@ -5488,7 +5413,7 @@ function sortBy(col){
   for(var i=0;i<cols.length;i++){var el=id('sort-'+cols[i]);if(el)el.textContent='';}
   var el=id('sort-updatedAt');if(el)el.textContent=S.sortDir===1?' \u25b2':' \u25bc';
   applyCurrentSort();
-  renderTable(S.filtered);renderKanban(S.filtered);
+  renderTable(S.filtered);
 }
 // ── RENDER CARDS — pure DOM, zero innerHTML, crash-proof ─────
 function renderTable(tasks){ renderCards(tasks); } // alias for compatibility
@@ -5761,8 +5686,6 @@ function renderCards(tasks){
     }catch(e){ console.error('Card error row '+i, e); }
   }
   appendLoadMoreIfNeeded(tasks, shown);
-
-  updateBulkBar();
 }
 
 function buildHODRows(tasks, canReassign){
@@ -5796,86 +5719,7 @@ function buildHODRows(tasks, canReassign){
   }
   return html;
 }
-function renderKanban(tasks){
-  var board=id('kanban');if(!board)return;
-  // The card view and kanban view are always re-rendered together from
-  // every call site, but only one is ever visible at a time. Skip the
-  // (identical-cost) kanban rebuild entirely while it's hidden — switchView()
-  // already forces a fresh render with the current task list the moment
-  // someone switches to it, so nothing is ever stale when it becomes visible.
-  var kv=id('viewKanban');
-  if(kv && kv.style.display==='none') return;
-  // Clear safely
-  while(board.firstChild)board.removeChild(board.firstChild);
-
-  var cols={Pending:[],'In Progress':[],Completed:[],'Review Pending':[],Overdue:[],Closed:[]};
-  var clrs={Pending:'#f59e0b','In Progress':'#0ea5e9',Completed:'#10b981','Review Pending':'#8b5cf6',Overdue:'#ef4444',Closed:'#64748b'};
-  for(var i=0;i<tasks.length;i++){
-    var t=tasks[i];
-    var s=(t.isOverdue&&t.status!=='Completed'&&t.status!=='Closed')?'Overdue':(t.status||'Pending');
-    (cols[s]||cols.Pending).push(t);
-  }
-
-  var colKeys=Object.keys(cols);
-  for(var ci=0;ci<colKeys.length;ci++){
-    var status=colKeys[ci];
-    var colTasks=cols[status];
-    var col=document.createElement('div');
-    col.className='k-col';
-
-    // Column header
-    var hd=document.createElement('div');
-    hd.className='k-col-hd';
-    var title=document.createElement('span');
-    title.className='k-col-title';
-    title.style.color=clrs[status]||'#64748b';
-    title.textContent=status;
-    var cnt=document.createElement('span');
-    cnt.className='k-count';
-    cnt.textContent=colTasks.length;
-    hd.appendChild(title);hd.appendChild(cnt);
-    col.appendChild(hd);
-
-    if(!colTasks.length){
-      var empty=document.createElement('div');
-      empty.style.cssText='padding:16px;text-align:center;font-size:12px;color:var(--tx3)';
-      empty.textContent='No tasks';
-      col.appendChild(empty);
-    }
-
-    for(var ti=0;ti<colTasks.length;ti++){
-      try{
-        var t=colTasks[ti];
-        var card=document.createElement('div');
-        card.className='k-card '+(t.priority||'').toLowerCase();
-        (function(tid){card.onclick=function(){viewTask(tid);};})(t.taskID);
-
-        var cardId=document.createElement('div');
-        cardId.className='k-card-id';
-        cardId.textContent=t.taskID+(t.source==='AI'?' \u00b7 AI':'');
-
-        var cardDesc=document.createElement('div');
-        cardDesc.className='k-card-desc';
-        var desc=String(t.description||'');
-        cardDesc.textContent=desc.length>70?desc.substring(0,70)+'...':desc;
-
-        var cardFt=document.createElement('div');
-        cardFt.className='k-card-ft';
-        var deptSpan=document.createElement('span');
-        deptSpan.textContent=t.department||'';
-        var dueSpan=document.createElement('span');
-        if(t.isOverdue)dueSpan.className='k-overdue';
-        dueSpan.textContent=fDateShort(t.dueDate);
-        cardFt.appendChild(deptSpan);cardFt.appendChild(dueSpan);
-
-        card.appendChild(cardId);card.appendChild(cardDesc);card.appendChild(cardFt);
-        col.appendChild(card);
-      }catch(e){console.error('Kanban card error',ti,e);}
-    }
-    board.appendChild(col);
-  }
-}
-function switchView(v,btn){var tabs=document.querySelectorAll('#trackerTabs .tab');for(var i=0;i<tabs.length;i++)tabs[i].classList.remove('active');btn.classList.add('active');var cv=id('viewCards'),kv=id('viewKanban');if(cv)cv.style.display=v==='kanban'?'none':'';if(kv)kv.style.display=v==='kanban'?'':'none';if(v==='kanban')renderKanban(S.filtered);}
+function switchView(v,btn){var tabs=document.querySelectorAll('#trackerTabs .tab');for(var i=0;i<tabs.length;i++)tabs[i].classList.remove('active');btn.classList.add('active');}
 function switchTaskTab(tab,btn){var tabs=document.querySelectorAll('#taskTabs .tab');for(var i=0;i<tabs.length;i++)tabs[i].classList.remove('active');btn.classList.add('active');var tm=id('tab-manual'),ta=id('tab-ai');if(tm)tm.classList.toggle('dn',tab!=='manual');if(ta)ta.classList.toggle('dn',tab!=='ai');}
 function getTaskForm(){
   // Officer comes from the MO multi-officer list (first officer for single-save)
@@ -6046,10 +5890,11 @@ function viewTask(taskID){
         t.updatedBy=r.task.updatedBy;
         t.photoLinks=r.task.photoLinks;
         if(r.task.history)t._history=r.task.history;
-        // Photos and attachments arrive in this SAME response now —
-        // consume them directly instead of firing two more calls for it.
+        // Photos, attachments, and comments arrive in this SAME response
+        // now — consume them directly instead of firing more calls for it.
         t.newPhotos=r.task.photos||[];
         t.docsData=r.task.attachments||[];
+        t.comments=r.task.comments||[];
         // Only update if this task's modal is still open
         if(id('mTaskTitle')&&id('mTaskTitle').textContent===taskID){
           id('mTaskBody').innerHTML=taskDetailHTML(t);
@@ -6216,21 +6061,51 @@ function taskDetailHTML(t){
     historyHtml='<div style="font-size:12px;color:var(--tx3)">Loading history...</div>';
   }
 
+  // ── COMMENTS TAB ─────────────────────────────────────────────
+  // A proper append-only discussion thread, separate from the single
+  // Officer Remarks field that gets overwritten on every status update.
+  var comments=t.comments||[];
+  var commentsHtml='<div id="taskCommentsList" style="display:flex;flex-direction:column;gap:10px;margin-bottom:14px;max-height:320px;overflow-y:auto">';
+  if(comments.length){
+    for(var ci=0;ci<comments.length;ci++){
+      var c=comments[ci];
+      var cwhen=c.createdAt?new Date(c.createdAt).toLocaleString('en-IN',{day:'numeric',month:'short',hour:'numeric',minute:'2-digit'}):'';
+      commentsHtml+='<div style="background:var(--surface2);border-radius:8px;padding:9px 12px">'
+        +'<div style="display:flex;align-items:center;gap:6px;margin-bottom:3px;flex-wrap:wrap">'
+        +'<span style="font-size:12.5px;font-weight:700;color:var(--tx1)">'+htmlEsc(c.author)+'</span>'
+        +'<span style="font-size:10px;color:var(--tx3);background:var(--surface);border:1px solid var(--border);border-radius:999px;padding:1px 7px">'+htmlEsc(c.authorRole)+'</span>'
+        +'<span style="font-size:10.5px;color:var(--tx3);margin-left:auto">'+cwhen+'</span>'
+        +'</div>'
+        +'<div style="font-size:13px;line-height:1.5;white-space:pre-wrap">'+htmlEsc(c.text)+'</div>'
+        +'</div>';
+    }
+  } else {
+    commentsHtml+='<div style="font-size:12px;color:var(--tx3);text-align:center;padding:20px 0">No comments yet \u2014 start the discussion below.</div>';
+  }
+  commentsHtml+='</div>'
+    +'<div style="display:flex;gap:8px;align-items:flex-end">'
+    +'<textarea id="taskCommentInput" placeholder="Add a comment..." style="flex:1;min-height:44px;max-height:120px;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;background:var(--surface);color:var(--tx1);resize:vertical;font-family:inherit"></textarea>'
+    +'<button class="btn btn-primary btn-sm" id="postCommentBtn" onclick="postTaskComment(\''+htmlEsc(t.taskID||'')+'\')"><span class="material-icons-round mi">send</span></button>'
+    +'</div>';
+
   // ── TAB BAR ──────────────────────────────────────────────────
   // Reuses the same .tabs/.tab classes as the Cards/Table toggle
   // elsewhere, so this looks consistent with the rest of the app rather
   // than introducing a one-off style.
   var mediaBadge=(totalPhotoCount+docsCount)>0?' ('+(totalPhotoCount+docsCount)+')':'';
   var historyBadge=(t._history&&t._history.length)?' ('+t._history.length+')':'';
+  var commentsBadge=comments.length>0?' ('+comments.length+')':'';
   var tabBar='<div class="tabs" id="taskDetailTabs" style="margin-bottom:14px">'
     +'<button class="tab'+(activeTab==='details'?' active':'')+'" onclick="switchTaskDetailTab(\'details\')">Details</button>'
     +'<button class="tab'+(activeTab==='media'?' active':'')+'" onclick="switchTaskDetailTab(\'media\')">Photos &amp; Docs'+mediaBadge+'</button>'
+    +'<button class="tab'+(activeTab==='comments'?' active':'')+'" onclick="switchTaskDetailTab(\'comments\')">Comments'+commentsBadge+'</button>'
     +'<button class="tab'+(activeTab==='history'?' active':'')+'" onclick="switchTaskDetailTab(\'history\')">History'+historyBadge+'</button>'
     +'</div>';
 
   return tabBar
     +'<div id="taskDetailPane-details" style="display:'+(activeTab==='details'?'block':'none')+'">'+detailsHtml+'</div>'
     +'<div id="taskDetailPane-media" style="display:'+(activeTab==='media'?'block':'none')+'">'+mediaHtml+'</div>'
+    +'<div id="taskDetailPane-comments" style="display:'+(activeTab==='comments'?'block':'none')+'">'+commentsHtml+'</div>'
     +'<div id="taskDetailPane-history" style="display:'+(activeTab==='history'?'block':'none')+'">'+historyHtml+'</div>';
 }
 // Switches tabs by toggling display (not rebuilding HTML) so it's instant
@@ -6240,10 +6115,37 @@ function taskDetailHTML(t){
 function switchTaskDetailTab(tab){
   S._taskDetailTab=tab;
   var tabs=document.querySelectorAll('#taskDetailTabs .tab');
-  var names=['details','media','history'];
+  var names=['details','media','comments','history'];
   for(var i=0;i<tabs.length;i++)tabs[i].classList.toggle('active',names[i]===tab);
-  var panes={details:id('taskDetailPane-details'),media:id('taskDetailPane-media'),history:id('taskDetailPane-history')};
+  var panes={details:id('taskDetailPane-details'),media:id('taskDetailPane-media'),comments:id('taskDetailPane-comments'),history:id('taskDetailPane-history')};
   for(var k in panes){if(panes[k])panes[k].style.display=(k===tab)?'block':'none';}
+}
+// Posts a new comment and re-renders the detail modal in place — since
+// S._taskDetailTab is already 'comments' (the person had to be on this
+// tab to see the input box), the re-render lands back on the same tab,
+// not bounced back to Details.
+function postTaskComment(taskID){
+  var input=id('taskCommentInput');if(!input)return;
+  var text=input.value.trim();
+  if(!text){toast('Please enter a comment.','error');return;}
+  var btn=id('postCommentBtn');
+  if(btn){if(btn.disabled)return;btn.disabled=true;btn.style.opacity='.6';}
+  gasCall('serverAddTaskComment',S.token,{taskID:taskID,text:text}).then(function(r){
+    if(btn){btn.disabled=false;btn.style.opacity='1';}
+    if(r&&r.success){
+      var t=null;for(var i=0;i<S.tasks.length;i++)if(S.tasks[i].taskID===taskID){t=S.tasks[i];break;}
+      if(t){
+        if(!t.comments)t.comments=[];
+        t.comments.push(r.comment);
+        if(id('mTaskTitle')&&id('mTaskTitle').textContent===taskID){
+          id('mTaskBody').innerHTML=taskDetailHTML(t);
+        }
+      }
+      toast('Comment posted.','ok');
+    } else {
+      toast((r&&r.message)||'Could not post comment.','error');
+    }
+  });
 }
 var EDIT_TASK={newPhotos:[],newDocs:[],taskID:null};
 function editTask(taskID){
@@ -6587,94 +6489,6 @@ function delTask(taskID){
   if(!confirm('Delete task '+taskID+'? This cannot be undone.'))return;
   showLoader('Deleting...');
   gasCall('serverDeleteTask',S.token,taskID).then(function(r){hideLoader();if(r&&r.success){toast('Task deleted.','ok');loadTasks();}else toast((r&&r.message)||'Failed.','error');});
-}
-
-// ── BULK SELECTION & DELETE ───────────────────────────────────
-function getSelectedIDs(){
-  var boxes=document.querySelectorAll('.task-chk:checked');
-  var ids=[];
-  for(var i=0;i<boxes.length;i++) ids.push(boxes[i].dataset.id);
-  return ids;
-}
-
-function onTaskCheckChange(){
-  // Update select-all checkbox state
-  var all=document.querySelectorAll('.task-chk');
-  var checked=document.querySelectorAll('.task-chk:checked');
-  var chkAll=id('chkAll');
-  if(chkAll){
-    chkAll.indeterminate=(checked.length>0&&checked.length<all.length);
-    chkAll.checked=(all.length>0&&checked.length===all.length);
-  }
-  // Highlight selected rows
-  for(var i=0;i<all.length;i++){
-    var row=all[i].closest('tr');
-    if(row) row.style.background=all[i].checked?'rgba(29,78,216,.07)':'';
-  }
-  updateBulkBar();
-}
-
-function toggleSelectAll(chk){
-  var boxes=document.querySelectorAll('.task-chk');
-  for(var i=0;i<boxes.length;i++){
-    boxes[i].checked=chk.checked;
-    var row=boxes[i].closest('tr');
-    if(row) row.style.background=chk.checked?'rgba(29,78,216,.07)':'';
-  }
-  updateBulkBar();
-}
-
-function updateBulkBar(){
-  var selected=getSelectedIDs();
-  var bar=id('bulkBar'),cnt=id('bulkCount');
-  if(!bar) return;
-  if(selected.length>0){
-    bar.style.display='flex';
-    bar.classList.remove('dn');
-    if(cnt) cnt.textContent=selected.length+' task'+(selected.length!==1?'s':'')+' selected';
-  } else {
-    bar.style.display='none';
-    bar.classList.add('dn');
-  }
-}
-
-function clearSelection(){
-  var boxes=document.querySelectorAll('.task-chk');
-  for(var i=0;i<boxes.length;i++){
-    boxes[i].checked=false;
-    var row=boxes[i].closest('tr');
-    if(row) row.style.background='';
-  }
-  var chkAll=id('chkAll');if(chkAll){chkAll.checked=false;chkAll.indeterminate=false;}
-  updateBulkBar();
-}
-
-function bulkDeleteSelected(){
-  if(!btnFreeze('bulkDelete',null,''))return;
-  var ids=getSelectedIDs();
-  if(!ids.length){toast('No tasks selected.','info');return;}
-  // Show confirmation with task count and IDs preview
-  var preview=ids.slice(0,5).join(', ')+(ids.length>5?' ... and '+(ids.length-5)+' more':'');
-  if(!confirm('Delete '+ids.length+' selected task'+(ids.length!==1?'s':''+'')+'?\n\n'+preview+'\n\nThis action cannot be undone.'))return;
-  showLoader('Deleting '+ids.length+' tasks...');
-  var deleted=0,failed=0;
-  function deleteNext(idx){
-    if(idx>=ids.length){
-      hideLoader();
-      clearSelection();
-      if(failed>0) toast('Deleted '+deleted+' tasks. '+failed+' failed.','info');
-      else toast('Successfully deleted '+deleted+' task'+(deleted!==1?'s':'')+'!','ok');
-      loadTasks();
-      return;
-    }
-    // Update loader message progress
-    var lm=id('loaderMsg');if(lm)lm.textContent='Deleting task '+(idx+1)+' of '+ids.length+'...';
-    gasCall('serverDeleteTask',S.token,ids[idx]).then(function(r){
-      if(r&&r.success)deleted++;else failed++;
-      deleteNext(idx+1);
-    });
-  }
-  deleteNext(0);
 }
 
 // ════════════════════════════════════════════════════════════
@@ -7113,66 +6927,6 @@ function renderPuNewDocPreviews(){
 }
 
 // HOD: reassign a task to a subordinate in their department
-function hodReassign(taskID){
-  var t=null;for(var i=0;i<S.tasks.length;i++)if(S.tasks[i].taskID===taskID){t=S.tasks[i];break;}if(!t)return;
-  var ra=id('ra-taskid');if(ra)ra.value=taskID;
-  var rd=id('ra-desc');if(rd)rd.textContent=t.description.substring(0,120)+(t.description.length>120?'...':'');
-  var rc=id('ra-current');if(rc)rc.textContent=t.officerName||'\u2014';
-  var rnote=id('ra-note');if(rnote)rnote.value='';
-  // Populate officer dropdown from HOD's departments
-  var sel=id('ra-officer');
-  if(sel){
-    sel.innerHTML='<option value="">Select Officer to Reassign</option>';
-    var hodDepts=(S.user&&S.user.hodDepartments)?S.user.hodDepartments:'';
-    var deptArr=hodDepts.split(',').map(function(d){return d.trim().toLowerCase();});
-    var officers=(S.lookup&&S.lookup.officers)||[];
-    for(var i=0;i<officers.length;i++){
-      var o=officers[i];
-      var oDept=String(o.department||o.dept||'').toLowerCase();
-      var inDept=false;
-      for(var j=0;j<deptArr.length;j++){if(oDept===deptArr[j]){inDept=true;break;}}
-      if(inDept){
-        var opt=document.createElement('option');
-        opt.value=JSON.stringify({id:o.userID,name:o.name,desig:o.designation||''});
-        opt.textContent=o.name+(o.designation?' \u2014 '+o.designation:'');
-        sel.appendChild(opt);
-      }
-    }
-  }
-  closeModal('mTask');
-  openModal('mReassign');
-}
-
-function submitReassign(){
-  var taskID=V('ra-taskid');
-  var officerRaw=V('ra-officer');
-  var note=V('ra-note').trim();
-  if(!taskID||!officerRaw){toast('Please select an officer.','error');return;}
-  var oData;
-  try{oData=JSON.parse(officerRaw);}catch(e){toast('Invalid officer selection.','error');return;}
-  var now=new Date();
-  var ts=now.toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'})
-    +' '+now.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',hour12:true});
-  // Build history note appended to remarks
-  var historyLine='[Reassigned to '+oData.name+(oData.desig?' ('+oData.desig+')':'')+' by '+(S.user?S.user.name:'HOD')+' on '+ts+']'+(note?' — '+note:'');
-  showLoader('Reassigning task...');
-  gasCall('serverUpdateTask',S.token,taskID,{
-    officerID:   oData.id,
-    officerName: oData.name,
-    designation: oData.desig,
-    status:      'Pending',
-    officerRemarks: historyLine,
-    updatedBy:   S.user?S.user.name:'HOD',
-    updatedAt:   now.toISOString()
-  }).then(function(r){
-    hideLoader();
-    if(r&&r.success){
-      toast('Task reassigned to '+oData.name+'!','ok');
-      closeModal('mReassign');
-      loadTasks();
-    } else toast((r&&r.message)||'Reassign failed.','error');
-  });
-}
 function handlePhotoSelect(files){addPhotos(Array.prototype.slice.call(files));}
 function handlePhotoDrop(e){e.preventDefault();var dz=id('photoDropZone');if(dz)dz.style.borderColor='var(--border)';var files=[];for(var i=0;i<e.dataTransfer.files.length;i++){var f=e.dataTransfer.files[i];if(f.type.indexOf('image/')===0||f.type==='application/pdf')files.push(f);}addPhotos(files);}
 function addPhotos(files){
@@ -7452,7 +7206,7 @@ function submitPhotoUpdate(){
           if(typeof renderCards==='function'&&S.filtered)renderCards(S.filtered);
           if(anyChunkFailed){
             setUploadingUI(false);
-            toastWithRetry('One or more photos could not be uploaded \u2014 likely a dropped connection. Tap Retry to try again \u2014 nothing already saved will be uploaded twice.',retryPhotoBatch);
+            toastWithRetry('Connection dropped \u2014 the photo(s) are queued and will upload automatically once you\'re back online. Tap Retry to try right now instead.',retryPhotoBatch);
             return;
           }
           var totalSkipped=permanentlyFailedCount+serverSkipped;
@@ -7475,6 +7229,10 @@ function submitPhotoUpdate(){
           } else {
             for(var ej=0;ej<chunk.entries.length;ej++){chunk.entries[ej].pending=false;chunk.entries[ej].failed=true;}
             anyChunkFailed=true;
+            // Queue this chunk's photos for automatic background retry —
+            // the compressed data is already in memory, no reason to make
+            // the officer manually retry once connectivity comes back.
+            queueOfflinePhotoUpload(taskID, chunk.b64);
           }
           chunkIdx++;
           sendNextChunk();
@@ -8558,16 +8316,6 @@ function plPopulateTypeDropdowns(){
     }
     if(cur&&types.indexOf(cur)!==-1)sel.value=cur;
   }
-  // Filter dropdown (All Types + each type)
-  var fsel=id('plFType');
-  if(fsel){
-    var fcur=fsel.value;
-    fsel.innerHTML='<option value="">All Types</option>';
-    for(var i=0;i<types.length;i++){
-      var opt2=document.createElement('option');opt2.textContent=types[i];fsel.appendChild(opt2);
-    }
-    if(fcur)fsel.value=fcur;
-  }
   // Edit modal dropdown (if open)
   var esel=id('plEdit-type');
   if(esel){
@@ -9067,13 +8815,14 @@ function plRenderCards(entries){
   }
   plUpdateCount(entries.length);
   entries=plSortEntries(entries);
-  var strip=id('plSummaryStrip');
+  var strip=id('plStatsStrip');
   if(strip){
     var ic=0,mc=0,sc=0,pc=0;
     for(var i=0;i<entries.length;i++){
       if(entries[i].type==='Inspection')ic++;else if(entries[i].type==='Meeting')mc++;else sc++;
       pc+=(entries[i].photoCount !== undefined ? entries[i].photoCount : (entries[i].photos?entries[i].photos.length:0));
     }
+    strip.style.display=entries.length?'flex':'none';
     strip.innerHTML='<div style="background:rgba(29,78,216,.08);border:1px solid rgba(29,78,216,.2);border-radius:8px;padding:8px 14px;font-size:12.5px;color:#1d4ed8;display:flex;gap:4px;align-items:center"><span class="material-icons-round mi" style="font-size:14px">search</span><strong>'+ic+'</strong> Inspections</div>'
       +'<div style="background:rgba(5,150,105,.08);border:1px solid rgba(5,150,105,.2);border-radius:8px;padding:8px 14px;font-size:12.5px;color:#059669;display:flex;gap:4px;align-items:center"><span class="material-icons-round mi" style="font-size:14px">groups</span><strong>'+mc+'</strong> Meetings</div>'
       +(sc>0?'<div style="background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.2);border-radius:8px;padding:8px 14px;font-size:12.5px;color:#d97706;display:flex;gap:4px;align-items:center"><span class="material-icons-round mi" style="font-size:14px">location_on</span><strong>'+sc+'</strong> Site Visits</div>':'')
@@ -10168,21 +9917,6 @@ function closeTaskPhotoViewer(fromPopState){
 function plPhotoThumbs(photosStr,idPrefix){
   return buildPhotoGrid(photosStr,idPrefix||('pl'+Date.now()));
 }
-function plFilter(){
-  var type=V('plFType'),zone=V('plFZone'),month=V('plFMonth'),filtered=[];
-  for(var i=0;i<PL.entries.length;i++){
-    var e=PL.entries[i];
-    if(type&&e.type!==type)continue;
-    if(zone&&e.zone!==zone)continue;
-    if(month&&e.date&&e.date.split('-')[1]!==month)continue;
-    filtered.push(e);
-  }
-  plRenderCards(filtered);
-}
-function plClearFilter(){
-  var f=['plFType','plFZone','plFMonth'];for(var i=0;i<f.length;i++){var e=id(f[i]);if(e)e.value='';}
-  plRenderCards(PL.entries);
-}
 function plToggleSort(){
   PL.sortOrder=(PL.sortOrder==='asc')?'desc':'asc';
   var icon=id('plSortIcon'),label=id('plSortLabel');
@@ -10969,6 +10703,29 @@ function doResetPassword(){
     hideLoader();
     if(r&&r.success){closeModal('mResetPw');toast('Password reset successfully!','ok');}
     else toast((r&&r.message)||'Reset failed.','error');
+  });
+}
+function runPhotoCleanup(){
+  if(!confirm('This will permanently remove any task photo rows that are corrupted and can never load. Valid photos are never touched. Continue?'))return;
+  var btn=id('photoCleanupBtn');
+  if(btn){if(btn.disabled)return;btn.disabled=true;btn.style.opacity='.6';}
+  var resultEl=id('photoCleanupResult');
+  if(resultEl)resultEl.innerHTML='<span style="color:var(--tx3)">Scanning...</span>';
+  gasCall('serverCleanupInvalidTaskPhotos',S.token).then(function(r){
+    if(btn){btn.disabled=false;btn.style.opacity='1';}
+    if(r&&r.success){
+      if(resultEl){
+        if(r.removedCount>0){
+          resultEl.innerHTML='<span style="color:var(--c-green);font-weight:600">\u2713 Removed '+r.removedCount+' corrupted photo row'+(r.removedCount!==1?'s':'')+' across '+r.affectedTaskCount+' task'+(r.affectedTaskCount!==1?'s':'')+'.</span>';
+        } else {
+          resultEl.innerHTML='<span style="color:var(--c-green);font-weight:600">\u2713 No corrupted photos found \u2014 everything checks out.</span>';
+        }
+      }
+      toast('Cleanup complete.','ok');
+    } else {
+      if(resultEl)resultEl.innerHTML='<span style="color:var(--c-red)">'+((r&&r.message)||'Cleanup failed.')+'</span>';
+      toast((r&&r.message)||'Cleanup failed.','error');
+    }
   });
 }
 function loadSettings(){
@@ -12252,6 +12009,79 @@ function toast(msg,type){
 // Unlike the normal toast, this does NOT auto-dismiss, since the whole
 // point is giving the person a deliberate, obvious next step rather than
 // a message that might vanish before they've even read it.
+// ── OFFLINE PHOTO UPLOAD QUEUE ───────────────────────────────────
+// If a photo upload fails because of a dropped connection (common for
+// field officers on patchy mobile signal), the compressed photo data is
+// already sitting in memory — it's wasteful to throw it away and make
+// the officer manually retry once they're back in range. Instead it's
+// queued to localStorage and retried automatically the moment the
+// browser reports it's back online, with a small persistent indicator
+// so nothing silently gets lost.
+var OFFLINE_QUEUE_KEY='scmc-offline-photo-queue';
+var OFFLINE_QUEUE_MAX_ATTEMPTS=8;
+
+function getOfflinePhotoQueue(){
+  try{ return JSON.parse(LS.get(OFFLINE_QUEUE_KEY)||'[]'); }catch(e){ return []; }
+}
+function saveOfflinePhotoQueue(q){
+  try{ LS.set(OFFLINE_QUEUE_KEY, JSON.stringify(q)); }catch(e){ /* storage full — best effort only */ }
+  renderOfflineQueueIndicator();
+}
+function queueOfflinePhotoUpload(taskID, photosB64){
+  var q=getOfflinePhotoQueue();
+  q.push({id:'oq_'+Date.now()+'_'+Math.floor(Math.random()*10000), taskID:taskID, photos:photosB64, queuedAt:Date.now(), attempts:0});
+  saveOfflinePhotoQueue(q);
+}
+// Attempts to send every queued item. Called on reconnect and on app
+// load (in case items were queued in a previous session that never got
+// a chance to flush). Safe to call anytime — a no-op if the queue is
+// empty, and never runs two flushes concurrently.
+var _offlineFlushInProgress=false;
+function flushOfflinePhotoQueue(){
+  if(_offlineFlushInProgress)return;
+  var q=getOfflinePhotoQueue();
+  if(!q.length)return;
+  _offlineFlushInProgress=true;
+  var idx=0,succeeded=0,gaveUp=0;
+  function next(){
+    if(idx>=q.length){
+      _offlineFlushInProgress=false;
+      saveOfflinePhotoQueue(q.filter(function(item){return !item._done&&!item._giveUp;}));
+      if(succeeded>0)toast(succeeded+' queued photo'+(succeeded!==1?'s':'')+' uploaded successfully.','ok');
+      if(gaveUp>0)toast(gaveUp+' queued photo upload'+(gaveUp!==1?'s':'')+' failed repeatedly and '+(gaveUp!==1?'were':'was')+' given up on \u2014 please re-attach if still needed.','error');
+      return;
+    }
+    var item=q[idx];
+    if(!S.token||!navigator.onLine){ _offlineFlushInProgress=false; return; } // not logged in or genuinely offline — stop, try again next trigger
+    gasCall('serverAddTaskPhotosBatch',S.token,{taskID:item.taskID,photos:item.photos}).then(function(pr){
+      if(pr&&pr.success){ item._done=true; succeeded++; }
+      else{
+        item.attempts=(item.attempts||0)+1;
+        if(item.attempts>=OFFLINE_QUEUE_MAX_ATTEMPTS){ item._giveUp=true; gaveUp++; }
+      }
+      idx++; next();
+    });
+  }
+  next();
+}
+// Small persistent indicator so a queued-but-not-yet-uploaded photo is
+// never silently invisible. Created on demand — no static markup needed.
+function renderOfflineQueueIndicator(){
+  var q=getOfflinePhotoQueue();
+  var el=id('offlineQueueBadge');
+  if(!q.length){ if(el)el.remove(); return; }
+  if(!el){
+    el=document.createElement('div');
+    el.id='offlineQueueBadge';
+    el.style.cssText='position:fixed;bottom:70px;left:50%;transform:translateX(-50%);z-index:9000;background:#b45309;color:#fff;padding:8px 16px;border-radius:999px;font-size:12.5px;font-weight:600;box-shadow:0 4px 14px rgba(0,0,0,.25);cursor:pointer;display:flex;align-items:center;gap:6px';
+    el.onclick=function(){ flushOfflinePhotoQueue(); };
+    document.body.appendChild(el);
+  }
+  el.innerHTML='<span class="material-icons-round mi" style="font-size:16px">cloud_upload</span>'
+    +q.length+' photo'+(q.length!==1?'s':'')+' waiting to upload \u2014 tap to retry now';
+}
+window.addEventListener('online', flushOfflinePhotoQueue);
+
 function toastWithRetry(msg,onRetry){
   var c=id('toasts');if(!c)return;
   var el=document.createElement('div');
