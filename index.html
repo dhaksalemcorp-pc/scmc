@@ -3386,10 +3386,6 @@ function swrSave(key,data){
     LS.set('swr-'+S.user.userID+'-'+key,JSON.stringify({t:Date.now(),d:data}));
   }catch(e){/* quota exceeded — silently skip */}
 }
-// ─── TAMIL / ENGLISH LANGUAGE TOGGLE ──────────────────────────
-// Covers main navigation, page titles, and common buttons. Toggle
-// persists in localStorage per device. Dynamic data (task text, names,
-// remarks) stays as entered — only the app chrome is translated.
 function swrLoad(key,maxAgeMs){
   try{
     if(!S.user)return null;
@@ -4120,7 +4116,6 @@ function populateSelects(){
   }
   fillSel('t-dept',deptListForEntry,'DeptName','DeptName','Select Department');fillSel('fDept',ld.departments,'DeptName','DeptName','All Departments');fillSel('mu-dept',ld.departments,'DeptName','DeptName','Select');fillSel('mapDept',ld.departments,'DeptName','DeptName','Select');
   fillSel('mu-desig',ld.designations,'DesigName','DesigName','Select');
-  fillOfficers(null);
   initAddOfficerDepts();
 }
 function fillSel(elId,data,val,lbl,ph){
@@ -7961,30 +7956,48 @@ function renderCommViewForDept(dept){
 }
 
 function loadCommView(){
-  showLoader('Loading...');
   CV_DEPT_FILTER='';
+  // INSTANT DISPLAY: render last-known Commissioner View data immediately
+  // (if we have it), while fresh data loads in the background — same
+  // pattern already used for Dashboard and Task Tracker. Previously this
+  // page showed a blank loader on every single visit with no cache at all.
+  var cached=swrLoad('commview',86400000); // max 24h old
+  var renderedFromCache=false;
+  if(cached&&cached.success){
+    applyCommViewData(cached);
+    renderedFromCache=true;
+  } else {
+    showLoader('Loading...');
+  }
   // Single merged call — returns tasks + stats in one round-trip (v110).
   // Previously fired 2 parallel calls; this eliminates the second
   // network response entirely.
   gasCall('serverGetCommissionerView',S.token).then(function(result){
     hideLoader();
-    if(!result||!result.success){toast('Failed to load Commissioner View','error');return;}
-    if(result.tasks){
-      S.tasks=normalizeTaskList(result.tasks||[]);
-      S.filtered=S.tasks.slice();
-      S._cvAllTasks=S.tasks.slice();
-      applyCurrentSort();
-      buildCommDeptTabs(S.tasks);
+    if(!result||!result.success){
+      if(!renderedFromCache)toast('Failed to load Commissioner View','error');
+      return;
     }
-    if(result.stats&&result.stats.stats){
-      var s=result.stats.stats;
-      var cv={'cv-total':s.total,'cv-done':s.completed,'cv-over':s.overdue,'cv-rate':result.stats.completionRate+'%'};
-      for(var k in cv){var el=id(k);if(el)el.textContent=cv[k];}
-      buildCVZone(result.stats.zoneStats);buildCVDept(result.stats.deptStats);
-      buildOfficerPerf(result.stats.officerStats);
-      buildCritical();
-    }
+    swrSave('commview',result);
+    applyCommViewData(result);
   });
+}
+function applyCommViewData(result){
+  if(result.tasks){
+    S.tasks=normalizeTaskList(result.tasks||[]);
+    S.filtered=S.tasks.slice();
+    S._cvAllTasks=S.tasks.slice();
+    applyCurrentSort();
+    buildCommDeptTabs(S.tasks);
+  }
+  if(result.stats&&result.stats.stats){
+    var s=result.stats.stats;
+    var cv={'cv-total':s.total,'cv-done':s.completed,'cv-over':s.overdue,'cv-rate':result.stats.completionRate+'%'};
+    for(var k in cv){var el=id(k);if(el)el.textContent=cv[k];}
+    buildCVZone(result.stats.zoneStats);buildCVDept(result.stats.deptStats);
+    buildOfficerPerf(result.stats.officerStats);
+    buildCritical();
+  }
 }
 function buildCVZone(zs){
   var ctx=id('cvZone');if(!ctx)return;if(S.charts.cvz)S.charts.cvz.destroy();
@@ -10561,8 +10574,27 @@ function buildCritical(tasksArr){
 // Alias for backward compatibility
 function buildCriticalList(arr){buildCritical(arr);}
 function loadUsers(){
-  showLoader('Loading users...');
-  gasCall('serverGetUsers',S.token).then(function(r){hideLoader();if(r&&r.success){S.users=r.data||[];renderUsers(S.users);}});
+  // INSTANT DISPLAY from cache, same pattern as Dashboard/Tasks/Commissioner
+  // View — this page previously had no caching at all.
+  var cached=swrLoad('users',86400000);
+  var renderedFromCache=false;
+  if(cached&&cached.length){
+    S.users=cached;
+    renderUsers(S.users);
+    renderedFromCache=true;
+  } else {
+    showLoader('Loading users...');
+  }
+  gasCall('serverGetUsers',S.token).then(function(r){
+    hideLoader();
+    if(r&&r.success){
+      S.users=r.data||[];
+      swrSave('users',S.users);
+      renderUsers(S.users);
+    } else if(!renderedFromCache){
+      toast((r&&r.message)||'Failed to load users.','error');
+    }
+  });
 }
 function filterUsers(){
   var q=V('userSearch').toLowerCase();
