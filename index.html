@@ -2592,7 +2592,7 @@ tbody tr:hover { background: var(--surface2); }
             <p style="font-size:13.5px;color:rgba(255,255,255,.65);margin-bottom:0">Task Management System &nbsp;&middot;&nbsp; Official Internal Portal</p>
             <div style="display:flex;align-items:center;justify-content:center;gap:8px;margin-top:16px;flex-wrap:wrap">
               <div style="display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);border-radius:999px;padding:5px 14px;font-size:11.5px;font-weight:600;color:#fbbf24">
-                <span class="material-icons-round" style="font-size:13px">bolt</span> Version 93 &middot; Live &amp; Actively Maintained
+                <span class="material-icons-round" style="font-size:13px">bolt</span> v123 &middot; Live &amp; Actively Maintained
               </div>
               <div id="aboutLiveStatus" style="display:inline-flex;align-items:center;gap:6px;background:rgba(156,163,175,.15);border:1px solid rgba(156,163,175,.3);border-radius:999px;padding:5px 14px;font-size:11.5px;font-weight:600;color:#9ca3af;cursor:pointer" onclick="checkAboutLiveStatus()">
                 <span style="width:7px;height:7px;border-radius:50%;background:#9ca3af;display:inline-block"></span> Tap to check connection
@@ -2601,23 +2601,23 @@ tbody tr:hover { background: var(--surface2); }
           </div>
         </div>
 
-        <!-- QUICK STATS STRIP (animated count-up) -->
+        <!-- QUICK STATS STRIP (animated count-up, real numbers pulled from lookup data) -->
         <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:20px">
           <div class="about-stat-card" style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px 10px;text-align:center;cursor:pointer;transition:transform .2s,box-shadow .2s" onclick="go('settings')">
-            <div class="about-stat-num" data-target="5" style="font-size:22px;font-weight:800;color:var(--c-blue)">0</div>
+            <div class="about-stat-num" id="aboutStatZones" data-target="5" style="font-size:22px;font-weight:800;color:var(--c-blue)">0</div>
             <div style="font-size:10.5px;color:var(--tx3);font-weight:600;margin-top:2px">ZONES</div>
           </div>
           <div class="about-stat-card" style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px 10px;text-align:center;cursor:pointer;transition:transform .2s,box-shadow .2s" onclick="go('settings')">
-            <div class="about-stat-num" data-target="8" style="font-size:22px;font-weight:800;color:var(--c-teal)">0</div>
+            <div class="about-stat-num" id="aboutStatDepts" data-target="8" style="font-size:22px;font-weight:800;color:var(--c-teal)">0</div>
             <div style="font-size:10.5px;color:var(--tx3);font-weight:600;margin-top:2px">DEPARTMENTS</div>
           </div>
           <div class="about-stat-card" style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px 10px;text-align:center;cursor:pointer;transition:transform .2s,box-shadow .2s" onclick="go('users')">
             <div class="about-stat-num" data-target="5" style="font-size:22px;font-weight:800;color:#7c3aed">0</div>
             <div style="font-size:10.5px;color:var(--tx3);font-weight:600;margin-top:2px">USER ROLES</div>
           </div>
-          <div class="about-stat-card" style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px 10px;text-align:center;cursor:pointer;transition:transform .2s,box-shadow .2s">
-            <div class="about-stat-num" data-target="93" style="font-size:22px;font-weight:800;color:#d97706">0</div>
-            <div style="font-size:10.5px;color:var(--tx3);font-weight:600;margin-top:2px">VERSIONS BUILT</div>
+          <div class="about-stat-card" style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px 10px;text-align:center;cursor:pointer;transition:transform .2s,box-shadow .2s" onclick="go('tracker')">
+            <div class="about-stat-num" data-target="6" style="font-size:22px;font-weight:800;color:#d97706">0</div>
+            <div style="font-size:10.5px;color:var(--tx3);font-weight:600;margin-top:2px">TASK STATUSES</div>
           </div>
         </div>
 
@@ -2722,23 +2722,28 @@ tbody tr:hover { background: var(--surface2); }
                 <div style="position:relative">
                   <div style="position:absolute;left:-21px;top:2px;width:10px;height:10px;border-radius:50%;background:var(--c-teal)"></div>
                   <div style="font-size:11px;font-weight:700;color:var(--c-teal);text-transform:uppercase">Latest</div>
-                  <div style="font-size:13px;font-weight:600;color:var(--tx1);margin-top:2px">Usage Analytics &amp; Activity Insights</div>
-                  <div style="font-size:11.5px;color:var(--tx3);margin-top:2px">Track login frequency and estimated active time per official, right from the Dashboard.</div>
+                  <div style="font-size:13px;font-weight:600;color:var(--tx1);margin-top:2px">Reliable Photo Uploads</div>
+                  <div style="font-size:11.5px;color:var(--tx3);margin-top:2px">Faster, validated uploads with an automatic fallback for large or complex photos, plus an offline queue that retries on its own once you're back online.</div>
                 </div>
                 <div style="position:relative">
                   <div style="position:absolute;left:-21px;top:2px;width:10px;height:10px;border-radius:50%;background:var(--c-blue)"></div>
-                  <div style="font-size:13px;font-weight:600;color:var(--tx1)">Grievance Management Module</div>
-                  <div style="font-size:11.5px;color:var(--tx3);margin-top:2px">Track Councilor &amp; representative letters with zone/ward-based auto-fill and full ATR follow-up threads.</div>
+                  <div style="font-size:13px;font-weight:600;color:var(--tx1)">Task Discussion Threads</div>
+                  <div style="font-size:11.5px;color:var(--tx3);margin-top:2px">A proper comment thread on every task, alongside Details, Photos &amp; Docs, and History &mdash; nothing gets overwritten anymore.</div>
                 </div>
                 <div style="position:relative">
                   <div style="position:absolute;left:-21px;top:2px;width:10px;height:10px;border-radius:50%;background:#7c3aed"></div>
-                  <div style="font-size:13px;font-weight:600;color:var(--tx1)">Document Attachments for Tasks</div>
-                  <div style="font-size:11.5px;color:var(--tx3);margin-top:2px">Upload, view, and manage PDF reports directly from Task Tracker &mdash; no more manual link-pasting.</div>
+                  <div style="font-size:13px;font-weight:600;color:var(--tx1)">One-Tap Quick Filters</div>
+                  <div style="font-size:11.5px;color:var(--tx3);margin-top:2px">Jump straight to My Tasks, Pending, In Progress, High Priority, Pending Review, Completed, or Overdue &mdash; no more setting filters manually every time.</div>
                 </div>
                 <div style="position:relative">
                   <div style="position:absolute;left:-21px;top:2px;width:10px;height:10px;border-radius:50%;background:#d97706"></div>
+                  <div style="font-size:13px;font-weight:600;color:var(--tx1)">Automatic Overdue Escalation</div>
+                  <div style="font-size:11.5px;color:var(--tx3);margin-top:2px">A task overdue for 2+ days now automatically escalates to High priority and notifies the department's HOD &mdash; nothing falls through the cracks unnoticed.</div>
+                </div>
+                <div style="position:relative">
+                  <div style="position:absolute;left:-21px;top:2px;width:10px;height:10px;border-radius:50%;background:var(--c-green)"></div>
                   <div style="font-size:13px;font-weight:600;color:var(--tx1)">Faster Everywhere</div>
-                  <div style="font-size:11.5px;color:var(--tx3);margin-top:2px">Session caching and smarter data loading cut page load times significantly across the app.</div>
+                  <div style="font-size:11.5px;color:var(--tx3);margin-top:2px">Session caching, smarter data loading, and a leaner codebase cut page load times significantly across the app.</div>
                 </div>
               </div>
             </div>
@@ -2963,6 +2968,12 @@ tbody tr:hover { background: var(--surface2); }
         </div>
       </div>
       <div class="f-group"><label class="f-label">Progress Remarks</label><textarea class="f-ctrl" id="pu-remarks" rows="3" placeholder="Describe progress, actions taken, or observations..."></textarea></div>
+      <div class="f-group">
+        <label class="f-label">Existing Photos</label>
+        <div id="puExistingPhotos" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:4px">
+          <span style="color:var(--tx3);font-size:12px">Loading existing photos...</span>
+        </div>
+      </div>
       <div class="f-group">
         <label class="f-label">Attach Photos <span style="font-size:10px;color:var(--tx3)">(Optional — max 5, 10MB each)</span></label>
         <!-- Source selection -->
@@ -6879,11 +6890,76 @@ function officerUpdateOpen(t,taskID,isHOD){
   var dlr=id('driveLinkRow');if(dlr)dlr.classList.add('dn');
   S.selPhotos=[];S.driveLinks=[];S.puDocs=[];
   var dprev=id('puDocPreview');if(dprev)dprev.innerHTML='';
+  loadPuExistingPhotos(taskID);
   loadPuExistingDocs(taskID);
   // Show Reassign button for HOD's own tasks
   var rBtn=id('pu-reassignBtn');
   if(rBtn)rBtn.style.display=isHOD?'':'none';
   closeModal('mTask');openModal('mPhotoUpload');
+}
+
+// ─── Existing photos inside the Update Task modal ──────────────
+// Mirrors the existing-documents pattern above: shows what's already
+// uploaded with a delete option, right alongside the "add new" area —
+// previously an officer could only ADD photos here and had no way to see
+// or remove what was already attached without leaving to the separate
+// View screen.
+function loadPuExistingPhotos(taskID){
+  var pprev=id('puExistingPhotos');if(!pprev)return;
+  pprev.innerHTML='<span style="color:var(--tx3);font-size:12px">Loading existing photos...</span>';
+  gasCall('serverGetTaskPhotos',S.token,taskID).then(function(r){
+    var photos=(r&&r.success)?(r.data||[]):[];
+    renderPuExistingPhotos(photos,taskID);
+  });
+}
+function renderPuExistingPhotos(photos,taskID){
+  var pprev=id('puExistingPhotos');if(!pprev)return;
+  if(!photos.length){
+    pprev.innerHTML='<span style="color:var(--tx3);font-size:12px">No photos uploaded yet.</span>';
+    return;
+  }
+  pprev.innerHTML='';
+  photos.forEach(function(p){
+    var looksValid=!!p.photoData&&(p.photoData.indexOf('data:image/')===0||p.photoData.indexOf('http')===0);
+    var wrap=document.createElement('div');
+    wrap.style.cssText='position:relative;width:80px;height:80px;border-radius:8px;overflow:hidden;border:1px solid var(--border);flex-shrink:0;background:var(--surface2)';
+    if(looksValid){
+      var img=document.createElement('img');
+      img.src=p.photoData;
+      img.style.cssText='width:100%;height:100%;object-fit:cover;cursor:pointer';
+      img.onerror=function(){photoImgLoadFailed(img);};
+      img.onclick=function(){window.open(p.photoData,'_blank','noopener');};
+      wrap.appendChild(img);
+    } else {
+      wrap.innerHTML='<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center"><span class="material-icons-round" style="font-size:22px;color:var(--c-red)">broken_image</span></div>';
+    }
+    var del=document.createElement('button');
+    del.innerHTML='<span class="material-icons-round" style="font-size:13px">close</span>';
+    del.title='Delete this photo';
+    del.style.cssText='position:absolute;top:3px;right:3px;background:rgba(0,0,0,.6);border:none;border-radius:50%;width:20px;height:20px;color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0';
+    del.onclick=function(){
+      if(!confirm('Delete this photo? This cannot be undone.'))return;
+      gasCall('serverDeleteTaskPhoto',S.token,p.photoID).then(function(r2){
+        if(r2&&r2.success){
+          toast('Photo removed.','ok');
+          // Keep any in-memory task object in sync so the card/detail
+          // view doesn't show a stale photo or count until next refresh.
+          var t=null;for(var ti=0;ti<S.tasks.length;ti++)if(S.tasks[ti].taskID===taskID){t=S.tasks[ti];break;}
+          if(t){
+            if(t.newPhotos)t.newPhotos=t.newPhotos.filter(function(np){return np.photoID!==p.photoID;});
+            if(typeof t.photoCount==='number')t.photoCount=Math.max(0,t.photoCount-1);
+            t._detail=null; // force a fresh detail fetch next time the task is viewed
+            if(typeof renderCards==='function'&&S.filtered)renderCards(S.filtered);
+          }
+          loadPuExistingPhotos(taskID);
+        } else {
+          toast((r2&&r2.message)||'Failed to remove photo.','error');
+        }
+      });
+    };
+    wrap.appendChild(del);
+    pprev.appendChild(wrap);
+  });
 }
 
 // ─── Document attachments inside the Update Task modal ─────────
@@ -11497,6 +11573,15 @@ function showAddCouncilorInline(){
 // ════════════════════════════════════════════════════════════
 var ABOUT_INITED=false;
 function loadAboutPage(){
+  // Use real counts from lookup data if it's already loaded (no extra
+  // fetch — About shouldn't cost a network round trip just to display
+  // itself). Falls back to the placeholder numbers only if lookup
+  // genuinely isn't available yet (e.g. About opened before bootstrap
+  // finishes), so the stat cards are never left blank.
+  if(S.lookup){
+    var zEl=id('aboutStatZones');if(zEl&&S.lookup.zones)zEl.setAttribute('data-target',String(S.lookup.zones.length));
+    var dEl=id('aboutStatDepts');if(dEl&&S.lookup.departments)dEl.setAttribute('data-target',String(S.lookup.departments.length));
+  }
   animateAboutStats();
   // Live status is NO LONGER checked automatically on every About page open.
   // Was previously calling serverGetLookupData purely for a cosmetic badge —
@@ -11524,7 +11609,7 @@ function animateAboutStats(){
       var progress=Math.min((ts-startTime)/duration,1);
       var eased=1-Math.pow(1-progress,3); // ease-out cubic
       var current=Math.round(start+(target-start)*eased);
-      el.textContent=current+(target===8&&progress>=1?'+':'');
+      el.textContent=current;
       if(progress<1)requestAnimationFrame(step);
     }
     requestAnimationFrame(step);
