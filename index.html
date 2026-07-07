@@ -1895,8 +1895,11 @@ tbody tr:hover { background: var(--surface2); }
              every other role sees "My Tasks" (assigned to them). -->
         <button class="filt-btn" data-qf="primary" id="qfPrimaryChip" onclick="quickFilter('primary')"><span class="material-icons-round mi" id="qfPrimaryIcon" style="font-size:14px;vertical-align:-2px">person</span> <span id="qfPrimaryLabel">My Tasks</span></button>
         <button class="filt-btn" data-qf="pending" onclick="quickFilter('pending')"><span class="material-icons-round mi" style="font-size:14px;vertical-align:-2px">hourglass_empty</span> Pending</button>
+        <button class="filt-btn" data-qf="inprogress" onclick="quickFilter('inprogress')"><span class="material-icons-round mi" style="font-size:14px;vertical-align:-2px">autorenew</span> In Progress</button>
         <button class="filt-btn filt-btn-high" data-qf="highpri" onclick="quickFilter('highpri')"><span class="material-icons-round mi" style="font-size:14px;vertical-align:-2px">priority_high</span> High Priority</button>
         <button class="filt-btn" data-qf="review" onclick="quickFilter('review')"><span class="material-icons-round mi" style="font-size:14px;vertical-align:-2px">rate_review</span> Pending Review</button>
+        <button class="filt-btn" data-qf="completed" onclick="quickFilter('completed')"><span class="material-icons-round mi" style="font-size:14px;vertical-align:-2px">check_circle</span> Completed</button>
+        <button class="filt-btn filt-btn-danger" data-qf="overdue" onclick="quickFilter('overdue')"><span class="material-icons-round mi" style="font-size:14px;vertical-align:-2px">warning</span> Overdue</button>
       </div>
       <!-- UNIVERSAL SEARCH BAR — always visible, no filter panel needed -->
       <div style="position:relative;margin-bottom:12px">
@@ -4106,6 +4109,7 @@ function populateSelects(){
   }
   fillSel('t-dept',deptListForEntry,'DeptName','DeptName','Select Department');fillSel('fDept',ld.departments,'DeptName','DeptName','All Departments');fillSel('mu-dept',ld.departments,'DeptName','DeptName','Select');fillSel('mapDept',ld.departments,'DeptName','DeptName','Select');
   fillSel('mu-desig',ld.designations,'DesigName','DesigName','Select');
+  fillOfficers(null);
   initAddOfficerDepts();
 }
 function fillSel(elId,data,val,lbl,ph){
@@ -5275,6 +5279,33 @@ function toggleChip(btn,hiddenId){
   for(var i=0;i<chips.length;i++)chips[i].classList.remove('active');
   btn.classList.add('active');
   var hidden=id(hiddenId);if(hidden)hidden.value=btn.dataset.val||'';
+  // Completed/Closed tasks are excluded from the normal fetch by default
+  // (to keep the list focused on actionable work) — filtering to that
+  // status client-side without first fetching them would silently show
+  // zero results even though plenty exist. If selecting either one (or
+  // moving away from them) changes what needs to be fetched, refresh
+  // from the server instead of just re-filtering what's already local.
+  if(hiddenId==='fStatus'){
+    var val=btn.dataset.val||'';
+    var newShowCompleted,newShowClosed;
+    if(val==='Completed'){newShowCompleted=true;newShowClosed=false;}
+    else if(val==='Closed'){newShowCompleted=false;newShowClosed=true;}
+    else if(val===''){
+      // "All" selected — respect All-Tasks mode if that's separately
+      // active (the Admin/Commissioner quick chip), otherwise back to
+      // the default hidden-by-default state.
+      newShowCompleted=!!S._qfAllMode;newShowClosed=!!S._qfAllMode;
+    } else {
+      // Pending / In Progress / Overdue / Review Pending — none of these
+      // need Completed or Closed tasks fetched at all.
+      newShowCompleted=false;newShowClosed=false;
+    }
+    if(newShowCompleted!==S.showCompleted||newShowClosed!==S.showClosed){
+      S.showCompleted=newShowCompleted;S.showClosed=newShowClosed;
+      loadTasks();
+      return;
+    }
+  }
   filterTasks();
 }
 // One-tap quick filters. Rather than maintaining a separate copy of
@@ -5310,6 +5341,9 @@ function quickFilter(kind){
   }
   var groupId,targetVal;
   if(kind==='pending'){groupId='statusChips';targetVal='Pending';}
+  else if(kind==='inprogress'){groupId='statusChips';targetVal='In Progress';}
+  else if(kind==='completed'){groupId='statusChips';targetVal='Completed';}
+  else if(kind==='overdue'){groupId='statusChips';targetVal='Overdue';}
   else if(kind==='review'){groupId='statusChips';targetVal='Review Pending';}
   else if(kind==='highpri'){groupId='priorityChips';targetVal='High';}
   else return;
@@ -5344,7 +5378,7 @@ function syncQuickFilterRow(){
   var row=id('quickFilterRow');if(!row)return;
   var status=V('fStatus'),pri=V('fPri');
   var isAdminLike=S.user&&(S.user.role==='Admin'||S.user.role==='Commissioner');
-  var map={primary:isAdminLike?!!S._qfAllMode:!!S._qfMine,pending:status==='Pending',highpri:pri==='High',review:status==='Review Pending'};
+  var map={primary:isAdminLike?!!S._qfAllMode:!!S._qfMine,pending:status==='Pending',inprogress:status==='In Progress',highpri:pri==='High',review:status==='Review Pending',completed:status==='Completed',overdue:status==='Overdue'};
   var btns=row.querySelectorAll('[data-qf]');
   for(var i=0;i<btns.length;i++){
     var k=btns[i].dataset.qf;
@@ -7123,6 +7157,7 @@ function submitPhotoUpdate(){
     // one combined request pays that fixed cost exactly once, no matter
     // how many photos are attached.
     var compressedB64=new Array(pickedPhotos.length);
+    var driveB64=new Array(pickedPhotos.length);
     function compressOne(idx){
       return new Promise(function(resolve){
         var file=pickedPhotos[idx];
@@ -7131,24 +7166,70 @@ function submitPhotoUpdate(){
         reader.onload=function(ev){
           var img=new Image();
           img.onload=function(){
-            var canvas=document.createElement('canvas');
-            var maxSize=900;
-            var scale=Math.min(maxSize/img.width,maxSize/img.height,1);
-            canvas.width=Math.round(img.width*scale);
-            canvas.height=Math.round(img.height*scale);
-            canvas.getContext('2d').drawImage(img,0,0,canvas.width,canvas.height);
-            var b64=canvas.toDataURL('image/jpeg',0.85);
-            if(b64.length>44000){b64=canvas.toDataURL('image/jpeg',0.7);}
-            if(b64.length>44000){
-              var scale2=Math.min(700/img.width,700/img.height,1);
-              var c2=document.createElement('canvas');
-              c2.width=Math.round(img.width*scale2);c2.height=Math.round(img.height*scale2);
-              c2.getContext('2d').drawImage(img,0,0,c2.width,c2.height);
-              b64=c2.toDataURL('image/jpeg',0.75);
+            // Canvas operations can genuinely throw — e.g. a large desktop
+            // screenshot (multi-monitor setups especially) can exceed a
+            // browser's max canvas dimensions, unlike a typical phone
+            // camera photo. Previously this had no try/catch: if it threw,
+            // resolve() was never called and this one photo silently
+            // stalled forever, with no visible error. Wrapping it means a
+            // failure here is now always caught and handled, never silent.
+            try{
+              var canvas=document.createElement('canvas');
+              var maxSize=900;
+              var scale=Math.min(maxSize/img.width,maxSize/img.height,1);
+              canvas.width=Math.round(img.width*scale);
+              canvas.height=Math.round(img.height*scale);
+              canvas.getContext('2d').drawImage(img,0,0,canvas.width,canvas.height);
+              var b64=canvas.toDataURL('image/jpeg',0.85);
+              if(b64.length>44000){b64=canvas.toDataURL('image/jpeg',0.7);}
+              if(b64.length>44000){
+                var scale2=Math.min(700/img.width,700/img.height,1);
+                var c2=document.createElement('canvas');
+                c2.width=Math.round(img.width*scale2);c2.height=Math.round(img.height*scale2);
+                c2.getContext('2d').drawImage(img,0,0,c2.width,c2.height);
+                b64=c2.toDataURL('image/jpeg',0.75);
+              }
+              if(b64.length<=44000){
+                // Fits comfortably in a sheet cell — use the fast path.
+                compressedB64[idx]=b64;
+                photoEntry._mode='fast';
+                photoEntry.photoData=b64;
+                resolve();
+                return;
+              }
+              // Still too big for the fast path even after 3 passes (an
+              // unusually large/detailed image) — fall through to the
+              // Drive fallback below rather than give up.
+              throw new Error('too large for fast path');
+            }catch(fastErr){
+              // DRIVE FALLBACK — a photo that can't be shrunk small enough
+              // for the sheet-based fast path (or whose canvas operations
+              // outright failed) still doesn't have to be a lost cause.
+              // Google Drive has no cell-size constraint, so re-compress
+              // with a much more generous budget and upload there instead.
+              // Slower than the fast path, but reliable, and only ever
+              // used for the rare photo the fast path genuinely can't
+              // handle — everything else still goes the fast, sheet-based
+              // route.
+              try{
+                var dCanvas=document.createElement('canvas');
+                var dScale=Math.min(1600/img.width,1600/img.height,1);
+                dCanvas.width=Math.round(img.width*dScale);
+                dCanvas.height=Math.round(img.height*dScale);
+                dCanvas.getContext('2d').drawImage(img,0,0,dCanvas.width,dCanvas.height);
+                var dB64=dCanvas.toDataURL('image/jpeg',0.8);
+                driveB64[idx]=dB64;
+                photoEntry._mode='drive';
+                photoEntry.photoData=dB64;
+                resolve();
+              }catch(driveErr){
+                compressedB64[idx]=null;
+                photoEntry.pending=false;
+                photoEntry.failed=true;
+                photoEntry.failMessage='This photo is too large or complex for this device to process — please try a smaller photo.';
+                resolve();
+              }
             }
-            compressedB64[idx]=b64;
-            photoEntry.photoData=b64; // swap local preview to the final compressed image
-            resolve();
           };
           // A photo that fails to decode (corrupt file, or a format the
           // browser can't render — e.g. some HEIC photos straight off an
@@ -7168,86 +7249,125 @@ function submitPhotoUpdate(){
       });
     }
     function uploadCompressedBatch(){
-      var validB64=[],validEntries=[];
-      for(var vi=0;vi<compressedB64.length;vi++){
-        // Skip anything already uploaded successfully in an earlier chunk —
-        // critical for retries: without this, retrying after a partial
-        // failure would re-send photos that already saved fine, creating
-        // duplicates. localPhotoEntries[vi].uploaded is only ever set true
-        // once the server has actually confirmed that specific photo saved.
-        if(compressedB64[vi]&&!localPhotoEntries[vi].uploaded){validB64.push(compressedB64[vi]);validEntries.push(localPhotoEntries[vi]);}
-      }
-      // Photos that could never even be compressed (bad format etc.) —
-      // a stable count unaffected by however many retries happen.
+      var fastB64=[],fastEntries=[],driveList=[];
       var permanentlyFailedCount=0;
-      for(var pfi=0;pfi<compressedB64.length;pfi++){if(!compressedB64[pfi])permanentlyFailedCount++;}
-      if(!validB64.length){
+      for(var vi=0;vi<localPhotoEntries.length;vi++){
+        var entry=localPhotoEntries[vi];
+        // Skip anything already uploaded successfully in an earlier
+        // chunk/attempt — critical for retries: without this, retrying
+        // after a partial failure would re-send photos that already
+        // saved fine, creating duplicates.
+        if(entry.uploaded)continue;
+        if(entry._mode==='drive'&&driveB64[vi]){
+          driveList.push({idx:vi,entry:entry});
+        } else if(compressedB64[vi]){
+          fastB64.push(compressedB64[vi]);fastEntries.push(entry);
+        } else {
+          permanentlyFailedCount++;
+        }
+      }
+      if(!fastB64.length&&!driveList.length){
         if(localTask)localTask._photosSaving=false;
         setUploadingUI(false);
-        if(permanentlyFailedCount>0)toastWithRetry('None of the selected photos could be processed on this device (unsupported format). Tap Retry, or re-select different photos.',retryPhotoBatch);
+        if(permanentlyFailedCount>0)toastWithRetry('None of the selected photos could be processed on this device. Tap Retry, or re-select different photos.',retryPhotoBatch);
         else uploadPendingDocs(); // everything was already uploaded — just move on
         return;
       }
-      // Send in small chunks rather than one giant request. Keeps each
-      // individual network call's payload comfortably small — safer
-      // against any transport/size quirks when several large photos are
-      // attached at once — while still cutting round trips drastically
-      // compared to one call per photo.
-      var CHUNK_SIZE=3;
-      var chunks=[];
-      for(var ci=0;ci<validB64.length;ci+=CHUNK_SIZE){
-        chunks.push({b64:validB64.slice(ci,ci+CHUNK_SIZE),entries:validEntries.slice(ci,ci+CHUNK_SIZE)});
-      }
-      var chunkIdx=0,anyChunkFailed=false,serverSkipped=0;
-      function sendNextChunk(){
-        if(chunkIdx>=chunks.length){
-          if(localTask)localTask._photosSaving=false;
-          if(typeof renderCards==='function'&&S.filtered)renderCards(S.filtered);
-          if(anyChunkFailed){
-            setUploadingUI(false);
-            toastWithRetry('Connection dropped \u2014 the photo(s) are queued and will upload automatically once you\'re back online. Tap Retry to try right now instead.',retryPhotoBatch);
-            return;
-          }
-          var totalSkipped=permanentlyFailedCount+serverSkipped;
-          if(totalSkipped>0){
-            toast(totalSkipped+' photo'+(totalSkipped!==1?'s':'')+' could not be processed and '+(totalSkipped!==1?'were':'was')+' skipped; the rest uploaded fine.','info');
-          }
-          uploadPendingDocs();
-          return;
-        }
-        var chunk=chunks[chunkIdx];
-        gasCall('serverAddTaskPhotosBatch',S.token,{taskID:taskID,photos:chunk.b64}).then(function(pr){
+      var anyFailure=false,serverSkipped=0;
+
+      // DRIVE FALLBACK uploads first (one at a time — Drive uploads are
+      // inherently a slower, sequential operation, unlike the fast
+      // sheet-based batch below). Only ever populated for the rare photo
+      // too large/complex for the fast path to handle.
+      function processDriveList(i){
+        if(i>=driveList.length){ startFastBatch(); return; }
+        var item=driveList[i];
+        var b64raw=(driveB64[item.idx].split(',')[1])||'';
+        var fileName='photo_'+Date.now()+'_'+i+'.jpg';
+        gasCall('serverUploadPhoto',S.token,taskID,fileName,'image/jpeg',b64raw).then(function(pr){
           if(pr&&pr.success){
-            for(var ei=0;ei<chunk.entries.length;ei++){
-              chunk.entries[ei].pending=false;
-              chunk.entries[ei].failed=false;
-              chunk.entries[ei].uploaded=true; // never re-send this one, even on retry
-              if(pr.photoIDs&&pr.photoIDs[ei])chunk.entries[ei].photoID=pr.photoIDs[ei];
-            }
-            serverSkipped+=(pr.skippedCount||0);
+            item.entry.pending=false;item.entry.failed=false;item.entry.uploaded=true;
+            if(pr.url)item.entry.photoData=pr.url; // shows immediately via the same http(s) path buildCombinedPhotoGrid already accepts
+            // A Drive-uploaded photo is authoritatively tracked via the
+            // task's PhotoLinks field server-side — invalidate the cached
+            // detail so re-opening this task fetches it fresh through the
+            // proven Drive-photo display path, not this optimistic local one.
+            if(localTask)localTask._detail=null;
           } else {
-            for(var ej=0;ej<chunk.entries.length;ej++){chunk.entries[ej].pending=false;chunk.entries[ej].failed=true;}
-            anyChunkFailed=true;
-            // Queue this chunk's photos for automatic background retry —
-            // the compressed data is already in memory, no reason to make
-            // the officer manually retry once connectivity comes back.
-            queueOfflinePhotoUpload(taskID, chunk.b64);
+            item.entry.pending=false;item.entry.failed=true;
+            anyFailure=true;
           }
-          chunkIdx++;
-          sendNextChunk();
+          processDriveList(i+1);
         });
       }
-      sendNextChunk();
+
+      function startFastBatch(){
+        if(!fastB64.length){ finishAll(); return; }
+        // Send in small chunks rather than one giant request. Keeps each
+        // individual network call's payload comfortably small — safer
+        // against any transport/size quirks when several large photos are
+        // attached at once — while still cutting round trips drastically
+        // compared to one call per photo.
+        var CHUNK_SIZE=3;
+        var chunks=[];
+        for(var ci=0;ci<fastB64.length;ci+=CHUNK_SIZE){
+          chunks.push({b64:fastB64.slice(ci,ci+CHUNK_SIZE),entries:fastEntries.slice(ci,ci+CHUNK_SIZE)});
+        }
+        var chunkIdx=0;
+        function sendNextChunk(){
+          if(chunkIdx>=chunks.length){ finishAll(); return; }
+          var chunk=chunks[chunkIdx];
+          gasCall('serverAddTaskPhotosBatch',S.token,{taskID:taskID,photos:chunk.b64}).then(function(pr){
+            if(pr&&pr.success){
+              for(var ei=0;ei<chunk.entries.length;ei++){
+                chunk.entries[ei].pending=false;
+                chunk.entries[ei].failed=false;
+                chunk.entries[ei].uploaded=true; // never re-send this one, even on retry
+                if(pr.photoIDs&&pr.photoIDs[ei])chunk.entries[ei].photoID=pr.photoIDs[ei];
+              }
+              serverSkipped+=(pr.skippedCount||0);
+            } else {
+              for(var ej=0;ej<chunk.entries.length;ej++){chunk.entries[ej].pending=false;chunk.entries[ej].failed=true;}
+              anyFailure=true;
+              // Queue this chunk's photos for automatic background retry —
+              // the compressed data is already in memory, no reason to make
+              // the officer manually retry once connectivity comes back.
+              queueOfflinePhotoUpload(taskID, chunk.b64);
+            }
+            chunkIdx++;
+            sendNextChunk();
+          });
+        }
+        sendNextChunk();
+      }
+
+      function finishAll(){
+        if(localTask)localTask._photosSaving=false;
+        if(typeof renderCards==='function'&&S.filtered)renderCards(S.filtered);
+        if(anyFailure){
+          setUploadingUI(false);
+          toastWithRetry('Connection dropped \u2014 the photo(s) are queued and will upload automatically once you\'re back online. Tap Retry to try right now instead.',retryPhotoBatch);
+          return;
+        }
+        var totalSkipped=permanentlyFailedCount+serverSkipped;
+        if(totalSkipped>0){
+          toast(totalSkipped+' photo'+(totalSkipped!==1?'s':'')+' could not be processed and '+(totalSkipped!==1?'were':'was')+' skipped; the rest uploaded fine.','info');
+        }
+        uploadPendingDocs();
+      }
+
+      processDriveList(0);
     }
-    // Retries resend the ALREADY-COMPRESSED batch as-is — no need to
+    // Retries resend whatever's already compressed as-is — no need to
     // re-decode/re-compress images that were already processed fine.
-    // Photos that failed to COMPRESS (not just upload) are left alone —
-    // re-sending won't fix an undecodable file, so they stay flagged for
-    // the person to re-select instead of looping forever.
+    // Photos that failed to COMPRESS entirely (not just upload) are left
+    // alone — re-sending won't fix an undecodable file, so they stay
+    // flagged for the person to re-select instead of looping forever.
     function retryPhotoBatch(){
       setUploadingUI(true);
       for(var ri=0;ri<localPhotoEntries.length;ri++){
-        if(compressedB64[ri]&&!localPhotoEntries[ri].uploaded){localPhotoEntries[ri].failed=false;localPhotoEntries[ri].pending=true;}
+        var hasData=compressedB64[ri]||(localPhotoEntries[ri]._mode==='drive'&&driveB64[ri]);
+        if(hasData&&!localPhotoEntries[ri].uploaded){localPhotoEntries[ri].failed=false;localPhotoEntries[ri].pending=true;}
       }
       if(typeof renderCards==='function'&&S.filtered)renderCards(S.filtered);
       uploadCompressedBatch();
