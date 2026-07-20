@@ -2912,6 +2912,10 @@ tbody tr:hover { background: var(--surface2); }
           Export as PDF<br><span style="font-size:11px;font-weight:400;opacity:.8">Print-ready report</span>
         </button>
       </div>
+      <label style="display:flex;align-items:center;gap:8px;margin-bottom:14px;padding:10px 12px;background:var(--surface2);border-radius:8px;cursor:pointer;font-size:12.5px;color:var(--tx2)">
+        <input type="checkbox" id="mExportAllTasks" checked onchange="updateExportSummary()" style="width:16px;height:16px;cursor:pointer;flex-shrink:0">
+        <span><strong>Include every task</strong>, including Completed and Closed (recommended for reports) &mdash; uncheck to export only what's currently shown on screen.</span>
+      </label>
       <div id="mExportFilterSummary" style="margin-top:14px;padding:10px;background:var(--surface2);border-radius:8px;font-size:12.5px;color:var(--tx2)"></div>
     </div>
     <div class="modal-ft"><button class="btn btn-ghost" onclick="closeModal('mExport')">Cancel</button></div>
@@ -3424,6 +3428,32 @@ function isLikelyConnectionDrop(msg){
 function gasCall(fn){
   var args=[];
   for(var i=1;i<arguments.length;i++)args.push(arguments[i]);
+  return gasCallInner(fn,args).then(function(r){
+    // Universal session-expiry handling — every single API call passes
+    // through here regardless of transport mode, so this is the ONE place
+    // to catch "the session is no longer valid" instead of leaving each
+    // page to show the bare backend message wherever it happened to
+    // surface. Previously there was no handling for this AT ALL: a page
+    // that made a call after the session had quietly expired just showed
+    // "Unauthorized" as a generic toast, with no indication that the fix
+    // is simply logging in again — which reads exactly like a permissions
+    // bug rather than what it actually is.
+    if(r&&r.success===false&&r.message==='Unauthorized'&&fn!=='serverLogin'&&fn!=='serverLoginAndLoad'&&fn!=='serverLogout'){
+      handleSessionExpired();
+    }
+    return r;
+  });
+}
+function handleSessionExpired(){
+  if(S._sessionExpiredHandled)return; // several calls can fail around the same moment — only act on the first
+  S._sessionExpiredHandled=true;
+  toast('Your session has expired \u2014 please log in again.','error');
+  setTimeout(function(){
+    S._sessionExpiredHandled=false; // cleared here so a fresh login can trigger this again in a future session
+    doLogout();
+  },1200);
+}
+function gasCallInner(fn,args){
 
   // ── GitHub Pages mode: call GAS as a web API via fetch ──
   if(GAS_URL){
@@ -4102,6 +4132,17 @@ function applyDrillFilter(){
 function toggleSidebar(){var s=id('sidebar'),o=id('sbOverlay');if(s)s.classList.toggle('open');if(o)o.classList.toggle('on');}
 function closeSidebar(){var s=id('sidebar');if(s)s.classList.remove('open');var o=id('sbOverlay');if(o)o.classList.remove('on');}
 function loadLookup(){return gasCall('serverGetLookupData',S.token).then(function(r){if(r&&r.success){S.lookup=r;populateSelects();}});}
+// Guarantees S.lookup is actually populated before running callback,
+// instead of assuming it's already loaded (it usually is, bundled into
+// the login response — but on a slow connection, or if someone reaches
+// a page that needs it before that response has resolved, dropdowns
+// that depend on it would silently populate empty or incomplete with no
+// indication why). Used anywhere a dropdown needs zones/departments/
+// officers and can't just assume S.lookup is ready.
+function ensureLookupReady(callback){
+  if(S.lookup){callback();return;}
+  loadLookup().then(function(){callback();}).catch(function(){callback();}); // even on failure, still call back — dropdowns just show empty rather than the UI silently hanging
+}
 function populateSelects(){
   var ld=S.lookup;if(!ld)return;
   fillSelZone('t-zone',ld.zones,'Select Zone');fillSelZone('fZone',ld.zones,'All Zones');fillSelZone('mu-zone',ld.zones,'Select');
@@ -5083,6 +5124,28 @@ function trkApplyResponse(r,fn,fromPreload){
       renderTable(S.filtered);updateTaskCount();
     }
     trkRenderNoteBar();
+    // Jumping here from a note's linked-task badge — now that real data
+    // has arrived (not a guessed timeout), open that task if it's in the
+    // fetched set. Cleared either way so this never fires again on a
+    // later, unrelated refresh.
+    if(S._pendingViewTaskID){
+      var pendingID=S._pendingViewTaskID;
+      S._pendingViewTaskID=null;
+      var found=false;
+      for(var pvi=0;pvi<S.tasks.length;pvi++){if(S.tasks[pvi].taskID===pendingID){found=true;break;}}
+      if(found)viewTask(pendingID);
+      else toast('Could not find that task \u2014 it may have been deleted.','info');
+    }
+}
+// Jumps from a note's linked-task badge to that task in the Tracker.
+// Forces a fetch that includes Completed/Closed (the linked task could be
+// in either state, and the normal fetch hides them by default), and
+// waits for trkApplyResponse to actually confirm the data arrived rather
+// than guessing at a fixed delay before trying to open it.
+function jumpToTaskFromNote(taskID){
+  S._pendingViewTaskID=taskID;
+  S.showCompleted=true;S.showClosed=true;
+  go('tracker');
 }
 
 // Note bar (review chip + completed toggle + window note) — reads
@@ -5934,6 +5997,8 @@ function viewTask(taskID){
         t.newPhotos=r.task.photos||[];
         t.docsData=r.task.attachments||[];
         t.comments=r.task.comments||[];
+        t.sourceNoteID=r.task.sourceNoteID||'';
+        t.sourceNote=r.task.sourceNote||null;
         // Only update if this task's modal is still open
         if(id('mTaskTitle')&&id('mTaskTitle').textContent===taskID){
           id('mTaskBody').innerHTML=taskDetailHTML(t);
@@ -6029,6 +6094,23 @@ function taskDetailHTML(t){
     +'<div style="font-size:10px;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px">Description</div>'
     +'<div style="background:var(--surface2);padding:11px;border-radius:8px;font-size:13px;line-height:1.6">'+(t.description||'\u2014')+'</div>'
     +'</div>';
+  // Originating inspection note — most tasks in this system start life
+  // as a field note, so surfacing it directly here (rather than making
+  // someone go search Notes separately) is what actually makes review
+  // fast: the reviewer sees what was observed AND what was done about it
+  // in one place.
+  if(t.sourceNote){
+    detailsHtml+='<div style="margin-bottom:12px;cursor:pointer" onclick="go(\'photolog\')" title="Open this note in Notes">'
+      +'<div style="font-size:10px;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px">&#128221; From Inspection Note \u2014 '+(t.sourceNote.date||'')+'</div>'
+      +'<div style="background:rgba(180,83,9,.06);border:1px solid rgba(180,83,9,.25);padding:11px;border-radius:8px;font-size:13px;line-height:1.6">'
+      +(t.sourceNote.type?'<span style="font-weight:700;color:#B45309">'+htmlEsc(t.sourceNote.type)+'</span>'+(t.sourceNote.zone?' \u00b7 '+htmlEsc(t.sourceNote.zone):'')+'<br>':'')
+      +htmlEsc(t.sourceNote.notes||'')
+      +'</div></div>';
+  } else if(t.sourceNoteID){
+    // Link exists but the note itself couldn't be found (e.g. deleted) —
+    // say so plainly rather than silently showing nothing.
+    detailsHtml+='<div style="margin-bottom:12px;font-size:12px;color:var(--tx3)">Originating note ('+t.sourceNoteID+') could not be found \u2014 it may have been deleted.</div>';
+  }
   if(t.officerRemarks&&t.officerRemarks.trim()){
     detailsHtml+='<div style="margin-bottom:12px">'
       +'<div style="font-size:10px;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px">Officer Remarks</div>'
@@ -6909,6 +6991,14 @@ function loadPuExistingPhotos(taskID){
 }
 function renderPuExistingPhotos(photos,taskID){
   var pprev=id('puExistingPhotos');if(!pprev)return;
+  // The modal may have since been closed and reopened for a DIFFERENT
+  // task by the time this response arrives (e.g. someone quickly closes
+  // Task A's update modal and opens Task B's before Task A's photo fetch
+  // resolves). Without this check, Task A's photos — and worse, their
+  // delete buttons — would render into what's now Task B's modal,
+  // risking exactly the kind of "wrong task got updated, not sure how"
+  // mix-up this is guarding against.
+  if(V('pu-taskid')!==taskID)return;
   if(!photos.length){
     pprev.innerHTML='<span style="color:var(--tx3);font-size:12px">No photos uploaded yet.</span>';
     return;
@@ -6934,6 +7024,10 @@ function renderPuExistingPhotos(photos,taskID){
     del.style.cssText='position:absolute;top:3px;right:3px;background:rgba(0,0,0,.6);border:none;border-radius:50%;width:20px;height:20px;color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0';
     del.onclick=function(){
       if(!confirm('Delete this photo? This cannot be undone.'))return;
+      // Re-check right before the destructive call too — the confirm()
+      // dialog blocks the UI, but someone could still have closed and
+      // reopened the modal in another window/tab in the meantime.
+      if(V('pu-taskid')!==taskID){toast('This task is no longer open \u2014 nothing was deleted.','info');return;}
       gasCall('serverDeleteTaskPhoto',S.token,p.photoID).then(function(r2){
         if(r2&&r2.success){
           toast('Photo removed.','ok');
@@ -7624,11 +7718,10 @@ function renderAITable(){
       var dn=depts[j].DeptName;
       deptOpts+='<option'+(dn===t.department?' selected':'')+'>'+dn+'</option>';
     }
-    // Build officer options with correct selected
-    var offOpts='<option value="">Unassigned</option>';
-    for(var j=0;j<offs.length;j++){
-      offOpts+='<option value="'+offs[j].userID+'"'+(offs[j].userID===t.officerID?' selected':'')+'>'+offs[j].name+' \u2014 '+offs[j].designation+'</option>';
-    }
+    // Build officer options — filtered to the row's currently selected
+    // department (if any), instead of always listing every officer from
+    // every department regardless of what's actually chosen here.
+    var offOpts=buildAiOfficerOptions(offs,t.department,t.officerID);
     // Build zone options with correct selected
     var zoneOpts='<option value="">Select</option>';
     for(var j=0;j<zones.length;j++){
@@ -7640,8 +7733,8 @@ function renderAITable(){
       +'<td style="padding:9px;font-weight:700;color:var(--c-blue);font-size:13px;vertical-align:top">'+(i+1)+'</td>'
       +'<td style="padding:9px;vertical-align:top;white-space:nowrap">'+confBadge(t.confidence)+'<div style="font-size:9px;color:var(--tx3);margin-top:2px">D:'+t.deptConf+'%</div></td>'
       +'<td style="padding:9px;min-width:190px;vertical-align:top"><textarea class="f-ctrl" rows="2" onchange="S.aiTasks['+i+'].description=this.value" style="font-size:12px;padding:6px 9px;min-height:46px">'+t.description+'</textarea></td>'
-      +'<td style="padding:9px;vertical-align:top;min-width:130px"><select class="f-sel" onchange="S.aiTasks['+i+'].department=this.value" style="font-size:12px;padding:6px 9px"'+fieldAlert(t.deptConf)+'>'+deptOpts+'</select><div style="font-size:9px;color:var(--tx3);margin-top:1px">'+confBadge(t.deptConf)+'</div></td>'
-      +'<td style="padding:9px;vertical-align:top;min-width:160px"><select class="f-sel" onchange="updateAITaskOfficer('+i+',this.value)" style="font-size:12px;padding:6px 9px"'+fieldAlert(t.offConf)+'>'+offOpts+'</select><div style="font-size:9px;color:var(--tx3);margin-top:1px">'+confBadge(t.offConf)+'</div></td>'
+      +'<td style="padding:9px;vertical-align:top;min-width:130px"><select class="f-sel" onchange="onAiDeptChange('+i+',this.value)" style="font-size:12px;padding:6px 9px"'+fieldAlert(t.deptConf)+'>'+deptOpts+'</select><div style="font-size:9px;color:var(--tx3);margin-top:1px">'+confBadge(t.deptConf)+'</div></td>'
+      +'<td style="padding:9px;vertical-align:top;min-width:160px"><select class="f-sel" id="aiOff'+i+'" onchange="updateAITaskOfficer('+i+',this.value)" style="font-size:12px;padding:6px 9px"'+fieldAlert(t.offConf)+'>'+offOpts+'</select><div style="font-size:9px;color:var(--tx3);margin-top:1px">'+confBadge(t.offConf)+'</div></td>'
       +'<td style="padding:9px;vertical-align:top"><select class="f-sel" onchange="S.aiTasks['+i+'].priority=this.value" style="font-size:12px;padding:6px 9px"><option'+(t.priority==='High'?' selected':'')+'>High</option><option'+(t.priority==='Medium'?' selected':'')+'>Medium</option><option'+(t.priority==='Low'?' selected':'')+'>Low</option></select></td>'
       +'<td style="padding:9px;vertical-align:top;min-width:140px"><select class="f-sel" onchange="S.aiTasks['+i+'].zone=this.value" style="font-size:12px;padding:6px 9px"'+fieldAlert(t.zoneConf)+'>'+zoneOpts+'</select><div style="font-size:9px;color:var(--tx3);margin-top:1px">'+confBadge(t.zoneConf)+'</div></td>'
       +'<td style="padding:9px;vertical-align:top"><select class="f-sel" onchange="S.aiTasks['+i+'].taskType=this.value" style="font-size:12px;padding:6px 9px">'
@@ -7654,7 +7747,7 @@ function renderAITable(){
       +'<td style="padding:9px;vertical-align:top"><input type="time" class="f-ctrl" value="'+(t.time||'')+'" onchange="S.aiTasks['+i+'].time=this.value" style="font-size:12px;padding:6px 9px;width:90px"></td>'
       +'<td style="padding:9px;vertical-align:top"><input type="date" class="f-ctrl" value="'+(t.dueDate||'')+'" onchange="S.aiTasks['+i+'].dueDate=this.value" style="font-size:12px;padding:6px 9px"'+fieldAlert(t.dueDateConf)+'>'
       +'<div style="font-size:9px;color:var(--tx3);margin-top:1px">'+(t.dueDate?confBadge(t.dueDateConf):'<span style="color:var(--tx3)">Optional</span>')+'</div></td>'
-      +'<td style="padding:9px;vertical-align:top"><button class="btn btn-danger btn-sm btn-icon" onclick="rmAI('+i+')" title="Remove"><span class="material-icons-round mi">delete</span></button></td></tr>';
+      +'<td style="padding:9px;vertical-align:top;white-space:nowrap"><button class="btn btn-ghost btn-sm btn-icon" onclick="dupAI('+i+')" title="Duplicate this task \u2014 useful when the same task needs a different officer too"><span class="material-icons-round mi">content_copy</span></button> <button class="btn btn-danger btn-sm btn-icon" onclick="rmAI('+i+')" title="Remove"><span class="material-icons-round mi">delete</span></button></td></tr>';
   }
   html+='</tbody></table></div>'
     +'<div style="padding:10px 16px;background:var(--surface2);border-top:1px solid var(--border);font-size:11.5px;color:var(--tx2)">'
@@ -7662,6 +7755,59 @@ function renderAITable(){
     +'<span style="color:var(--c-gold);font-weight:700">Yellow border</span> = medium confidence. '
     +'Date/Time/Type auto-detected from header lines. All fields editable before saving.</div>';
   var el=id('aiTable');if(el)el.innerHTML=html;
+}
+// Builds the officer <option> list for one AI Extractor row, filtered to
+// the department currently selected on that row (falls back to showing
+// every officer if no department is set yet, so the dropdown is never
+// empty before a department's been picked). currentOfficerID is kept
+// selected only if they actually belong to the filtered department —
+// otherwise the selection is cleared rather than silently keeping a
+// mismatched officer selected.
+function buildAiOfficerOptions(allOfficers,department,currentOfficerID){
+  var filtered=department
+    ? allOfficers.filter(function(o){return String(o.department||'').trim()===String(department).trim();})
+    : allOfficers;
+  var opts='<option value="">Unassigned</option>';
+  for(var j=0;j<filtered.length;j++){
+    opts+='<option value="'+filtered[j].userID+'"'+(filtered[j].userID===currentOfficerID?' selected':'')+'>'+filtered[j].name+' \u2014 '+filtered[j].designation+'</option>';
+  }
+  return opts;
+}
+// Previously changing the department dropdown only updated the task's
+// department field — the officer dropdown right next to it kept showing
+// every officer from every department, completely unfiltered. Now
+// changing department re-filters that row's officer list to just that
+// department's staff, same as the intent already built into initial
+// rendering above.
+function onAiDeptChange(idx,newDept){
+  if(!S.aiTasks[idx])return;
+  S.aiTasks[idx].department=newDept;
+  var offSel=id('aiOff'+idx);
+  if(!offSel)return;
+  var allOfficers=(S.lookup&&S.lookup.officers)||[];
+  var currentOfficerID=S.aiTasks[idx].officerID||'';
+  offSel.innerHTML=buildAiOfficerOptions(allOfficers,newDept,currentOfficerID);
+  // If the previously selected officer doesn't belong to the new
+  // department, the rebuilt list won't have them selected — clear the
+  // task's officer fields to match what's actually showing, rather than
+  // silently keeping a stale officerID that no longer matches the visible selection.
+  if(offSel.value!==currentOfficerID){
+    updateAITaskOfficer(idx,offSel.value);
+  }
+}
+// Clones one extracted task right below itself — for when the same
+// underlying task genuinely needs to go to more than one officer (e.g. a
+// joint inspection, or the same issue affecting two departments). The
+// clone's officer is intentionally cleared (not copied) so the two rows
+// don't look like an accidental exact duplicate sitting side by side —
+// whoever's reviewing has to deliberately pick who the second one goes to.
+function dupAI(i){
+  if(!S.aiTasks[i])return;
+  var clone=JSON.parse(JSON.stringify(S.aiTasks[i]));
+  clone.officerID='';clone.officerName='';clone.designation='';
+  S.aiTasks.splice(i+1,0,clone);
+  renderAITable();
+  toast('Task duplicated \u2014 assign the copy to another officer below.','info');
 }
 function rmAI(i){S.aiTasks.splice(i,1);renderAITable();if(S.aiTasks.length===0){var r=id('aiResults');if(r)r.classList.add('dn');}}
 
@@ -7732,6 +7878,10 @@ function saveAllAI(){
       task.officerName = '';
       task.officerID   = '';
     }
+    // Carries the link back to whichever note (if any) this extraction
+    // was launched from — see plCreateTaskFromNote(). Applies to every
+    // task in this batch, since they were all extracted from that same note's text.
+    if(S.pendingSourceNoteID) task.sourceNoteID = S.pendingSourceNoteID;
     tasks.push(task);
   }
 
@@ -7746,7 +7896,7 @@ function saveAllAI(){
     btnRelease('saveAllAI',null);
   }
   function saveNext(idx){
-    if(idx>=tasks.length){hideLoader();toast('Saved '+saved+'/'+total+' tasks!','ok');finishSaveAll();clearAI();go('tracker');return;}
+    if(idx>=tasks.length){hideLoader();toast('Saved '+saved+'/'+total+' tasks!','ok');finishSaveAll();S.pendingSourceNoteID=null;clearAI();go('tracker');return;}
     gasCall('serverCreateTask',S.token,tasks[idx]).then(function(r){if(r&&r.success)saved++;saveNext(idx+1);});
   }
   saveNext(0);
@@ -7754,18 +7904,74 @@ function saveAllAI(){
 function clearAI(){S.aiTasks=[];var r=id('aiResults');if(r)r.classList.add('dn');var ai=id('aiInput');if(ai)ai.value='';}
 function showExportChoice(ctx){
   S.exportCtx=ctx||'tracker';
-  var tasks=(S.exportCtx==='commissioner')?S.tasks:(S.filtered.length?S.filtered:S.tasks);
-  var done=0,over=0;for(var i=0;i<tasks.length;i++){if(tasks[i].status==='Completed'||tasks[i].status==='Closed')done++;if(tasks[i].isOverdue)over++;}
+  var cb=id('mExportAllTasks');if(cb)cb.checked=true; // default to complete data every time the modal opens
+  var cbRow=cb?cb.closest('label'):null;
+  if(cbRow)cbRow.style.display=(S.exportCtx==='commissioner')?'none':'flex';
   var title=id('mExportTitle');if(title)title.textContent=(S.exportCtx==='commissioner')?'Export Commissioner Report':'Export Task Data';
-  var desc=id('mExportDesc');if(desc)desc.textContent=(S.exportCtx==='commissioner')?'Structured review-ready official report.':'Currently filtered task list.';
-  var sumEl=id('mExportFilterSummary');if(sumEl)sumEl.innerHTML='<strong>'+tasks.length+'</strong> tasks \u00b7 <span style="color:var(--c-green)">'+done+' completed</span> \u00b7 <span style="color:var(--c-red)">'+over+' overdue</span>';
+  updateExportSummary();
   openModal('mExport');
 }
+// Keeps the summary line honest about what will actually be exported —
+// previously the modal always just showed whatever was in the currently
+// filtered view with no way to tell that Completed/Closed tasks (hidden
+// from the tracker by default) were silently missing from the export.
+function updateExportSummary(){
+  var allMode=id('mExportAllTasks')?id('mExportAllTasks').checked:true;
+  var desc=id('mExportDesc');
+  var sumEl=id('mExportFilterSummary');
+  if(S.exportCtx==='commissioner'){
+    if(desc)desc.textContent='Structured review-ready official report.';
+    var tasks=S.tasks;
+    var done=0,over=0;for(var i=0;i<tasks.length;i++){if(tasks[i].status==='Completed'||tasks[i].status==='Closed')done++;if(tasks[i].isOverdue)over++;}
+    if(sumEl)sumEl.innerHTML='<strong>'+tasks.length+'</strong> tasks \u00b7 <span style="color:var(--c-green)">'+done+' completed</span> \u00b7 <span style="color:var(--c-red)">'+over+' overdue</span>';
+    return;
+  }
+  if(allMode){
+    if(desc)desc.textContent='Every task, all time, all statuses \u2014 including Completed and Closed.';
+    if(sumEl)sumEl.innerHTML='<span style="color:var(--tx3)">Fetching the complete count\u2026</span>';
+    gasCall('serverGetTasks',S.token,{days:0,includeCompleted:true,includeClosed:true}).then(function(r){
+      if(!id('mExportAllTasks')||!id('mExportAllTasks').checked)return; // toggled off or modal closed before this resolved
+      var tasks=(r&&r.success)?normalizeTaskList(r.data||[]):[];
+      var done=0,over=0;for(var i=0;i<tasks.length;i++){if(tasks[i].status==='Completed'||tasks[i].status==='Closed')done++;if(tasks[i].isOverdue)over++;}
+      if(sumEl)sumEl.innerHTML='<strong>'+tasks.length+'</strong> tasks (complete) \u00b7 <span style="color:var(--c-green)">'+done+' completed</span> \u00b7 <span style="color:var(--c-red)">'+over+' overdue</span>';
+    });
+  } else {
+    if(desc)desc.textContent='Only the tasks currently shown on screen (your active filters apply).';
+    var tasksShown=(S.filtered.length?S.filtered:S.tasks);
+    var done2=0,over2=0;for(var j=0;j<tasksShown.length;j++){if(tasksShown[j].status==='Completed'||tasksShown[j].status==='Closed')done2++;if(tasksShown[j].isOverdue)over2++;}
+    if(sumEl)sumEl.innerHTML='<strong>'+tasksShown.length+'</strong> tasks shown \u00b7 <span style="color:var(--c-green)">'+done2+' completed</span> \u00b7 <span style="color:var(--c-red)">'+over2+' overdue</span>';
+  }
+}
 function doExport(fmt){
-  closeModal('mExport');
-  var tasks=(S.exportCtx==='commissioner')?S.tasks:(S.filtered.length?S.filtered:S.tasks);
-  if(!tasks.length){toast('No tasks to export.','info');return;}
-  if(fmt==='excel')exportExcel(tasks);else exportPDF(tasks,S.exportCtx);
+  var allMode=id('mExportAllTasks')?id('mExportAllTasks').checked:true;
+  if(S.exportCtx==='commissioner'){
+    closeModal('mExport');
+    var tasks=S.tasks;
+    if(!tasks.length){toast('No tasks to export.','info');return;}
+    if(fmt==='excel')exportExcel(tasks);else exportPDF(tasks,S.exportCtx);
+    return;
+  }
+  if(!allMode){
+    closeModal('mExport');
+    var tasksShown=(S.filtered.length?S.filtered:S.tasks);
+    if(!tasksShown.length){toast('No tasks to export.','info');return;}
+    if(fmt==='excel')exportExcel(tasksShown);else exportPDF(tasksShown,S.exportCtx);
+    return;
+  }
+  // Complete export — fetch fresh, full data regardless of whatever's
+  // currently filtered/visible. This is the fix for exports silently
+  // missing Completed/Closed tasks: previously export always used
+  // S.filtered, which never contains them unless the tracker's own
+  // "show completed" toggle happened to already be on.
+  showLoader('Preparing complete export\u2026');
+  gasCall('serverGetTasks',S.token,{days:0,includeCompleted:true,includeClosed:true}).then(function(r){
+    hideLoader();
+    closeModal('mExport');
+    if(!r||!r.success){toast((r&&r.message)||'Could not fetch complete task list for export.','error');return;}
+    var tasks=normalizeTaskList(r.data||[]);
+    if(!tasks.length){toast('No tasks to export.','info');return;}
+    if(fmt==='excel')exportExcel(tasks);else exportPDF(tasks,S.exportCtx);
+  });
 }
 function exportExcel(tasks){
   var now=new Date().toLocaleDateString('en-IN'),done=0,over=0,pend=0;
@@ -8396,9 +8602,11 @@ function loadPhotoLog(){
   if(canWriteNotes){
     var pd=id('pl-date');if(pd&&!pd.value)pd.value=new Date().toISOString().slice(0,10);
     var pt=id('pl-time');if(pt&&!pt.value){var now=new Date();pt.value=zeroPad(now.getHours(),2)+':'+zeroPad(now.getMinutes(),2);}
-    plPopulateOfficerDropdown('pl-officer');
-    plPopulateDeptDropdown('pl-dept');
-    plPopulateDeptDropdown('plDeptFilter');
+    ensureLookupReady(function(){
+      plPopulateOfficerDropdown('pl-officer');
+      plPopulateDeptDropdown('pl-dept');
+      plPopulateDeptDropdown('plDeptFilter');
+    });
   }
   // NoteTypes NOT loaded here — only needed when "New Entry" form opens.
   // Moved to plToggleView('form') so it's lazy-loaded on demand.
@@ -9144,6 +9352,27 @@ function plMakeEntryCard(e, typeColors, months){
   }
   content.appendChild(tagRow);
 
+  // Linked tasks — visible to everyone (not just roles that can manage
+  // notes), so an officer can see at a glance whether this inspection
+  // note already turned into one or more tasks, and jump straight to any
+  // of them to check progress. A single note can legitimately produce
+  // SEVERAL tasks (e.g. one inspection note mentioning both a drain
+  // blockage and a streetlight issue becomes two tasks for two
+  // departments), so every linked task gets its own badge, not just one.
+  if(e.linkedTasks&&e.linkedTasks.length){
+    var linksWrap=document.createElement('div');
+    linksWrap.style.cssText='display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px';
+    e.linkedTasks.forEach(function(lt){
+      var linkTag=document.createElement('div');
+      var lStatusColor=(lt.status==='Completed'||lt.status==='Closed')?'var(--c-green)':(lt.status==='Overdue'?'var(--c-red)':'var(--c-blue)');
+      linkTag.style.cssText='display:inline-flex;align-items:center;gap:5px;background:rgba(29,78,216,.06);border:1px solid rgba(29,78,216,.2);border-radius:7px;padding:4px 10px;font-size:12px;font-weight:600;color:var(--c-blue);cursor:pointer;width:fit-content';
+      linkTag.innerHTML='<span class="material-icons-round" style="font-size:14px">task_alt</span>'+htmlEsc(lt.taskID)+' <span style="color:'+lStatusColor+'">&middot; '+htmlEsc(lt.status||'')+'</span>';
+      linkTag.onclick=function(ev){ev.stopPropagation();jumpToTaskFromNote(lt.taskID);};
+      linksWrap.appendChild(linkTag);
+    });
+    content.appendChild(linksWrap);
+  }
+
   if(e.officerName&&e.officerName.trim()){
     var officerTag=document.createElement('div');
     officerTag.style.cssText='display:inline-flex;align-items:center;gap:5px;background:linear-gradient(135deg,rgba(180,83,9,.12),rgba(180,83,9,.06));border:1px solid rgba(180,83,9,.3);border-radius:7px;padding:4px 10px;margin-bottom:8px;font-size:12.5px;font-weight:700;color:#B45309';
@@ -9264,7 +9493,20 @@ function plMakeEntryCard(e, typeColors, months){
 
   if(plCheckAdmin()&&!e._saving){
     var actRow=document.createElement('div');
-    actRow.style.cssText='display:flex;gap:8px;margin-top:6px;padding-top:8px;border-top:1px solid var(--border)';
+    actRow.style.cssText='display:flex;gap:8px;margin-top:6px;padding-top:8px;border-top:1px solid var(--border);flex-wrap:wrap';
+    // Create Task — always available, not just before the first one
+    // exists: a single inspection note can legitimately need more than
+    // one task over time (a follow-up issue noticed later, a second
+    // department that also needs to act on it, etc.), so this never
+    // disappears just because one task already exists. The linked-task
+    // badges above are the way back to whatever's already been created.
+    var taskBtn=document.createElement('button');
+    taskBtn.className='btn btn-ghost btn-sm';
+    taskBtn.style.cssText='color:var(--c-blue);border-color:var(--c-blue)';
+    taskBtn.innerHTML='<span class="material-icons-round mi">add_task</span> '+(e.linkedTasks&&e.linkedTasks.length?'Create Another Task':'Create Task');
+    taskBtn.title='Send this note to the AI Extractor to create a task from it';
+    taskBtn.onclick=function(ev){ev.stopPropagation();plCreateTaskFromNote(e);};
+    actRow.appendChild(taskBtn);
     // Edit available to every role that can delete (Admin, Commissioner,
     // Supervision) — previously restricted to Admin/Commissioner only.
     var editBtn=document.createElement('button');
@@ -9370,6 +9612,28 @@ function plOpenPhotoViewer(photoUrls, startIdx){
   show(curIdx);
 }
 
+// Sends a note over to the AI Extractor to become a task — pre-fills the
+// extraction box with the note's own text (plus date/zone/department
+// context, which helps the extractor guess those fields correctly) and
+// remembers which note this came from, so whatever gets saved from this
+// extraction carries the link back to it.
+function plCreateTaskFromNote(e){
+  S.pendingSourceNoteID=e.noteID;
+  go('taskEntry');
+  setTimeout(function(){
+    var tabBtn=id('aiExtractorTab');
+    if(tabBtn)switchTaskTab('ai',tabBtn);
+    var input=id('aiInput');
+    if(input){
+      var context=[];
+      if(e.date)context.push('Date: '+e.date);
+      if(e.zone)context.push('Zone/Dept: '+(e.department||e.zone));
+      var prefix=context.length?context.join(' | ')+'\n':'';
+      input.value=prefix+(e.notes||'');
+    }
+    toast('Note loaded into AI Extractor \u2014 tap Extract Tasks below.','info');
+  },200);
+}
 function plDeleteEntry(noteID){
   if(!confirm('Delete this entry and all its photos and attachments? This cannot be undone.'))return;
   showLoader('Deleting...');
@@ -9445,7 +9709,7 @@ function plEditEntry(noteID){
     +'<div id="plEditPdfPreview" style="display:flex;flex-direction:column;gap:6px;margin-top:8px"></div>'
     +'</div>'
     +'<div style="display:flex;gap:8px;margin-top:12px">'
-    +'<button class="btn btn-primary" onclick="plSaveEdit(\''+noteID+'\')"><span class="material-icons-round mi">save</span> Save Changes</button>'
+    +'<button class="btn btn-primary" id="plSaveEditBtn" onclick="plSaveEdit(\''+noteID+'\')"><span class="material-icons-round mi">save</span> Save Changes</button>'
     +'<button class="btn btn-ghost" onclick="closeModal(\'mGeneric\')">Cancel</button>'
     +'</div></div>';
 
@@ -9466,8 +9730,15 @@ function plEditEntry(noteID){
       }
       st.value=e.type||'Inspection';
     }
-    plPopulateOfficerDropdown('plEdit-officer',e.officerName);
-    plPopulateDeptDropdown('plEdit-dept',e.department||'');
+    // Previously these two just assumed S.lookup was already populated —
+    // on a slow connection, or if Notes was reached before the login
+    // bootstrap's lookup data had actually arrived, both dropdowns would
+    // silently populate with nothing but the placeholder option. Now they
+    // wait for lookup data to genuinely be ready first.
+    ensureLookupReady(function(){
+      plPopulateOfficerDropdown('plEdit-officer',e.officerName);
+      plPopulateDeptDropdown('plEdit-dept',e.department||'');
+    });
     plRenderEditExistingPhotos();
     plRenderEditExistingAttachments();
   },50);
@@ -9607,11 +9878,21 @@ function plSaveEdit(noteID){
     department:V('plEdit-dept')
   };
   if(!updated.notes.trim()){toast('Notes cannot be empty.','error');return;}
+  // Freeze immediately, same pattern as the AI Extractor's Save All —
+  // this modal stays open through several async steps (photo/attachment
+  // uploads), so without this a fast double-click sends duplicate
+  // serverUpdateNote calls and duplicate photo/attachment uploads.
+  if(!btnFreeze('plSaveEdit','plSaveEditBtn','<span class="material-icons-round mi" style="animation:spin 1s linear infinite">sync</span> Saving...'))return;
   showLoader('Saving...');
 
   // Step 1: update text fields
   gasCall('serverUpdateNote',S.token,updated).then(function(r){
-    if(!r||!r.success){hideLoader();toast((r&&r.message)||'Update failed.','error');return;}
+    if(!r||!r.success){
+      hideLoader();
+      toast((r&&r.message)||'Update failed.','error');
+      btnRelease('plSaveEdit','plSaveEditBtn'); // modal stays open on failure — must be usable again
+      return;
+    }
 
     // Step 2: delete any photos the admin removed (each its own small call)
     var removedIDs=(PL.editRemovedPhotoIDs||[]).slice();
@@ -9743,6 +10024,7 @@ function plSaveEdit(noteID){
 
 function finishEdit(noteID,updated){
   hideLoader();closeModal('mGeneric');
+  btnRelease('plSaveEdit','plSaveEditBtn');
   toast('Entry updated!','ok');
   // Refresh from server so the photo list reflects deletions/additions accurately
   gasCall('serverGetNotes',S.token,0).then(function(r){
