@@ -1961,21 +1961,6 @@ tbody tr:hover { background: var(--surface2); }
         <div class="card-bd" id="officerPerf" style="max-height:420px;overflow-y:auto"></div>
       </div>
       <div class="card"><div class="card-hd"><span class="card-title" id="cvCriticalTitle">Critical &amp; Delayed Tasks</span></div><div class="card-bd-0" id="criticalList"></div></div>
-
-      <!-- INSPECTION REVIEW — shown only once a specific department is
-           selected above. Built for department review meetings: shows the
-           inspection notes behind that department's tasks in date order,
-           each with its photos and whichever task(s)/officer resulted
-           from it, so a reviewer sees "what was observed" and "what's
-           being done about it" together instead of checking two
-           separate tabs. -->
-      <div class="card mt16" id="cvInspectionReviewCard" style="display:none">
-        <div class="card-hd">
-          <span class="material-icons-round mi" style="margin-right:6px;color:#B45309">fact_check</span>
-          <span class="card-title" id="cvInspectionReviewTitle">Inspection Review</span>
-        </div>
-        <div class="card-bd" id="cvInspectionReviewBody" style="max-height:600px;overflow-y:auto"></div>
-      </div>
     </div>
 
     <!-- USER MANAGEMENT -->
@@ -8174,115 +8159,10 @@ function renderCommViewForDept(dept){
   var critical=[];
   for(var i=0;i<tasks.length;i++)if(tasks[i].isOverdue||(tasks[i].priority==='High'&&tasks[i].status!=='Completed'))critical.push(tasks[i]);
   buildCriticalList(critical.slice(0,10));
-
-  // Inspection Review — only makes sense once a specific department is
-  // picked (reviewing "all departments' notes" at once isn't useful for
-  // a department-specific review meeting), so it's hidden for "All
-  // Departments" and only appears once someone picks one.
-  var reviewCard=id('cvInspectionReviewCard');
-  if(reviewCard)reviewCard.style.display=dept?'block':'none';
-  if(dept)loadDeptInspectionReview(dept);
-}
-
-// Builds the department review meeting view: every inspection note for
-// this department, most recent first, each with its photos (loaded on
-// demand, same lazy pattern as the Notes tab itself) and whichever
-// task(s)/officer resulted from it — so a reviewer sees what was
-// observed AND what's being done about it, side by side, without
-// switching to the Notes tab separately.
-var _cvNotesCache=null;
-function loadDeptInspectionReview(dept){
-  var titleEl=id('cvInspectionReviewTitle');
-  if(titleEl)titleEl.textContent=dept+' — Inspection Review';
-  var bodyEl=id('cvInspectionReviewBody');
-  if(!bodyEl)return;
-  bodyEl.innerHTML='<div style="padding:20px;text-align:center;color:var(--tx3)"><span class="material-icons-round mi" style="animation:spin 1.1s linear infinite">sync</span> Loading inspection notes\u2026</div>';
-  function renderWithNotes(allNotes){
-    var deptNotes=allNotes.filter(function(n){return String(n.department||'').trim().toLowerCase()===dept.trim().toLowerCase();});
-    deptNotes.sort(function(a,b){return (b.date||'').localeCompare(a.date||'');}); // most recent first — what a review meeting cares about
-    if(!deptNotes.length){
-      bodyEl.innerHTML='<div style="padding:20px;text-align:center;color:var(--tx3);font-size:13px">No inspection notes recorded for '+htmlEsc(dept)+' yet.</div>';
-      return;
-    }
-    bodyEl.innerHTML='';
-    deptNotes.forEach(function(n){
-      var card=document.createElement('div');
-      card.style.cssText='border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:10px;background:var(--surface)';
-      var head=document.createElement('div');
-      head.style.cssText='display:flex;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap';
-      head.innerHTML='<span style="font-size:12.5px;font-weight:700;color:var(--tx1)">'+(n.date||'')+'</span>'
-        +'<span style="font-size:10.5px;color:#B45309;background:rgba(180,83,9,.08);border:1px solid rgba(180,83,9,.25);border-radius:999px;padding:1px 8px;font-weight:600">'+htmlEsc(n.type||'')+'</span>'
-        +(n.zone?'<span style="font-size:11px;color:var(--tx3)">'+htmlEsc(n.zone)+'</span>':'');
-      card.appendChild(head);
-      var body=document.createElement('div');
-      body.style.cssText='font-size:13px;color:var(--tx2);line-height:1.6;white-space:pre-wrap;margin-bottom:8px';
-      body.textContent=n.notes||'';
-      card.appendChild(body);
-      // Photos — lazy-loaded on demand, same pattern as the Notes tab
-      if(n.photoCount>0){
-        var photoWrap=document.createElement('div');
-        photoWrap.style.cssText='margin-bottom:8px';
-        var loadBtn=document.createElement('div');
-        loadBtn.style.cssText='display:inline-flex;align-items:center;gap:6px;padding:6px 10px;background:var(--surface2);border-radius:8px;cursor:pointer;font-size:11.5px;color:var(--c-teal)';
-        loadBtn.innerHTML='<span class="material-icons-round mi" style="font-size:14px">photo_camera</span>'+n.photoCount+' photo'+(n.photoCount!==1?'s':'')+' \u2014 tap to view';
-        loadBtn.onclick=function(){
-          loadBtn.innerHTML='<span class="material-icons-round mi" style="font-size:14px;animation:spin 1s linear infinite">sync</span> Loading...';
-          gasCall('serverGetNoteDetail',S.token,n.noteID).then(function(r){
-            if(r&&r.success&&r.photos&&r.photos.length){
-              photoWrap.innerHTML='';
-              var grid=document.createElement('div');
-              grid.style.cssText='display:flex;flex-wrap:wrap;gap:6px';
-              r.photos.forEach(function(p){
-                var looksValid=!!p.photoData&&(p.photoData.indexOf('data:image/')===0||p.photoData.indexOf('http')===0);
-                var thumb=document.createElement(looksValid?'img':'div');
-                thumb.style.cssText='width:64px;height:64px;border-radius:6px;object-fit:cover;border:1px solid var(--border);cursor:pointer;background:var(--surface2)';
-                if(looksValid){thumb.src=p.photoData;thumb.onclick=function(){window.open(p.photoData,'_blank','noopener');};}
-                grid.appendChild(thumb);
-              });
-              photoWrap.appendChild(grid);
-            } else {
-              loadBtn.textContent='Could not load photos.';
-            }
-          });
-        };
-        photoWrap.appendChild(loadBtn);
-        card.appendChild(photoWrap);
-      }
-      // Linked task(s) + assigned officer — the whole point of this view
-      if(n.linkedTasks&&n.linkedTasks.length){
-        var linksWrap=document.createElement('div');
-        linksWrap.style.cssText='display:flex;flex-wrap:wrap;gap:6px';
-        n.linkedTasks.forEach(function(lt){
-          var t=null;for(var ti=0;ti<S.tasks.length;ti++)if(S.tasks[ti].taskID===lt.taskID){t=S.tasks[ti];break;}
-          var officerLabel=t&&t.officerName?' \u00b7 '+htmlEsc(t.officerName):'';
-          var lColor=(lt.status==='Completed'||lt.status==='Closed')?'var(--c-green)':(lt.status==='Overdue'?'var(--c-red)':'var(--c-blue)');
-          var tag=document.createElement('div');
-          tag.style.cssText='display:inline-flex;align-items:center;gap:5px;background:rgba(29,78,216,.06);border:1px solid rgba(29,78,216,.2);border-radius:7px;padding:4px 10px;font-size:12px;font-weight:600;color:var(--c-blue);cursor:pointer';
-          tag.innerHTML='<span class="material-icons-round" style="font-size:14px">task_alt</span>'+htmlEsc(lt.taskID)+officerLabel+' <span style="color:'+lColor+'">&middot; '+htmlEsc(lt.status||'')+'</span>';
-          tag.onclick=function(taskID){return function(){go('tracker');setTimeout(function(){viewTask(taskID);},200);};}(lt.taskID);
-          linksWrap.appendChild(tag);
-        });
-        card.appendChild(linksWrap);
-      } else {
-        var noTask=document.createElement('div');
-        noTask.style.cssText='font-size:11.5px;color:var(--tx3);font-style:italic';
-        noTask.textContent='No task created from this note yet.';
-        card.appendChild(noTask);
-      }
-      bodyEl.appendChild(card);
-    });
-  }
-  if(_cvNotesCache){ renderWithNotes(_cvNotesCache); return; }
-  gasCall('serverGetNotes',S.token,0).then(function(r){
-    var allNotes=(r&&r.success)?(r.data||[]):[];
-    _cvNotesCache=allNotes;
-    renderWithNotes(allNotes);
-  });
 }
 
 function loadCommView(){
   CV_DEPT_FILTER='';
-  _cvNotesCache=null; // fresh load — don't reuse notes fetched in a previous visit
   // INSTANT DISPLAY: render last-known Commissioner View data immediately
   // (if we have it), while fresh data loads in the background — same
   // pattern already used for Dashboard and Task Tracker. Previously this
