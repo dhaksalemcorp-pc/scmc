@@ -10592,7 +10592,6 @@ function exportPlDiaryPDF(entries,aiText,style,from,to){
       var pc=plPhotoCount(e);
       dateWiseHtml+='<div class="entry-block">'
         +'<div class="entry-meta">'
-        +(e.time?'<span class="entry-time">'+e.time+'</span>':'')
         +'<span class="entry-type" style="background:'+col+'1a;color:'+col+';border:1px solid '+col+'44">'+e.type+'</span>'
         +'<span class="entry-loc">'+(e.zone||'')+(e.location?' \u00b7 '+e.location:'')+'</span>'
         +(pc>0?'<span class="entry-photos">\uD83D\uDCF7 '+pc+' photo'+(pc!==1?'s':'')+'</span>':'')
@@ -10627,16 +10626,36 @@ function exportPlDiaryPDF(entries,aiText,style,from,to){
 
   // Stats for the summary header
   var totalPhotos=0,typeCounts={Inspection:0,Meeting:0,'Site Visit':0};
-  var zoneSet={};
+  var zoneCounts={};
   for(var i=0;i<entries.length;i++){
     totalPhotos+=plPhotoCount(entries[i]);
     if(typeCounts[entries[i].type]!==undefined)typeCounts[entries[i].type]++;
     // A single entry's zone field can itself be a comma-separated list
     // (e.g. "Suramangalam Zone-1, Hasthampatti Zone-2") when one note
-    // covers several zones — split it out so each zone is only counted once overall.
-    String(entries[i].zone||'').split(',').forEach(function(z){z=z.trim();if(z)zoneSet[z]=true;});
+    // covers several zones — an entry counts toward EACH zone it names,
+    // since the inspection genuinely covered all of them.
+    var seenZonesThisEntry={};
+    String(entries[i].zone||'').split(',').forEach(function(z){
+      z=z.trim();
+      if(z&&!seenZonesThisEntry[z]){ // avoid double-counting if the same zone appears twice in one entry's list
+        seenZonesThisEntry[z]=true;
+        zoneCounts[z]=(zoneCounts[z]||0)+1;
+      }
+    });
   }
-  var zoneCount=Object.keys(zoneSet).length;
+  var zoneNames=Object.keys(zoneCounts).sort(function(a,b){return zoneCounts[b]-zoneCounts[a];});
+  var zoneCount=zoneNames.length;
+  var zoneBreakdownHtml='';
+  if(zoneNames.length){
+    zoneBreakdownHtml='<div class="sechd"><h2>Zone-Wise Breakdown</h2></div>'
+      +'<div style="display:flex;gap:10px;margin-bottom:6px;flex-wrap:wrap">'
+      +zoneNames.map(function(z){
+        return '<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;padding:8px 14px;font-size:10.5px;color:#1e293b">'
+          +'<strong style="color:#0b1f45">'+zoneCounts[z]+'</strong> '+String(z).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+          +'</div>';
+      }).join('')
+      +'</div>';
+  }
 
   var html='<!DOCTYPE html><html><head><meta charset="UTF-8"><title>'+title+'</title><style>'+css+'</style></head><body>'
     +'<div class="hband"><div>'
@@ -10657,6 +10676,7 @@ function exportPlDiaryPDF(entries,aiText,style,from,to){
     +'<div style="background:#fdf4ff;border-radius:6px;padding:8px 14px;font-size:10.5px;color:#a21caf"><strong>'+zoneCount+'</strong> Zone'+(zoneCount!==1?'s':'')+' Covered</div>'
     +'<div style="background:#f0f9ff;border-radius:6px;padding:8px 14px;font-size:10.5px;color:#0ea5e9"><strong>'+totalPhotos+'</strong> Photos Attached</div>'
     +'</div>'
+    +zoneBreakdownHtml
     +'<div class="sechd"><h2>\u2728 AI-Generated Commissioner\'s Summary</h2></div>'
     +'<div class="ai-box"><div style="font-size:9px;font-weight:700;color:#7c3aed;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">Summarised by AI from field notes</div>'+aiHtml+'</div>'
     +'<div class="sechd"><h2>Date-Wise Detailed Entry Log</h2></div>'
@@ -10770,7 +10790,6 @@ function exportPlNotesDirectPDF(entries,from,to,sortDir){
       var pc=plPhotoCount(e);
       dateWiseHtml+='<div class="entry-block">'
         +'<div class="entry-meta">'
-        +(e.time?'<span class="entry-time">'+e.time+'</span>':'')
         +'<span class="entry-type" style="background:'+col+'1a;color:'+col+';border:1px solid '+col+'44">'+String(e.type||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')+'</span>'
         +'<span class="entry-loc">'+String(e.zone||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')+(e.location?' \u00b7 '+String(e.location).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'):'')+'</span>'
         +(pc>0?'<span class="entry-photos">\uD83D\uDCF7 '+pc+' photo'+(pc!==1?'s':'')+'</span>':'')
@@ -10801,17 +10820,37 @@ function exportPlNotesDirectPDF(entries,from,to,sortDir){
 
   var now=new Date(),dateStr2=now.toLocaleDateString('en-IN',{day:'2-digit',month:'long',year:'numeric'});
   var totalPhotos=0,typeCounts={};
-  var zoneSet2={};
+  var zoneCounts2={};
   for(var i=0;i<entries.length;i++){
     totalPhotos+=plPhotoCount(entries[i]);
     var t=entries[i].type||'Other';
     typeCounts[t]=(typeCounts[t]||0)+1;
     // A single entry's zone field can itself be a comma-separated list
     // (e.g. "Suramangalam Zone-1, Hasthampatti Zone-2") when one note
-    // covers several zones — split it out so each zone is only counted once overall.
-    String(entries[i].zone||'').split(',').forEach(function(z){z=z.trim();if(z)zoneSet2[z]=true;});
+    // covers several zones — an entry counts toward EACH zone it names,
+    // since the inspection genuinely covered all of them.
+    var seenZonesThisEntry2={};
+    String(entries[i].zone||'').split(',').forEach(function(z){
+      z=z.trim();
+      if(z&&!seenZonesThisEntry2[z]){
+        seenZonesThisEntry2[z]=true;
+        zoneCounts2[z]=(zoneCounts2[z]||0)+1;
+      }
+    });
   }
-  var zoneCount2=Object.keys(zoneSet2).length;
+  var zoneNames2=Object.keys(zoneCounts2).sort(function(a,b){return zoneCounts2[b]-zoneCounts2[a];});
+  var zoneCount2=zoneNames2.length;
+  var zoneBreakdownHtml2='';
+  if(zoneNames2.length){
+    zoneBreakdownHtml2='<div class="sechd"><h2>Zone-Wise Breakdown</h2></div>'
+      +'<div style="display:flex;gap:10px;margin-bottom:6px;flex-wrap:wrap">'
+      +zoneNames2.map(function(z){
+        return '<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;padding:8px 14px;font-size:10.5px;color:#1e293b">'
+          +'<strong style="color:#0b1f45">'+zoneCounts2[z]+'</strong> '+String(z).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+          +'</div>';
+      }).join('')
+      +'</div>';
+  }
   var typeCountsHtml='';
   var typeColorsForCount={Inspection:'#1d4ed8',Meeting:'#059669','Site Visit':'#d97706'};
   for(var tk in typeCounts){
@@ -10843,6 +10882,7 @@ function exportPlNotesDirectPDF(entries,from,to,sortDir){
     +'<div style="background:#fdf4ff;border-radius:6px;padding:8px 14px;font-size:10.5px;color:#a21caf"><strong>'+zoneCount2+'</strong> Zone'+(zoneCount2!==1?'s':'')+' Covered</div>'
     +'<div style="background:#f0f9ff;border-radius:6px;padding:8px 14px;font-size:10.5px;color:#0ea5e9"><strong>'+totalPhotos+'</strong> Photos Attached</div>'
     +'</div>'
+    +zoneBreakdownHtml2
     +'<div class="sechd"><h2>Date-Wise Entry Log</h2></div>'
     +dateWiseHtml
     +'<div class="fband"><div><strong>Salem City Municipal Corporation</strong> \u00b7 Notes Export<br>Period: '+from+' to '+to+' \u00b7 Generated: '+dateStr2+'</div>'
