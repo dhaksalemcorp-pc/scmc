@@ -10627,10 +10627,16 @@ function exportPlDiaryPDF(entries,aiText,style,from,to){
 
   // Stats for the summary header
   var totalPhotos=0,typeCounts={Inspection:0,Meeting:0,'Site Visit':0};
+  var zoneSet={};
   for(var i=0;i<entries.length;i++){
     totalPhotos+=plPhotoCount(entries[i]);
     if(typeCounts[entries[i].type]!==undefined)typeCounts[entries[i].type]++;
+    // A single entry's zone field can itself be a comma-separated list
+    // (e.g. "Suramangalam Zone-1, Hasthampatti Zone-2") when one note
+    // covers several zones — split it out so each zone is only counted once overall.
+    String(entries[i].zone||'').split(',').forEach(function(z){z=z.trim();if(z)zoneSet[z]=true;});
   }
+  var zoneCount=Object.keys(zoneSet).length;
 
   var html='<!DOCTYPE html><html><head><meta charset="UTF-8"><title>'+title+'</title><style>'+css+'</style></head><body>'
     +'<div class="hband"><div>'
@@ -10648,6 +10654,7 @@ function exportPlDiaryPDF(entries,aiText,style,from,to){
     +'<div style="background:#eff6ff;border-radius:6px;padding:8px 14px;font-size:10.5px;color:#1d4ed8"><strong>'+typeCounts.Inspection+'</strong> Inspections</div>'
     +'<div style="background:#ecfdf5;border-radius:6px;padding:8px 14px;font-size:10.5px;color:#059669"><strong>'+typeCounts.Meeting+'</strong> Meetings</div>'
     +'<div style="background:#fffbeb;border-radius:6px;padding:8px 14px;font-size:10.5px;color:#d97706"><strong>'+typeCounts['Site Visit']+'</strong> Site Visits</div>'
+    +'<div style="background:#fdf4ff;border-radius:6px;padding:8px 14px;font-size:10.5px;color:#a21caf"><strong>'+zoneCount+'</strong> Zone'+(zoneCount!==1?'s':'')+' Covered</div>'
     +'<div style="background:#f0f9ff;border-radius:6px;padding:8px 14px;font-size:10.5px;color:#0ea5e9"><strong>'+totalPhotos+'</strong> Photos Attached</div>'
     +'</div>'
     +'<div class="sechd"><h2>\u2728 AI-Generated Commissioner\'s Summary</h2></div>'
@@ -10794,11 +10801,17 @@ function exportPlNotesDirectPDF(entries,from,to,sortDir){
 
   var now=new Date(),dateStr2=now.toLocaleDateString('en-IN',{day:'2-digit',month:'long',year:'numeric'});
   var totalPhotos=0,typeCounts={};
+  var zoneSet2={};
   for(var i=0;i<entries.length;i++){
     totalPhotos+=plPhotoCount(entries[i]);
     var t=entries[i].type||'Other';
     typeCounts[t]=(typeCounts[t]||0)+1;
+    // A single entry's zone field can itself be a comma-separated list
+    // (e.g. "Suramangalam Zone-1, Hasthampatti Zone-2") when one note
+    // covers several zones — split it out so each zone is only counted once overall.
+    String(entries[i].zone||'').split(',').forEach(function(z){z=z.trim();if(z)zoneSet2[z]=true;});
   }
+  var zoneCount2=Object.keys(zoneSet2).length;
   var typeCountsHtml='';
   var typeColorsForCount={Inspection:'#1d4ed8',Meeting:'#059669','Site Visit':'#d97706'};
   for(var tk in typeCounts){
@@ -10827,6 +10840,7 @@ function exportPlNotesDirectPDF(entries,from,to,sortDir){
     +'<div style="display:flex;gap:10px;margin-bottom:6px;flex-wrap:wrap">'
     +'<div style="background:#eef2ff;border-radius:6px;padding:8px 14px;font-size:10.5px;color:#1d4ed8"><strong>'+entries.length+'</strong> Total Entries</div>'
     +typeCountsHtml
+    +'<div style="background:#fdf4ff;border-radius:6px;padding:8px 14px;font-size:10.5px;color:#a21caf"><strong>'+zoneCount2+'</strong> Zone'+(zoneCount2!==1?'s':'')+' Covered</div>'
     +'<div style="background:#f0f9ff;border-radius:6px;padding:8px 14px;font-size:10.5px;color:#0ea5e9"><strong>'+totalPhotos+'</strong> Photos Attached</div>'
     +'</div>'
     +'<div class="sechd"><h2>Date-Wise Entry Log</h2></div>'
