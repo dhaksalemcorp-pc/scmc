@@ -3497,10 +3497,20 @@ function gasCallInner(fn,args){
             // The server returned something that isn't JSON at all — almost
             // always Google serving its own HTML (an error page, a sign-in
             // redirect, or a quota-throttling page) instead of running the
-            // script. This is a deployment/quota problem, not a bug in this
-            // page, so say that plainly instead of showing a confusing raw
-            // parse error.
+            // script. This is USUALLY a deployment/quota problem, but it can
+            // also be a transient blip (e.g. a momentary concurrent-execution
+            // limit bump when many of the 30-40 officers hit the script at
+            // once) that clears itself a second later — so this gets the
+            // same one-shot automatic retry as a genuine network failure
+            // below, instead of immediately showing an error. A real stale
+            // deployment will still fail the same way on retry and correctly
+            // surface the diagnostic message; a transient blip recovers silently.
             var looksLikeHTML=txt.trim().indexOf('<')===0;
+            if(looksLikeHTML&&retriesLeft>0){
+              return new Promise(function(resolve){
+                setTimeout(function(){resolve(attempt(retriesLeft-1));},800);
+              });
+            }
             if(looksLikeHTML){
               return{success:false,message:'The server returned an unexpected page instead of data. This usually means the Apps Script deployment needs to be re-published, or today\'s Google quota has been reached. Please try again shortly, or ask your Admin to check Apps Script → Deployments.'};
             }
@@ -3524,7 +3534,7 @@ function gasCallInner(fn,args){
         return{success:false,message:'Network error: '+e.message};
       });
     }
-    return attempt(1);
+    return attempt(2);
   }
 
   return new Promise(function(resolve){
