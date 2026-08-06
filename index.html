@@ -3383,11 +3383,20 @@ function gasCallInner(fn,args){
 
   // ── GitHub Pages mode: call GAS as a web API via fetch ──
   if(GAS_URL){
-    function attempt(retriesLeft){
-      // Abort after 30s — a request that old is dead; failing fast with a
-      // clear message beats a browser-default hang that looks like a freeze.
+    function attempt(retriesLeft,timeoutMs){
+      // Each attempt gets its OWN timeout, and retries get a SHORTER one
+      // than the first try — not the same full-length wait repeated.
+      // Previously every attempt (including retries) got a full 30s, so
+      // a genuinely slow/stuck backend meant up to three sequential 30s
+      // waits before any feedback reached the user — nearly a minute and
+      // a half in the worst case, which is exactly the kind of "login
+      // takes forever" symptom this was silently causing. A first
+      // attempt that's still failing after a reasonable wait is very
+      // unlikely to suddenly succeed if given the exact same amount of
+      // time again — retries exist to catch quick transient blips, not
+      // to be equally-patient second attempts.
       var ctrl=(typeof AbortController!=='undefined')?new AbortController():null;
-      var timer=ctrl?setTimeout(function(){try{ctrl.abort();}catch(e){}},30000):null;
+      var timer=ctrl?setTimeout(function(){try{ctrl.abort();}catch(e){}},timeoutMs):null;
       return fetch(GAS_URL,{
         method:'POST',
         signal:ctrl?ctrl.signal:undefined,
@@ -3434,7 +3443,7 @@ function gasCallInner(fn,args){
             var looksLikeHTML=txt.trim().indexOf('<')===0;
             if(looksLikeHTML&&retriesLeft>0){
               return new Promise(function(resolve){
-                setTimeout(function(){resolve(attempt(retriesLeft-1));},800);
+                setTimeout(function(){resolve(attempt(retriesLeft-1,10000));},800);
               });
             }
             if(looksLikeHTML){
@@ -3454,13 +3463,17 @@ function gasCallInner(fn,args){
         // manually every time.
         if(retriesLeft>0){
           return new Promise(function(resolve){
-            setTimeout(function(){resolve(attempt(retriesLeft-1));},800);
+            setTimeout(function(){resolve(attempt(retriesLeft-1,10000));},800);
           });
         }
         return{success:false,message:'Network error: '+e.message};
       });
     }
-    return attempt(2);
+    // First attempt: 20s (was 30s — still generous for a genuinely
+    // healthy-but-slow request). One retry at 10s (was a second FULL 30s
+    // attempt). Worst case is now roughly 20s + 0.8s + 10s \u2248 31s total,
+    // not the ~91s three-full-attempts-at-30s-each this used to allow.
+    return attempt(1,20000);
   }
 
   return new Promise(function(resolve){
