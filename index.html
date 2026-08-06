@@ -2,7 +2,7 @@
 <html lang="en" data-theme="light">
 <head>
 <meta charset="UTF-8">
-<!-- Prevent mobile browsers and installed PWA shells from serving a stale 
+<!-- Prevent mobile browsers and installed PWA shells from serving a stale
      cached copy of this page. Without this, a person can keep running an
      old version of the app's JavaScript (with old bugs already fixed in
      later updates) until they happen to do something that forces a reload. -->
@@ -507,19 +507,26 @@ body {
 .filter-chip{padding:5px 14px;border-radius:999px;font-size:12.5px;font-weight:500;cursor:pointer;border:1.5px solid var(--border);background:var(--surface2);color:var(--tx2);transition:all .15s;white-space:nowrap;display:inline-flex;align-items:center;gap:4px}
 .filter-chip.active{background:var(--c-blue);color:#fff;border-color:var(--c-blue)}
 .filter-chip:hover:not(.active){background:var(--border);color:var(--tx1)}
-.task-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:0;overflow:hidden;transition:box-shadow .15s,transform .1s;cursor:pointer}
-.task-card:hover{box-shadow:0 4px 16px rgba(0,0,0,.08);transform:translateY(-1px)}
-.task-card.overdue{border-left:4px solid var(--c-red)}
-.task-card.high{border-left:4px solid #ef4444}
-.task-card.medium{border-left:4px solid #f59e0b}
-.task-card.low{border-left:4px solid #10b981}
-.task-card-header{display:flex;align-items:center;gap:8px;padding:10px 14px;border-bottom:1px solid var(--border);background:var(--surface2)}
-.task-card-body{padding:10px 14px}
-.task-card-footer{display:flex;align-items:center;gap:6px;padding:8px 14px;border-top:1px solid var(--border);background:var(--surface2);flex-wrap:wrap}
-.task-card-desc{font-size:13.5px;font-weight:500;color:var(--tx1);margin-bottom:6px;line-height:1.4}
-.task-card-meta{display:flex;gap:10px;flex-wrap:wrap}
-.task-card-meta-item{display:flex;align-items:center;gap:4px;font-size:11.5px;color:var(--tx3)}
-.task-card-meta-item .material-icons-round{font-size:13px}
+/* ── COMPACT TABLE VIEW ─────────────────────────────────────────
+   Replaces the old card grid with an information-dense row layout —
+   more tasks visible per screen, easier to scan status/officer/priority
+   at a glance without opening each one. A CSS grid (not a real <table>
+   element) so it drops into the existing container with no markup
+   changes, but lines up exactly like one. Horizontal scroll on narrow
+   screens keeps every column usable on a phone instead of collapsing
+   or hiding data. */
+.task-table-wrap{overflow-x:auto;border:1px solid var(--border);border-radius:10px;background:var(--surface)}
+.task-row-grid{display:grid;grid-template-columns:104px 2fr 130px 130px 84px 104px 96px 68px 128px;min-width:1020px;align-items:center}
+.task-row-header{font-size:10px;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:.04em;padding:9px 10px;background:var(--surface2);position:sticky;top:0;z-index:1;border-bottom:1px solid var(--border)}
+.task-row{font-size:12.5px;color:var(--tx1);padding:9px 10px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .1s;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.task-row-grid:last-child .task-row{border-bottom:none}
+.task-row-line:hover .task-row{background:var(--surface2)}
+.task-row-line.overdue .task-row:first-child{box-shadow:inset 3px 0 0 var(--c-red)}
+.task-row-desc{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.task-row-actions{display:flex;gap:2px;white-space:nowrap}
+.task-row-actions .btn-icon{width:26px;height:26px;min-width:26px;padding:0}
+.task-row-actions .btn-icon .mi{font-size:15px}
+@media (max-width:720px){.task-row-grid{min-width:920px}}
 .grv-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 16px;margin-bottom:10px;cursor:pointer;transition:all .15s}
 .grv-card:hover{border-color:var(--c-blue);box-shadow:0 3px 10px rgba(29,78,216,.08)}
 .grv-status{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:999px;font-size:11.5px;font-weight:700}
@@ -1378,7 +1385,6 @@ tbody tr:hover { background: var(--surface2); }
       <div class="sb-item active" data-page="dashboard" id="snav-dashboard" onclick="go('dashboard')"><span class="material-icons-round sb-i">dashboard</span> Dashboard</div>
       <div class="sb-item" data-page="taskEntry" id="snav-taskEntry" onclick="go('taskEntry')"><span class="material-icons-round sb-i">add_task</span> Task Entry</div>
       <div class="sb-item" data-page="tracker" onclick="go('tracker')"><span class="material-icons-round sb-i">track_changes</span> Task Tracker<span class="sb-badge" id="overdBadge" style="display:none">0</span></div>
-      <div class="sb-item" data-page="commview" id="snav-commview" onclick="go('commview')"><span class="material-icons-round sb-i">bar_chart</span> Commissioner View</div>
       <div class="sb-section-lbl" style="margin-top:8px">Manage</div>
       <div class="sb-item" data-page="users" id="snav-users" onclick="go('users')"><span class="material-icons-round sb-i">manage_accounts</span> User Management</div>
       <div class="sb-item" data-page="settings" id="snav-settings" onclick="go('settings')"><span class="material-icons-round sb-i">settings</span> Settings</div>
@@ -1424,6 +1430,15 @@ tbody tr:hover { background: var(--surface2); }
       </div>
       <!-- Admin/Commissioner full dashboard -->
       <div id="adminDash">
+        <!-- Department filter — Admin/Commissioner only. Scopes the KPI
+             summary, zone performance, and department breakdown below to
+             a single department when selected. -->
+        <div class="flex-c gap8 mb12" style="align-items:center;flex-wrap:wrap">
+          <span style="font-size:12px;font-weight:600;color:var(--tx3)">Department:</span>
+          <select class="f-sel" id="dashDeptFilter" onchange="loadDashboard()" style="font-size:13px;padding:6px 10px;width:auto;min-width:180px">
+            <option value="">All Departments</option>
+          </select>
+        </div>
         <div class="kpi-grid" id="kpiGrid">
           <div class="kpi blue" onclick="drillDown('all')" style="cursor:pointer"><div class="kpi-stripe"></div><div class="kpi-icon-wrap"><span class="material-icons-round mi">assignment</span></div><div class="kpi-val" id="k-total">&#8212;</div><div class="kpi-lbl">Total Tasks</div></div>
           <div class="kpi orange" onclick="drillDown('pending')" style="cursor:pointer"><div class="kpi-stripe"></div><div class="kpi-icon-wrap"><span class="material-icons-round mi">pending</span></div><div class="kpi-val" id="k-pending">&#8212;</div><div class="kpi-lbl">Pending</div></div>
@@ -1434,46 +1449,9 @@ tbody tr:hover { background: var(--surface2); }
           <div class="kpi purple" onclick="drillDown('high')" style="cursor:pointer"><div class="kpi-stripe"></div><div class="kpi-icon-wrap"><span class="material-icons-round mi">priority_high</span></div><div class="kpi-val" id="k-high">&#8212;</div><div class="kpi-lbl">High Priority</div></div>
           <div class="kpi green"><div class="kpi-stripe"></div><div class="kpi-icon-wrap"><span class="material-icons-round mi">percent</span></div><div class="kpi-val" id="k-rate">&#8212;</div><div class="kpi-lbl">Completion %</div></div>
         </div>
-        <div class="g2 mb16">
-          <div class="card"><div class="card-hd"><span class="card-title">Task Status</span></div><div class="card-bd" style="height:220px"><canvas id="chartStatus"></canvas></div></div>
-          <div class="card"><div class="card-hd"><span class="card-title">Zone Performance</span></div><div class="card-bd" style="height:220px"><canvas id="chartZone"></canvas></div></div>
-        </div>
         <div class="g2">
-          <div class="card"><div class="card-hd"><span class="card-title">Department Breakdown</span></div><div class="card-bd" id="deptBreakdown" style="max-height:280px;overflow-y:auto"></div></div>
-          <div class="card"><div class="card-hd"><span class="card-title">Recent Activity</span><span style="font-size:11px;color:var(--tx3);font-weight:500" id="recentActMeta"></span><button class="btn btn-ghost btn-sm" id="recentActLoadBtn" onclick="loadActivityLog()" style="margin-left:auto;display:none"><span class="material-icons-round mi">refresh</span></button></div><div class="card-bd" id="recentAct" style="max-height:280px;overflow-y:auto"></div></div>
-        </div>
-        <div class="card mt16" id="usageAnalyticsCard" style="display:none">
-          <div class="card-hd">
-            <span class="card-title">&#128202; Usage Analytics</span>
-            <div style="display:flex;gap:6px;align-items:center">
-              <select class="f-sel" id="usageWindowSel" onchange="loadUsageAnalytics()" style="font-size:12px;padding:4px 8px;width:auto">
-                <option value="7">Last 7 days</option>
-                <option value="30" selected>Last 30 days</option>
-                <option value="90">Last 90 days</option>
-              </select>
-            </div>
-          </div>
-          <div class="card-bd">
-            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px">
-              <div style="background:var(--surface2);border-radius:10px;padding:14px;text-align:center">
-                <div style="font-size:22px;font-weight:800;color:var(--c-blue)" id="ua-totalLogins">&#8212;</div>
-                <div style="font-size:11px;color:var(--tx3);margin-top:2px">Total Logins</div>
-              </div>
-              <div style="background:var(--surface2);border-radius:10px;padding:14px;text-align:center">
-                <div style="font-size:22px;font-weight:800;color:var(--c-green)" id="ua-activeToday">&#8212;</div>
-                <div style="font-size:11px;color:var(--tx3);margin-top:2px">Active Today</div>
-              </div>
-              <div style="background:var(--surface2);border-radius:10px;padding:14px;text-align:center">
-                <div style="font-size:22px;font-weight:800;color:#7c3aed" id="ua-totalUsers">&#8212;</div>
-                <div style="font-size:11px;color:var(--tx3);margin-top:2px">Officials Tracked</div>
-              </div>
-            </div>
-            <div id="usageAnalyticsList"></div>
-            <div style="font-size:10.5px;color:var(--tx3);margin-top:10px;padding-top:10px;border-top:1px solid var(--border)">
-              <span class="material-icons-round" style="font-size:11px;vertical-align:middle">info</span>
-              "Time spent" is estimated from login-to-last-action gaps, not exact continuous tracking.
-            </div>
-          </div>
+          <div class="card"><div class="card-hd"><span class="card-title">Zone Performance</span></div><div class="card-bd" style="height:260px"><canvas id="chartZone"></canvas></div></div>
+          <div class="card"><div class="card-hd"><span class="card-title">Department Breakdown</span></div><div class="card-bd" id="deptBreakdown" style="max-height:320px;overflow-y:auto"></div></div>
         </div>
       </div>
       <!-- Officer-specific dashboard -->
@@ -1871,9 +1849,6 @@ tbody tr:hover { background: var(--surface2); }
         </div>
       </div>
       <div class="flex-c gap8 mb12" style="flex-wrap:wrap;justify-content:space-between;align-items:center">
-        <div class="tabs" id="trackerTabs">
-          <button class="tab active" onclick="switchView('cards',this)"><span class="material-icons-round mi">view_agenda</span> Cards</button>
-        </div>
         <span class="c-muted" id="taskCount" style="flex-shrink:0">Loading...</span>
         <div style="display:flex;gap:4px;align-items:center;margin-left:auto">
           <span style="font-size:11px;color:var(--tx3);white-space:nowrap">Sort:</span>
@@ -1924,45 +1899,6 @@ tbody tr:hover { background: var(--surface2); }
     </div>
 
     <!-- COMMISSIONER VIEW -->
-    <div class="page" id="page-commview">
-      <div class="ph">
-        <div class="ph-left"><h1>Commissioner Dashboard</h1><p>Executive performance overview</p></div>
-        <div class="ph-actions">
-          <button class="btn btn-ghost btn-sm" onclick="openCustomReport()"><span class="material-icons-round mi">tune</span> Custom Report</button>
-          <button class="btn btn-success btn-sm" onclick="showExportChoice('commissioner')"><span class="material-icons-round mi">ios_share</span> Export Report</button>
-        </div>
-      </div>
-      <!-- Department drill-down filter — improved UI -->
-      <div class="card mb14" style="border:1.5px solid var(--border)">
-        <div class="card-bd" style="padding:12px 16px">
-          <div style="font-size:11px;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;display:flex;align-items:center;gap:6px">
-            <span class="material-icons-round" style="font-size:14px">business</span> Department Filter
-          </div>
-          <div id="cvDeptTabs" style="display:flex;gap:6px;flex-wrap:wrap;overflow-x:auto;padding-bottom:2px">
-            <button class="cv-dept-btn active" data-dept="" onclick="cvFilterDept(this)">
-              <span class="material-icons-round" style="font-size:13px;vertical-align:middle;margin-right:3px">layers</span>All Departments
-            </button>
-          </div>
-        </div>
-      </div>
-      <div class="kpi-grid mb16">
-        <div class="kpi blue"><div class="kpi-stripe"></div><div class="kpi-icon-wrap"><span class="material-icons-round mi">assignment</span></div><div class="kpi-val" id="cv-total">&#8212;</div><div class="kpi-lbl">Total Tasks</div></div>
-        <div class="kpi orange"><div class="kpi-stripe"></div><div class="kpi-icon-wrap"><span class="material-icons-round mi">pending_actions</span></div><div class="kpi-val" id="cv-pending">&#8212;</div><div class="kpi-lbl">Pending</div></div>
-        <div class="kpi green"><div class="kpi-stripe"></div><div class="kpi-icon-wrap"><span class="material-icons-round mi">check_circle</span></div><div class="kpi-val" id="cv-done">&#8212;</div><div class="kpi-lbl">Completed</div></div>
-        <div class="kpi red"><div class="kpi-stripe"></div><div class="kpi-icon-wrap"><span class="material-icons-round mi">warning</span></div><div class="kpi-val" id="cv-over">&#8212;</div><div class="kpi-lbl">Overdue</div></div>
-        <div class="kpi gold"><div class="kpi-stripe"></div><div class="kpi-icon-wrap"><span class="material-icons-round mi">percent</span></div><div class="kpi-val" id="cv-rate">&#8212;</div><div class="kpi-lbl">Completion %</div></div>
-      </div>
-      <div class="g2 mb16">
-        <div class="card"><div class="card-hd"><span class="card-title">Zone Completion Rates</span></div><div class="card-bd" style="height:250px"><canvas id="cvZone"></canvas></div></div>
-        <div class="card"><div class="card-hd"><span class="card-title">Department Tasks</span></div><div class="card-bd" style="height:250px"><canvas id="cvDept"></canvas></div></div>
-      </div>
-      <div class="card mb16">
-        <div class="card-hd"><span class="card-title" id="cvOfficerTitle">Officer Task Summary</span><button class="btn btn-ghost btn-sm" onclick="loadCommView()"><span class="material-icons-round mi">refresh</span></button></div>
-        <div class="card-bd" id="officerPerf" style="max-height:420px;overflow-y:auto"></div>
-      </div>
-      <div class="card"><div class="card-hd"><span class="card-title" id="cvCriticalTitle">Critical &amp; Delayed Tasks</span></div><div class="card-bd-0" id="criticalList"></div></div>
-    </div>
-
     <!-- USER MANAGEMENT -->
     <div class="page" id="page-users">
       <div class="ph">
@@ -2394,6 +2330,7 @@ tbody tr:hover { background: var(--surface2); }
       <div class="ph">
         <div class="ph-left"><h1>&#128202; Reports</h1><p>Dynamic Report Generator &mdash; quick links to specialised report tools</p></div>
         <div class="ph-actions">
+          <button class="btn btn-ghost" onclick="openCustomReport()"><span class="material-icons-round mi">tune</span> Custom Period Report</button>
           <button class="btn btn-primary" onclick="showAddReportModal()"><span class="material-icons-round mi">add_link</span> Add Report</button>
         </div>
       </div>
@@ -2648,7 +2585,7 @@ tbody tr:hover { background: var(--surface2); }
           <div class="card" style="border-left:3px solid var(--c-teal)">
             <div class="card-bd" style="padding:16px">
               <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px"><span class="material-icons-round" style="font-size:16px;color:var(--c-teal)">cloud_done</span><span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--tx3)">System Version</span></div>
-              <div style="font-size:13.5px;font-weight:600;color:var(--tx1)">TMS v93</div>
+              <div style="font-size:13.5px;font-weight:600;color:var(--tx1)">TMS v123</div>
               <div style="font-size:11.5px;color:var(--tx3);margin-top:2px">Built on Google Apps Script</div>
             </div>
           </div>
@@ -2685,9 +2622,9 @@ tbody tr:hover { background: var(--surface2); }
                 <span class="material-icons-round" style="font-size:18px;color:var(--c-teal);flex-shrink:0">security</span>
                 <div><div style="font-size:12.5px;font-weight:700;color:var(--tx1)">Role-Based Access</div><div style="font-size:11px;color:var(--tx3)">5 distinct permission levels</div></div>
               </div>
-              <div class="about-feat-card" onclick="go('commview')" style="display:flex;align-items:flex-start;gap:10px;padding:10px;border-radius:10px;background:var(--surface2);cursor:pointer;transition:transform .15s,box-shadow .15s">
+              <div class="about-feat-card" onclick="go('dashboard')" style="display:flex;align-items:flex-start;gap:10px;padding:10px;border-radius:10px;background:var(--surface2);cursor:pointer;transition:transform .15s,box-shadow .15s">
                 <span class="material-icons-round" style="font-size:18px;color:#d97706;flex-shrink:0">insights</span>
-                <div><div style="font-size:12.5px;font-weight:700;color:var(--tx1)">Commissioner Dashboard</div><div style="font-size:11px;color:var(--tx3)">Real-time zone &amp; dept analytics</div></div>
+                <div><div style="font-size:12.5px;font-weight:700;color:var(--tx1)">Department Dashboard</div><div style="font-size:11px;color:var(--tx3)">Zone &amp; department performance, filterable</div></div>
               </div>
               <div class="about-feat-card" onclick="go('reports')" style="display:flex;align-items:flex-start;gap:10px;padding:10px;border-radius:10px;background:var(--surface2);cursor:pointer;transition:transform .15s,box-shadow .15s">
                 <span class="material-icons-round" style="font-size:18px;color:#dc2626;flex-shrink:0">picture_as_pdf</span>
@@ -2696,14 +2633,6 @@ tbody tr:hover { background: var(--surface2); }
               <div class="about-feat-card" onclick="go('tracker')" style="display:flex;align-items:flex-start;gap:10px;padding:10px;border-radius:10px;background:var(--surface2);cursor:pointer;transition:transform .15s,box-shadow .15s">
                 <span class="material-icons-round" style="font-size:18px;color:#059669;flex-shrink:0">photo_camera</span>
                 <div><div style="font-size:12.5px;font-weight:700;color:var(--tx1)">Photos &amp; Documents</div><div style="font-size:11px;color:var(--tx3)">Instant evidence, PDF attachments</div></div>
-              </div>
-              <div class="about-feat-card" onclick="go('dashboard')" style="display:flex;align-items:flex-start;gap:10px;padding:10px;border-radius:10px;background:var(--surface2);cursor:pointer;transition:transform .15s,box-shadow .15s">
-                <span class="material-icons-round" style="font-size:18px;color:#7c3aed;flex-shrink:0">query_stats</span>
-                <div><div style="font-size:12.5px;font-weight:700;color:var(--tx1)">Usage Analytics</div><div style="font-size:11px;color:var(--tx3)">Login frequency &amp; activity tracking</div></div>
-              </div>
-              <div class="about-feat-card" onclick="go('photolog')" style="display:flex;align-items:flex-start;gap:10px;padding:10px;border-radius:10px;background:var(--surface2);cursor:pointer;transition:transform .15s,box-shadow .15s">
-                <span class="material-icons-round" style="font-size:18px;color:#f59e0b;flex-shrink:0">mail</span>
-                <div><div style="font-size:12.5px;font-weight:700;color:var(--tx1)">Email Notifications</div><div style="font-size:11px;color:var(--tx3)">Opt-in task assignment alerts</div></div>
               </div>
             </div>
           </div>
@@ -2722,13 +2651,13 @@ tbody tr:hover { background: var(--surface2); }
                 <div style="position:relative">
                   <div style="position:absolute;left:-21px;top:2px;width:10px;height:10px;border-radius:50%;background:var(--c-teal)"></div>
                   <div style="font-size:11px;font-weight:700;color:var(--c-teal);text-transform:uppercase">Latest</div>
-                  <div style="font-size:13px;font-weight:600;color:var(--tx1);margin-top:2px">Reliable Photo Uploads</div>
-                  <div style="font-size:11.5px;color:var(--tx3);margin-top:2px">Faster, validated uploads with an automatic fallback for large or complex photos, plus an offline queue that retries on its own once you're back online.</div>
+                  <div style="font-size:13px;font-weight:600;color:var(--tx1);margin-top:2px">Compact Task Table View</div>
+                  <div style="font-size:11.5px;color:var(--tx3);margin-top:2px">Task Tracker redesigned as a dense, scannable table &mdash; far more tasks visible at once, with status, officer, and priority readable at a glance.</div>
                 </div>
                 <div style="position:relative">
                   <div style="position:absolute;left:-21px;top:2px;width:10px;height:10px;border-radius:50%;background:var(--c-blue)"></div>
-                  <div style="font-size:13px;font-weight:600;color:var(--tx1)">Task Discussion Threads</div>
-                  <div style="font-size:11.5px;color:var(--tx3);margin-top:2px">A proper comment thread on every task, alongside Details, Photos &amp; Docs, and History &mdash; nothing gets overwritten anymore.</div>
+                  <div style="font-size:13px;font-weight:600;color:var(--tx1)">Streamlined Dashboard</div>
+                  <div style="font-size:11.5px;color:var(--tx3);margin-top:2px">One dashboard for everyone, with a department filter for Admin and Commissioner &mdash; zone and department performance in the same place you already check daily.</div>
                 </div>
                 <div style="position:relative">
                   <div style="position:absolute;left:-21px;top:2px;width:10px;height:10px;border-radius:50%;background:#7c3aed"></div>
@@ -2783,10 +2712,6 @@ tbody tr:hover { background: var(--surface2); }
       <button class="bn-item" id="bnEntry" data-page="taskEntry" onclick="go('taskEntry')">
         <span class="material-icons-round mi">add_task</span>
         <span class="bn-label">New Task</span>
-      </button>
-      <button class="bn-item" id="bnCommView" data-page="commview" onclick="go('commview')">
-        <span class="material-icons-round mi">bar_chart</span>
-        <span class="bn-label">Analytics</span>
       </button>
       <button class="bn-item" onclick="toggleSidebar()">
         <span class="material-icons-round mi">more_horiz</span>
@@ -4000,7 +3925,6 @@ function applyRoleNav(role){
 
   show('snav-taskEntry', isAdmin||isSupervision);
   show('snav-users', isAdminOnly);
-  show('snav-commview', isAdmin);
   show('snav-settings', isAdminOnly);
   show('snav-reports', isAdminOnly);
   show('snav-grievances', FEATURES.grievance&&(isAdmin||isHOD||isSupervision));
@@ -4041,11 +3965,11 @@ function applyRoleNav(role){
     // and full Notes create/delete access (enforced server-side).
     S.allowedPages=['dashboard','taskEntry','tracker','photolog','about'];
   } else if(isAdminOnly){
-    S.allowedPages=['dashboard','taskEntry','tracker','commview','users','settings','reports','photolog','about'];
+    S.allowedPages=['dashboard','taskEntry','tracker','users','settings','reports','photolog','about'];
   } else {
     // Commissioner: full visibility into tasks and analytics, but
     // User Management, Settings, and Reports remain Admin-only.
-    S.allowedPages=['dashboard','taskEntry','tracker','commview','photolog','about'];
+    S.allowedPages=['dashboard','taskEntry','tracker','photolog','about'];
   }
   if(FEATURES.grievance&&S.allowedPages.indexOf('grievances')===-1) S.allowedPages.push('grievances');
 
@@ -4060,7 +3984,7 @@ function applyRoleNav(role){
     if(ad)ad.classList.remove('dn');if(od)od.classList.add('dn');if(hd)hd.classList.add('dn');if(spd)spd.classList.add('dn');
   }
 }
-var PAGE_META={dashboard:['Dashboard','Overview & Analytics'],taskEntry:['Task Entry','Create and assign tasks'],tracker:['Task Tracker','Monitor all tasks'],commview:['Commissioner View','Executive analytics'],users:['User Management','Manage accounts'],settings:['Settings','System configuration'],photolog:['Notes','Inspection & Meeting Records'],calendar:['Calendar','Meetings & Schedule'],reports:['Reports','Dynamic Report Generator'],grievances:['Grievance Management','Track public & representative grievances'],about:['About','Application information']};
+var PAGE_META={dashboard:['Dashboard','Overview & Analytics'],taskEntry:['Task Entry','Create and assign tasks'],tracker:['Task Tracker','Monitor all tasks'],users:['User Management','Manage accounts'],settings:['Settings','System configuration'],photolog:['Notes','Inspection & Meeting Records'],calendar:['Calendar','Meetings & Schedule'],reports:['Reports','Dynamic Report Generator'],grievances:['Grievance Management','Track public & representative grievances'],about:['About','Application information']};
 function go(page){
   if(S.allowedPages&&S.allowedPages.length&&S.allowedPages.indexOf(page)===-1){toast('Access restricted.','error');return;}
   S.page=page;
@@ -4089,7 +4013,6 @@ function go(page){
     setupQuickFilterPrimaryChip();
     loadTasks();
   }
-  else if(page==='commview')loadCommView();
   else if(page==='users')loadUsers();
   else if(page==='settings')loadSettings();
   else if(page==='photolog')loadPhotoLog();
@@ -4229,18 +4152,34 @@ function loadDashboard(){
   var gd=id('greetDate');if(gd)gd.textContent=new Date().toLocaleDateString('en-IN',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
   var gn=id('greetName');if(gn)gn.textContent=S.user?S.user.name.split(' ')[0]:'';
 
-  // Priority 1: pre-loaded dashboard data from the login response.
-  if(S.preloadedDash&&S.preloadedDash.success&&S.preloadedDash.stats){
+  // Populate the department filter dropdown once — reuses whatever
+  // lookup data is already available, no extra fetch.
+  var deptSel=id('dashDeptFilter');
+  if(deptSel&&deptSel.options.length<=1&&S.lookup&&S.lookup.departments){
+    S.lookup.departments.forEach(function(d){
+      var opt=document.createElement('option');
+      opt.value=d.DeptName||d.deptName||d;
+      opt.textContent=d.DeptName||d.deptName||d;
+      deptSel.appendChild(opt);
+    });
+  }
+  var selectedDept=deptSel?deptSel.value:'';
+  var cacheKey='admindash'+(selectedDept?'_'+selectedDept:'');
+
+  // Priority 1: pre-loaded dashboard data from the login response — only
+  // applies to the unfiltered ("All Departments") view, since that's all
+  // the login bootstrap ever bundles.
+  if(!selectedDept&&S.preloadedDash&&S.preloadedDash.success&&S.preloadedDash.stats){
     var r=S.preloadedDash;
     S.preloadedDash=null; // consume once
-    swrSave('admindash',r); // save BEFORE render so a chart error can't block it
+    swrSave(cacheKey,r); // save BEFORE render so a chart error can't block it
     applyAdminDashData(r);
     return;
   }
 
   // Priority 2: INSTANT DISPLAY from last session's cached data —
   // renders immediately, fresh data updates silently in background.
-  var cached=swrLoad('admindash',86400000);
+  var cached=swrLoad(cacheKey,86400000);
   var renderedFromCache=false;
   if(cached&&cached.stats){
     applyAdminDashData(cached);
@@ -4250,15 +4189,16 @@ function loadDashboard(){
   }
 
   // Bootstrap already delivers fresh dashboard data — skip the duplicate
-  if(BOOT_PENDING&&renderedFromCache)return;
+  // (only for the unfiltered view; a department filter always needs its own fetch)
+  if(!selectedDept&&BOOT_PENDING&&renderedFromCache)return;
 
-  gasCall('serverGetDashboardStats',S.token).then(function(r){
+  gasCall('serverGetDashboardStats',S.token,selectedDept).then(function(r){
     hideLoader();
     if(!r||!r.success){
       if(!renderedFromCache)toast(r?r.message:'Load failed','error');
       return;
     }
-    swrSave('admindash',r);
+    swrSave(cacheKey,r);
     applyAdminDashData(r);
   });
 }
@@ -4269,7 +4209,7 @@ function applyAdminDashData(r){
   var kv={'k-total':s.total,'k-pending':s.pending,'k-progress':s.inProgress,'k-done':s.completed,'k-overdue':s.overdue,'k-today':s.dueToday,'k-high':s.highPriority,'k-rate':r.completionRate+'%'};
   for(var k in kv){var el=id(k);if(el)el.textContent=kv[k];}
   if(s.overdue>0){var b=id('overdBadge');if(b){b.textContent=s.overdue;b.style.display='';}var d=id('bnDot');if(d)d.classList.add('on');}
-  buildStatusChart(s);buildZoneChart(r.zoneStats);buildDeptBreakdown(r.deptStats);renderActivityPlaceholder();renderUsageAnalyticsPlaceholder();
+  buildZoneChart(r.zoneStats);buildDeptBreakdown(r.deptStats);
 }
 function loadHODDashboard(){
   var u=S.user;if(!u)return;
@@ -4752,10 +4692,6 @@ function buildOfficerRecentTasks(tasks){
   }
   tbody.innerHTML=html;
 }
-function buildStatusChart(s){
-  var ctx=id('chartStatus');if(!ctx)return;if(S.charts.status)S.charts.status.destroy();
-  S.charts.status=new Chart(ctx,{type:'doughnut',data:{labels:['Pending','In Progress','Completed','Overdue'],datasets:[{data:[s.pending,s.inProgress,s.completed,s.overdue],backgroundColor:['#f59e0b','#0ea5e9','#10b981','#ef4444'],borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,cutout:'62%',plugins:{legend:{position:'bottom',labels:{padding:14,font:{size:11,family:'Inter'}}}}}});
-}
 function buildZoneChart(zs){
   var ctx=id('chartZone');if(!ctx)return;if(S.charts.zone)S.charts.zone.destroy();
   // Sort zones in canonical order
@@ -4826,133 +4762,6 @@ function buildDeptBreakdown(ds){
     var btn=ev.target.closest('.dept-drill-btn');
     if(btn)deptDrillTo(btn.dataset.dept,btn.dataset.status);
   };
-}
-function renderActivityPlaceholder(){
-  var el=id('recentAct');if(!el)return;
-  el.innerHTML='<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;gap:10px">'
-    +'<span class="material-icons-round" style="font-size:28px;color:var(--tx3)">history</span>'
-    +'<span style="font-size:12.5px;color:var(--tx3)">Tap to load recent activity</span>'
-    +'<button class="btn btn-ghost btn-sm" onclick="loadActivityLog()" style="margin-top:2px">'
-    +'<span class="material-icons-round mi">arrow_downward</span> Load Activity</button>'
-    +'</div>';
-}
-function loadActivityLog(){
-  var el=id('recentAct');if(!el)return;
-  var loadBtn=id('recentActLoadBtn');
-  el.innerHTML='<div style="text-align:center;padding:20px"><span class="material-icons-round" style="font-size:24px;color:var(--tx3);animation:spin 1s linear infinite">sync</span></div>';
-  gasCall('serverGetActivityLogs',S.token,12).then(function(r){
-    var meta=id('recentActMeta');
-    // Show the refresh button in the card header now that data has loaded once
-    if(loadBtn)loadBtn.style.display='';
-    if(!r||!r.success||!r.data||!r.data.length){
-      el.innerHTML='<div class="empty" style="padding:16px"><span class="material-icons-round mi" style="font-size:28px">history</span><p style="font-size:12px;margin-top:4px">No recent activity</p></div>';
-      if(meta)meta.textContent='';
-      return;
-    }
-    if(meta)meta.textContent=r.data.length+' recent event'+(r.data.length!==1?'s':'');
-    var actionMeta={
-      'LOGIN':       {icon:'login',          color:'var(--c-teal)',  bg:'rgba(13,148,136,.1)'},
-      'CREATE_TASK': {icon:'add_task',        color:'var(--c-blue)',  bg:'rgba(29,78,216,.1)'},
-      'UPDATE_TASK': {icon:'edit_note',       color:'var(--c-blue)',  bg:'rgba(29,78,216,.1)'},
-      'DELETE_TASK': {icon:'delete',          color:'var(--c-red)',   bg:'rgba(220,38,38,.1)'},
-      'UPLOAD_PHOTO':{icon:'photo_camera',    color:'#7c3aed',        bg:'rgba(124,58,237,.1)'},
-      'CREATE_GRIEVANCE':{icon:'gavel',       color:'#B45309',        bg:'rgba(180,83,9,.1)'},
-      'ADD_ATR':     {icon:'forum',           color:'#B45309',        bg:'rgba(180,83,9,.1)'},
-      'UPDATE_USER': {icon:'manage_accounts', color:'#7c3aed',        bg:'rgba(124,58,237,.1)'}
-    };
-    var html='';
-    for(var i=0;i<r.data.length;i++){
-      var l=r.data[i];
-      var am=actionMeta[l.action]||{icon:'circle_notifications',color:'var(--tx3)',bg:'var(--surface2)'};
-      html+='<div style="display:flex;gap:10px;padding:9px 0;border-bottom:1px solid var(--border)">'
-        +'<div style="width:28px;height:28px;border-radius:8px;background:'+am.bg+';display:flex;align-items:center;justify-content:center;flex-shrink:0">'
-        +'<span class="material-icons-round" style="font-size:15px;color:'+am.color+'">'+am.icon+'</span></div>'
-        +'<div style="flex:1;min-width:0"><div style="font-size:12.5px;font-weight:600;color:var(--tx1)">'+htmlEsc(l.details)+'</div>'
-        +'<div class="c-muted" style="margin-top:1px">'+htmlEsc(l.username)+' \u00b7 '+fRelativeTime(l.timestamp)+'</div></div></div>';
-    }
-    el.innerHTML=html;
-  });
-}
-
-// Converts a timestamp into a short relative phrase ("5m ago", "3h ago",
-// "Yesterday", or a plain date for anything older) — much more useful
-// at a glance than a full date/time on every single row.
-function fRelativeTime(ts){
-  if(!ts)return'\u2014';
-  var d=new Date(ts);
-  if(isNaN(d.getTime()))return String(ts);
-  var diffMs=Date.now()-d.getTime();
-  var mins=Math.floor(diffMs/60000);
-  if(mins<1)return'Just now';
-  if(mins<60)return mins+'m ago';
-  var hrs=Math.floor(mins/60);
-  if(hrs<24)return hrs+'h ago';
-  var days=Math.floor(hrs/24);
-  if(days===1)return'Yesterday';
-  if(days<7)return days+'d ago';
-  return fDateShort(ts);
-}
-
-// ─── USAGE ANALYTICS — how often & how long officials use the app ──
-function renderUsageAnalyticsPlaceholder(){
-  var card=id('usageAnalyticsCard');if(!card)return;
-  var isAdminLike=(S.user&&(S.user.role==='Admin'||S.user.role==='Commissioner'));
-  card.style.display=isAdminLike?'block':'none';
-  if(!isAdminLike)return;
-  var list=id('usageAnalyticsList');
-  if(list)list.innerHTML='<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;gap:10px">'
-    +'<span class="material-icons-round" style="font-size:28px;color:var(--tx3)">query_stats</span>'
-    +'<span style="font-size:12.5px;color:var(--tx3)">Tap to load usage analytics</span>'
-    +'<button class="btn btn-ghost btn-sm" onclick="loadUsageAnalytics()" style="margin-top:2px">'
-    +'<span class="material-icons-round mi">arrow_downward</span> Load Analytics</button>'
-    +'</div>';
-  // Reset KPI numbers to dashes until loaded
-  ['ua-totalLogins','ua-activeToday','ua-totalUsers'].forEach(function(i){var e=id(i);if(e)e.textContent='\u2014';});
-}
-function loadUsageAnalytics(){
-  var card=id('usageAnalyticsCard');
-  if(!card)return;
-  var isAdminLike=(S.user&&(S.user.role==='Admin'||S.user.role==='Commissioner'));
-  card.style.display=isAdminLike?'block':'none';
-  if(!isAdminLike)return;
-
-  var list=id('usageAnalyticsList');
-  if(list)list.innerHTML='<div style="text-align:center;padding:20px"><span class="material-icons-round" style="font-size:24px;color:var(--tx3);animation:spin 1s linear infinite">sync</span></div>';
-
-  var windowDays=V('usageWindowSel')||30;
-  gasCall('serverGetUsageAnalytics',S.token,parseInt(windowDays,10)).then(function(r){
-    if(!r||!r.success){
-      if(list)list.innerHTML='<div class="empty" style="padding:16px"><p style="font-size:12px">'+((r&&r.message)||'Could not load usage analytics.')+'</p></div>';
-      return;
-    }
-    var d=r.data;
-    var tl=id('ua-totalLogins');if(tl)tl.textContent=d.totalLogins;
-    var at=id('ua-activeToday');if(at)at.textContent=d.activeToday;
-    var tu=id('ua-totalUsers');if(tu)tu.textContent=d.users.length;
-
-    if(!list)return;
-    if(!d.users.length){
-      list.innerHTML='<div class="empty" style="padding:16px"><span class="material-icons-round mi">group_off</span><p style="font-size:12px">No login activity recorded yet in this window.</p></div>';
-      return;
-    }
-    var html='<div class="tbl-wrap"><table><thead><tr>'
-      +'<th>Official</th><th>Logins</th><th>Est. Time Active</th><th>Avg. Session</th><th>Last Seen</th>'
-      +'</tr></thead><tbody>';
-    for(var i=0;i<d.users.length;i++){
-      var u=d.users[i];
-      var hrs=Math.floor(u.totalActiveMinutes/60),mins=u.totalActiveMinutes%60;
-      var activeStr=hrs>0?(hrs+'h '+mins+'m'):(mins+'m');
-      html+='<tr>'
-        +'<td><strong>'+htmlEsc(u.username)+'</strong></td>'
-        +'<td>'+u.loginCount+'</td>'
-        +'<td>'+activeStr+'</td>'
-        +'<td>'+u.avgSessionMinutes+'m</td>'
-        +'<td class="c-muted">'+fRelativeTime(u.lastSeen)+'</td>'
-        +'</tr>';
-    }
-    html+='</tbody></table></div>';
-    list.innerHTML=html;
-  });
 }
 
 var TRK_RP_ON=false;
@@ -5528,141 +5337,118 @@ function sortBy(col){
   renderTable(S.filtered);
 }
 // ── RENDER CARDS — pure DOM, zero innerHTML, crash-proof ─────
-function renderTable(tasks){ renderCards(tasks); } // alias for compatibility
+// Builds the column-label header row — same fixed grid template as
+// makeTaskRow() below, so columns always line up exactly.
+function taskRowHeader(isComm){
+  var h=document.createElement('div');
+  h.className='task-row-grid';
+  var cols=['Task ID','Description','Zone','Officer','Priority','Status','Due Date','Files','Actions'];
+  cols.forEach(function(c){
+    var d=document.createElement('div');
+    d.className='task-row-header';
+    d.textContent=c;
+    h.appendChild(d);
+  });
+  return h;
+}
+// Compact table-row rendering — replaces the old card layout with a
+// dense, scannable row: same data and same actions the old card view had,
+// just laid out so far more tasks fit on screen at once and status/
+// officer/priority are visible without opening anything.
+function makeTaskRow(t, isAdmin, isHOD, showReassign){
+  var pri=(t.priority||'medium').toLowerCase();
+  var line=document.createElement('div');
+  line.className='task-row-line'+(t.isOverdue?' overdue':'');
+  line.id='row-'+t.taskID;
 
-function makeTaskCard(t, isAdmin, isHOD, showReassign){
-  var pri = (t.priority||'medium').toLowerCase();
-  var card = document.createElement('div');
-  card.className = 'task-card ' + (t.isOverdue ? 'overdue' : pri);
-  card.id = 'row-' + t.taskID;
+  var g=document.createElement('div');
+  g.className='task-row-grid';
+  g.onclick=function(){ viewTask(t.taskID); };
 
-  // Header row
-  var hdr = document.createElement('div');
-  hdr.className = 'task-card-header';
-
-  var idSpan = document.createElement('span');
-  idSpan.className = 'mono';
-  idSpan.style.cssText = 'color:var(--c-blue);font-size:12px;font-weight:700';
-  idSpan.textContent = t.taskID;
-
-  var typeSpan = document.createElement('span');
-  typeSpan.style.cssText = 'font-size:12px;color:var(--tx3)';
-  typeSpan.textContent = t.taskType;
-
-  var priBadge = document.createElement('span');
-  priBadge.className = 'badge badge-' + pri;
-  priBadge.textContent = t.priority || 'Medium';
-
-  var statusBadge = document.createElement('span');
-  statusBadge.className = 'badge badge-' + statusClass(t.status||'Pending');
-  statusBadge.textContent = t.status || 'Pending';
-
-  var spacer = document.createElement('span');
-  spacer.style.flex = '1';
-
-  if(t.isOverdue){
-    var ov = document.createElement('span');
-    ov.style.cssText = 'font-size:11px;font-weight:700;color:var(--c-red);background:rgba(239,68,68,.1);padding:2px 7px;border-radius:999px';
-    ov.textContent = '⚠ OVERDUE';
-    hdr.appendChild(ov);
-  }
-  if(t._photosSaving){
-    var upTag = document.createElement('span');
-    upTag.style.cssText = 'font-size:10.5px;font-weight:600;color:var(--c-blue);background:rgba(29,78,216,.1);padding:2px 8px;border-radius:999px;display:flex;align-items:center;gap:3px';
-    upTag.innerHTML = '<span class="material-icons-round" style="font-size:12px;animation:spin 1s linear infinite">sync</span>Uploading photos';
-    hdr.appendChild(upTag);
-  }
-
-  hdr.appendChild(idSpan);
-  hdr.appendChild(typeSpan);
-  hdr.appendChild(spacer);
-  hdr.appendChild(priBadge);
-  hdr.appendChild(statusBadge);
-
-  // Body
-  var body = document.createElement('div');
-  body.className = 'task-card-body';
-  body.onclick = function(){ viewTask(t.taskID); };
-
-  var desc = document.createElement('div');
-  desc.className = 'task-card-desc';
-  if(S.searchQ){desc.innerHTML=hlMatch((t.description||'(no description)').slice(0,180));}
-  else{desc.textContent=t.description||'(no description)';}
-
-  var meta = document.createElement('div');
-  meta.className = 'task-card-meta';
-
-  function metaItem(icon, text){
-    var d = document.createElement('div');
-    d.className = 'task-card-meta-item';
-    var ic = document.createElement('span');
-    ic.className = 'material-icons-round';
-    ic.textContent = icon;
-    var tx = document.createElement('span');
-    tx.textContent = text;
-    d.appendChild(ic); d.appendChild(tx);
+  function cell(content,extraClass,title){
+    var d=document.createElement('div');
+    d.className='task-row'+(extraClass?' '+extraClass:'');
+    if(title)d.title=title;
+    if(content instanceof Node)d.appendChild(content);
+    else d.textContent=content||'\u2014';
     return d;
   }
-  if(t.zone)      meta.appendChild(metaItem('location_on', t.zone));
-  if(t.department)meta.appendChild(metaItem('business', t.department));
-  if(t.officerName)meta.appendChild(metaItem('person', t.officerName));
-  if(t.dateAssigned)meta.appendChild(metaItem('calendar_today', 'Insp: '+fDateShort(t.dateAssigned)));
-  if(t.dueDate)   meta.appendChild(metaItem('event', 'Due: '+fDateShort(t.dueDate)));
-  // At-a-glance photo/document counts — lets someone see whether a task
-  // already has evidence attached without opening the detail view just
-  // to check. photoCount combines both the legacy PhotoLinks field and
-  // the newer fast-upload TaskPhotos sheet, so this is accurate regardless
-  // of which upload path was used.
-  var photoCount = typeof t.photoCount === 'number' ? t.photoCount : 0;
-  var docCount = typeof t.docCount === 'number' ? t.docCount : 0;
-  if(photoCount > 0) meta.appendChild(metaItem('photo_camera', String(photoCount)));
-  if(docCount > 0)   meta.appendChild(metaItem('description', String(docCount)));
 
-  body.appendChild(desc);
-  body.appendChild(meta);
+  // Task ID — small badge showing "uploading" status if a photo batch is
+  // still in flight, same signal the old card header gave.
+  var idWrap=document.createElement('span');
+  idWrap.className='mono';
+  idWrap.style.cssText='color:var(--c-blue);font-weight:700';
+  idWrap.textContent=t.taskID;
+  g.appendChild(cell(idWrap));
 
-  // Footer actions
-  var ftr = document.createElement('div');
-  ftr.className = 'task-card-footer';
+  // Description — single line, truncated by CSS, full text on hover and
+  // search-match highlighting preserved from the card view.
+  var descEl=document.createElement('span');
+  if(S.searchQ){descEl.innerHTML=hlMatch(t.description||'(no description)');}
+  else{descEl.textContent=t.description||'(no description)';}
+  g.appendChild(cell(descEl,'task-row-desc',t.description||''));
 
-  function btn(icon, label, cls, fn){
-    var b = document.createElement('button');
-    b.className = 'btn btn-sm ' + cls;
-    b.style.cssText = 'display:inline-flex;align-items:center;gap:4px';
-    var ic = document.createElement('span');
-    ic.className = 'material-icons-round mi';
-    ic.textContent = icon;
-    b.appendChild(ic);
-    if(label){ var tx = document.createElement('span'); tx.textContent = label; b.appendChild(tx); }
-    b.onclick = function(e){ e.stopPropagation(); fn(); };
+  g.appendChild(cell(t.zone,'',t.zone));
+  g.appendChild(cell(t.officerName,'',t.officerName));
+
+  var priBadge=document.createElement('span');
+  priBadge.className='badge badge-'+pri;
+  priBadge.textContent=t.priority||'Medium';
+  g.appendChild(cell(priBadge));
+
+  var statusBadge=document.createElement('span');
+  statusBadge.className='badge badge-'+statusClass(t.status||'Pending');
+  statusBadge.textContent=t.status||'Pending';
+  g.appendChild(cell(statusBadge));
+
+  var dueWrap=document.createElement('span');
+  if(t.isOverdue){dueWrap.style.cssText='color:var(--c-red);font-weight:700';dueWrap.textContent=(t.dueDate?fDateShort(t.dueDate):'Not set')+' \u26a0';}
+  else{dueWrap.textContent=t.dueDate?fDateShort(t.dueDate):'\u2014';}
+  g.appendChild(cell(dueWrap));
+
+  // Photo/document counts — same at-a-glance evidence indicator the card
+  // view had, just compacted into icon+number pairs.
+  var photoCount=typeof t.photoCount==='number'?t.photoCount:0;
+  var docCount=typeof t.docCount==='number'?t.docCount:0;
+  var filesWrap=document.createElement('span');
+  filesWrap.style.cssText='display:flex;gap:6px;align-items:center;color:var(--tx3)';
+  if(photoCount>0)filesWrap.innerHTML+='<span style="display:inline-flex;align-items:center;gap:1px"><span class="material-icons-round" style="font-size:13px">photo_camera</span>'+photoCount+'</span>';
+  if(docCount>0)filesWrap.innerHTML+='<span style="display:inline-flex;align-items:center;gap:1px"><span class="material-icons-round" style="font-size:13px">description</span>'+docCount+'</span>';
+  if(t._photosSaving)filesWrap.innerHTML+='<span class="material-icons-round" style="font-size:13px;color:var(--c-blue);animation:spin 1s linear infinite">sync</span>';
+  g.appendChild(cell(filesWrap));
+
+  // Actions — identical role-based button set to the card footer.
+  var actWrap=document.createElement('div');
+  actWrap.className='task-row-actions';
+  function abtn(icon,cls,fn,label){
+    var b=document.createElement('button');
+    b.className='btn btn-sm btn-icon '+cls;
+    b.title=label||'';
+    b.innerHTML='<span class="material-icons-round mi">'+icon+'</span>';
+    b.onclick=function(e){e.stopPropagation();fn();};
     return b;
   }
-
-  ftr.appendChild(btn('visibility','View','btn-ghost btn-icon', function(){ viewTask(t.taskID); }));
-
+  actWrap.appendChild(abtn('visibility','btn-ghost',function(){viewTask(t.taskID);},'View'));
   if(isAdmin){
-    ftr.appendChild(btn('update','Update','btn-ghost btn-icon', function(){ adminUpdate(t.taskID); }));
-    ftr.appendChild(btn('edit','Edit','btn-ghost btn-icon', function(){ editTask(t.taskID); }));
-    ftr.appendChild(btn('delete','','btn-danger btn-icon', function(){ delTask(t.taskID); }));
+    actWrap.appendChild(abtn('update','btn-ghost',function(){adminUpdate(t.taskID);},'Update'));
+    actWrap.appendChild(abtn('edit','btn-ghost',function(){editTask(t.taskID);},'Edit'));
+    actWrap.appendChild(abtn('delete','btn-danger',function(){delTask(t.taskID);},'Delete'));
   } else if(isHOD){
-    ftr.appendChild(btn('update','Update','btn-primary btn-icon', function(){ officerUpdate(t.taskID); }));
-    if(showReassign) ftr.appendChild(btn('swap_horiz','Reassign','btn-ghost btn-icon', function(){ hodReassignTask(t.taskID); }));
+    actWrap.appendChild(abtn('update','btn-primary',function(){officerUpdate(t.taskID);},'Update'));
+    if(showReassign)actWrap.appendChild(abtn('swap_horiz','btn-ghost',function(){hodReassignTask(t.taskID);},'Reassign'));
   } else {
-    ftr.appendChild(btn('update','Update','btn-primary btn-icon', function(){ officerUpdate(t.taskID); }));
+    actWrap.appendChild(abtn('update','btn-primary',function(){officerUpdate(t.taskID);},'Update'));
   }
+  var actCell=cell(actWrap);
+  actCell.onclick=function(e){e.stopPropagation();}; // don't trigger the row's own viewTask when clicking near buttons
+  g.appendChild(actCell);
 
-  if(t.photoLinks){
-    var ph = document.createElement('span');
-    ph.style.cssText = 'font-size:11px;color:var(--c-teal);display:flex;align-items:center;gap:2px;margin-left:auto';
-    ph.innerHTML = '<span class="material-icons-round" style="font-size:13px">photo_camera</span> Photos';
-    ftr.appendChild(ph);
-  }
-
-  card.appendChild(hdr);
-  card.appendChild(body);
-  card.appendChild(ftr);
-  return card;
+  line.appendChild(g);
+  return line;
 }
+
+function renderTable(tasks){ renderCards(tasks); } // alias for compatibility
 
 function renderCards(tasks){
   var grid = id('taskCardsGrid');
@@ -5766,7 +5552,11 @@ function renderCards(tasks){
         nm.textContent='No tasks found.';
         body.appendChild(nm);
       } else {
-        for(var i=0;i<sectionTasks.length;i++) body.appendChild(makeTaskCard(sectionTasks[i],false,true,showReassign));
+        var sectionWrap=document.createElement('div');
+        sectionWrap.className='task-table-wrap';
+        sectionWrap.appendChild(taskRowHeader());
+        for(var i=0;i<sectionTasks.length;i++) sectionWrap.appendChild(makeTaskRow(sectionTasks[i],false,true,showReassign));
+        body.appendChild(sectionWrap);
       }
 
       wrap.appendChild(hd);
@@ -5782,21 +5572,29 @@ function renderCards(tasks){
   if(isSupervision){
     // Flat list, scoped to assigned departments — view + update only, no reassign
     var supShown=Math.min(S._trackerShown||TRACKER_PAGE_SIZE, tasks.length);
+    var supWrap=document.createElement('div');
+    supWrap.className='task-table-wrap';
+    supWrap.appendChild(taskRowHeader());
     for(var i=0;i<supShown;i++){
       try{
-        grid.appendChild(makeTaskCard(tasks[i], false, false, false));
-      }catch(e){ console.error('Card error row '+i, e); }
+        supWrap.appendChild(makeTaskRow(tasks[i], false, false, false));
+      }catch(e){ console.error('Row error '+i, e); }
     }
+    grid.appendChild(supWrap);
     appendLoadMoreIfNeeded(tasks, supShown);
     return;
   }
 
   var shown=Math.min(S._trackerShown||TRACKER_PAGE_SIZE, tasks.length);
+  var flatWrap=document.createElement('div');
+  flatWrap.className='task-table-wrap';
+  flatWrap.appendChild(taskRowHeader());
   for(var i=0;i<shown;i++){
     try{
-      grid.appendChild(makeTaskCard(tasks[i], isAdmin, false, false));
-    }catch(e){ console.error('Card error row '+i, e); }
+      flatWrap.appendChild(makeTaskRow(tasks[i], isAdmin, false, false));
+    }catch(e){ console.error('Row error '+i, e); }
   }
+  grid.appendChild(flatWrap);
   appendLoadMoreIfNeeded(tasks, shown);
 }
 
@@ -5831,7 +5629,6 @@ function buildHODRows(tasks, canReassign){
   }
   return html;
 }
-function switchView(v,btn){var tabs=document.querySelectorAll('#trackerTabs .tab');for(var i=0;i<tabs.length;i++)tabs[i].classList.remove('active');btn.classList.add('active');}
 function switchTaskTab(tab,btn){var tabs=document.querySelectorAll('#taskTabs .tab');for(var i=0;i<tabs.length;i++)tabs[i].classList.remove('active');btn.classList.add('active');var tm=id('tab-manual'),ta=id('tab-ai');if(tm)tm.classList.toggle('dn',tab!=='manual');if(ta)ta.classList.toggle('dn',tab!=='ai');}
 function getTaskForm(){
   // Officer comes from the MO multi-officer list (first officer for single-save)
@@ -6002,11 +5799,10 @@ function viewTask(taskID){
         t.updatedBy=r.task.updatedBy;
         t.photoLinks=r.task.photoLinks;
         if(r.task.history)t._history=r.task.history;
-        // Photos, attachments, and comments arrive in this SAME response
-        // now — consume them directly instead of firing more calls for it.
+        // Photos and attachments arrive in this SAME response now —
+        // consume them directly instead of firing more calls for it.
         t.newPhotos=r.task.photos||[];
         t.docsData=r.task.attachments||[];
-        t.comments=r.task.comments||[];
         t.sourceNoteID=r.task.sourceNoteID||'';
         t.sourceNote=r.task.sourceNote||null;
         // Only update if this task's modal is still open
@@ -6192,51 +5988,21 @@ function taskDetailHTML(t){
     historyHtml='<div style="font-size:12px;color:var(--tx3)">Loading history...</div>';
   }
 
-  // ── COMMENTS TAB ─────────────────────────────────────────────
-  // A proper append-only discussion thread, separate from the single
-  // Officer Remarks field that gets overwritten on every status update.
-  var comments=t.comments||[];
-  var commentsHtml='<div id="taskCommentsList" style="display:flex;flex-direction:column;gap:10px;margin-bottom:14px;max-height:320px;overflow-y:auto">';
-  if(comments.length){
-    for(var ci=0;ci<comments.length;ci++){
-      var c=comments[ci];
-      var cwhen=c.createdAt?new Date(c.createdAt).toLocaleString('en-IN',{day:'numeric',month:'short',hour:'numeric',minute:'2-digit'}):'';
-      commentsHtml+='<div style="background:var(--surface2);border-radius:8px;padding:9px 12px">'
-        +'<div style="display:flex;align-items:center;gap:6px;margin-bottom:3px;flex-wrap:wrap">'
-        +'<span style="font-size:12.5px;font-weight:700;color:var(--tx1)">'+htmlEsc(c.author)+'</span>'
-        +'<span style="font-size:10px;color:var(--tx3);background:var(--surface);border:1px solid var(--border);border-radius:999px;padding:1px 7px">'+htmlEsc(c.authorRole)+'</span>'
-        +'<span style="font-size:10.5px;color:var(--tx3);margin-left:auto">'+cwhen+'</span>'
-        +'</div>'
-        +'<div style="font-size:13px;line-height:1.5;white-space:pre-wrap">'+htmlEsc(c.text)+'</div>'
-        +'</div>';
-    }
-  } else {
-    commentsHtml+='<div style="font-size:12px;color:var(--tx3);text-align:center;padding:20px 0">No comments yet \u2014 start the discussion below.</div>';
-  }
-  commentsHtml+='</div>'
-    +'<div style="display:flex;gap:8px;align-items:flex-end">'
-    +'<textarea id="taskCommentInput" placeholder="Add a comment..." style="flex:1;min-height:44px;max-height:120px;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;background:var(--surface);color:var(--tx1);resize:vertical;font-family:inherit"></textarea>'
-    +'<button class="btn btn-primary btn-sm" id="postCommentBtn" onclick="postTaskComment(\''+htmlEsc(t.taskID||'')+'\')"><span class="material-icons-round mi">send</span></button>'
-    +'</div>';
-
   // ── TAB BAR ──────────────────────────────────────────────────
   // Reuses the same .tabs/.tab classes as the Cards/Table toggle
   // elsewhere, so this looks consistent with the rest of the app rather
   // than introducing a one-off style.
   var mediaBadge=(totalPhotoCount+docsCount)>0?' ('+(totalPhotoCount+docsCount)+')':'';
   var historyBadge=(t._history&&t._history.length)?' ('+t._history.length+')':'';
-  var commentsBadge=comments.length>0?' ('+comments.length+')':'';
   var tabBar='<div class="tabs" id="taskDetailTabs" style="margin-bottom:14px">'
     +'<button class="tab'+(activeTab==='details'?' active':'')+'" onclick="switchTaskDetailTab(\'details\')">Details</button>'
     +'<button class="tab'+(activeTab==='media'?' active':'')+'" onclick="switchTaskDetailTab(\'media\')">Photos &amp; Docs'+mediaBadge+'</button>'
-    +'<button class="tab'+(activeTab==='comments'?' active':'')+'" onclick="switchTaskDetailTab(\'comments\')">Comments'+commentsBadge+'</button>'
     +'<button class="tab'+(activeTab==='history'?' active':'')+'" onclick="switchTaskDetailTab(\'history\')">History'+historyBadge+'</button>'
     +'</div>';
 
   return tabBar
     +'<div id="taskDetailPane-details" style="display:'+(activeTab==='details'?'block':'none')+'">'+detailsHtml+'</div>'
     +'<div id="taskDetailPane-media" style="display:'+(activeTab==='media'?'block':'none')+'">'+mediaHtml+'</div>'
-    +'<div id="taskDetailPane-comments" style="display:'+(activeTab==='comments'?'block':'none')+'">'+commentsHtml+'</div>'
     +'<div id="taskDetailPane-history" style="display:'+(activeTab==='history'?'block':'none')+'">'+historyHtml+'</div>';
 }
 // Switches tabs by toggling display (not rebuilding HTML) so it's instant
@@ -6246,37 +6012,10 @@ function taskDetailHTML(t){
 function switchTaskDetailTab(tab){
   S._taskDetailTab=tab;
   var tabs=document.querySelectorAll('#taskDetailTabs .tab');
-  var names=['details','media','comments','history'];
+  var names=['details','media','history'];
   for(var i=0;i<tabs.length;i++)tabs[i].classList.toggle('active',names[i]===tab);
-  var panes={details:id('taskDetailPane-details'),media:id('taskDetailPane-media'),comments:id('taskDetailPane-comments'),history:id('taskDetailPane-history')};
+  var panes={details:id('taskDetailPane-details'),media:id('taskDetailPane-media'),history:id('taskDetailPane-history')};
   for(var k in panes){if(panes[k])panes[k].style.display=(k===tab)?'block':'none';}
-}
-// Posts a new comment and re-renders the detail modal in place — since
-// S._taskDetailTab is already 'comments' (the person had to be on this
-// tab to see the input box), the re-render lands back on the same tab,
-// not bounced back to Details.
-function postTaskComment(taskID){
-  var input=id('taskCommentInput');if(!input)return;
-  var text=input.value.trim();
-  if(!text){toast('Please enter a comment.','error');return;}
-  var btn=id('postCommentBtn');
-  if(btn){if(btn.disabled)return;btn.disabled=true;btn.style.opacity='.6';}
-  gasCall('serverAddTaskComment',S.token,{taskID:taskID,text:text}).then(function(r){
-    if(btn){btn.disabled=false;btn.style.opacity='1';}
-    if(r&&r.success){
-      var t=null;for(var i=0;i<S.tasks.length;i++)if(S.tasks[i].taskID===taskID){t=S.tasks[i];break;}
-      if(t){
-        if(!t.comments)t.comments=[];
-        t.comments.push(r.comment);
-        if(id('mTaskTitle')&&id('mTaskTitle').textContent===taskID){
-          id('mTaskBody').innerHTML=taskDetailHTML(t);
-        }
-      }
-      toast('Comment posted.','ok');
-    } else {
-      toast((r&&r.message)||'Could not post comment.','error');
-    }
-  });
 }
 var EDIT_TASK={newPhotos:[],newDocs:[],taskID:null};
 function editTask(taskID){
@@ -8124,203 +7863,6 @@ function exportPDF(tasks,context){
     +'<script>window.onload=function(){setTimeout(function(){window.print();},500);};<\/script></body></html>';
   var w=window.open('','_blank');if(w){w.document.write(html);w.document.close();}else toast('Pop-up blocked. Allow pop-ups and try again.','info');
 }
-var CV_DEPT_FILTER=''; // currently selected dept filter in commview
-
-function cvFilterDept(btn){
-  var chips=document.querySelectorAll('#cvDeptTabs .cv-dept-btn');
-  for(var i=0;i<chips.length;i++)chips[i].classList.remove('active');
-  btn.classList.add('active');
-  CV_DEPT_FILTER=btn.dataset.dept||'';
-  renderCommViewForDept(CV_DEPT_FILTER);
-}
-
-function buildCommDeptTabs(tasks){
-  var tabs=id('cvDeptTabs');if(!tabs)return;
-  var depts={};
-  for(var i=0;i<tasks.length;i++){var d=tasks[i].department||'';if(d)depts[d]=1;}
-  var dk=Object.keys(depts).sort();
-  var html='<button class="cv-dept-btn '+(CV_DEPT_FILTER===''?'active':'')+'" data-dept="" onclick="cvFilterDept(this)">'
-    +'<span class="material-icons-round" style="font-size:14px">layers</span>All Departments</button>';
-  for(var i=0;i<dk.length;i++){
-    html+='<button class="cv-dept-btn '+(CV_DEPT_FILTER===dk[i]?'active':'')+'" data-dept="'+dk[i]+'" onclick="cvFilterDept(this)">'
-      +'<span class="material-icons-round" style="font-size:14px">business</span>'+dk[i]+'</button>';
-  }
-  tabs.innerHTML=html;
-}
-
-function renderCommViewForDept(dept){
-  if(!S._cvAllTasks)return;
-  var tasks=dept?S._cvAllTasks.filter(function(t){return t.department===dept;}):S._cvAllTasks;
-  var title=id('cvOfficerTitle');if(title)title.textContent=(dept?dept+' — ':'')+'Officer Task Summary';
-  var ct=id('cvCriticalTitle');if(ct)ct.textContent=(dept?dept+' — ':'')+'Critical & Delayed Tasks';
-  // Recompute KPIs for filtered tasks
-  var total=tasks.length,completed=0,overdue=0;
-  for(var i=0;i<tasks.length;i++){
-    if(tasks[i].status==='Completed'||tasks[i].status==='Closed')completed++;
-    if(tasks[i].isOverdue)overdue++;
-  }
-  var pending2=total-completed;
-  var rate=total>0?Math.round(completed/total*100):0;
-  var kv=id('cv-total');if(kv)kv.textContent=total;
-  var kp2=id('cv-pending');if(kp2)kp2.textContent=pending2;
-  var kd=id('cv-done');if(kd)kd.textContent=completed;
-  var ko=id('cv-over');if(ko)ko.textContent=overdue;
-  var kr=id('cv-rate');if(kr)kr.textContent=rate+'%';
-  // Officer summary for filtered tasks
-  var officerStats={};
-  for(var i=0;i<tasks.length;i++){
-    var t=tasks[i];var n=t.officerName||'Unknown';
-    if(!officerStats[n])officerStats[n]={total:0,completed:0,pending:0,overdue:0,dept:t.department||''};
-    officerStats[n].total++;
-    if(t.status==='Completed'||t.status==='Closed')officerStats[n].completed++;
-    else officerStats[n].pending++;
-    if(t.isOverdue)officerStats[n].overdue++;
-  }
-  buildOfficerPerf(officerStats);
-  // Critical tasks
-  var critical=[];
-  for(var i=0;i<tasks.length;i++)if(tasks[i].isOverdue||(tasks[i].priority==='High'&&tasks[i].status!=='Completed'))critical.push(tasks[i]);
-  buildCriticalList(critical.slice(0,10));
-}
-
-function loadCommView(){
-  CV_DEPT_FILTER='';
-  // INSTANT DISPLAY: render last-known Commissioner View data immediately
-  // (if we have it), while fresh data loads in the background — same
-  // pattern already used for Dashboard and Task Tracker. Previously this
-  // page showed a blank loader on every single visit with no cache at all.
-  var cached=swrLoad('commview',86400000); // max 24h old
-  var renderedFromCache=false;
-  if(cached&&cached.success){
-    applyCommViewData(cached);
-    renderedFromCache=true;
-  } else {
-    showLoader('Loading...');
-  }
-  // Single merged call — returns tasks + stats in one round-trip (v110).
-  // Previously fired 2 parallel calls; this eliminates the second
-  // network response entirely.
-  gasCall('serverGetCommissionerView',S.token).then(function(result){
-    hideLoader();
-    if(!result||!result.success){
-      if(!renderedFromCache)toast('Failed to load Commissioner View','error');
-      return;
-    }
-    swrSave('commview',result);
-    applyCommViewData(result);
-  });
-}
-function applyCommViewData(result){
-  if(result.tasks){
-    S.tasks=normalizeTaskList(result.tasks||[]);
-    S.filtered=S.tasks.slice();
-    S._cvAllTasks=S.tasks.slice();
-    applyCurrentSort();
-    buildCommDeptTabs(S.tasks);
-  }
-  if(result.stats&&result.stats.stats){
-    var s=result.stats.stats;
-    var cv={'cv-total':s.total,'cv-done':s.completed,'cv-over':s.overdue,'cv-rate':result.stats.completionRate+'%'};
-    for(var k in cv){var el=id(k);if(el)el.textContent=cv[k];}
-    buildCVZone(result.stats.zoneStats);buildCVDept(result.stats.deptStats);
-    buildOfficerPerf(result.stats.officerStats);
-    buildCritical();
-  }
-}
-function buildCVZone(zs){
-  var ctx=id('cvZone');if(!ctx)return;if(S.charts.cvz)S.charts.cvz.destroy();
-  // Sort zones by canonical order
-  var zones=Object.keys(zs);
-  zones.sort(function(a,b){return zoneRank(a)-zoneRank(b);});
-  var rates=[];
-  for(var i=0;i<zones.length;i++){var s=zs[zones[i]];rates.push(s.total>0?Math.round(s.completed/s.total*100):0);}
-  // Shorten zone labels for display
-  var labels=zones.map(function(z){return z.replace('Suramangalam','Suram.').replace('Hasthampatti','Hasth.').replace('Kondalampatti','Kond.').replace(' Zone-',' Z').replace('Main Office','Main');});
-  S.charts.cvz=new Chart(ctx,{type:'bar',data:{labels:labels,datasets:[{label:'Completion %',data:rates,backgroundColor:rates.map(function(r){return r>60?'#10b981':r>30?'#f59e0b':'#ef4444';}),borderRadius:5}]},options:{responsive:true,maintainAspectRatio:false,scales:{y:{beginAtZero:true,max:100}},plugins:{legend:{display:false}}}});
-}
-function buildCVDept(ds){
-  var ctx=id('cvDept');if(!ctx)return;if(S.charts.cvd)S.charts.cvd.destroy();
-  var depts=Object.keys(ds),doneData=[],pendData=[];for(var i=0;i<depts.length;i++){doneData.push(ds[depts[i]].completed);pendData.push(ds[depts[i]].pending);}
-  S.charts.cvd=new Chart(ctx,{type:'bar',data:{labels:depts,datasets:[{label:'Completed',data:doneData,backgroundColor:'#10b981',borderRadius:4},{label:'Pending',data:pendData,backgroundColor:'#f59e0b',borderRadius:4}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,scales:{x:{stacked:true},y:{stacked:true}},plugins:{legend:{position:'bottom',labels:{font:{size:11}}}}}});
-}
-function buildOfficerPerf(os){
-  var el=id('officerPerf');if(!el)return;
-  var names=Object.keys(os);
-  if(!names.length){el.innerHTML='<div class="empty"><span class="material-icons-round mi">group</span><p>No officer data</p></div>';return;}
-  var offDeptMap={};
-  var offs=(S.lookup&&S.lookup.officers)||[];
-  for(var i=0;i<offs.length;i++) offDeptMap[offs[i].name]=offs[i].department||'';
-  // Build interactive cards instead of table
-  var html='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px">';
-  for(var i=0;i<names.length;i++){
-    var n=names[i],s=os[n];
-    var dept=s.dept&&s.dept!=='undefined'&&s.dept.trim()!==''?s.dept:(offDeptMap[n]||'');
-    var rate=s.total>0?Math.round(s.completed/s.total*100):0;
-    var color=rate>=70?'var(--c-green)':rate>=40?'var(--c-gold)':'var(--c-red)';
-    var statusIcon=s.overdue>0?'&#9888;':'&#10003;';
-    var statusCol=s.overdue>0?'var(--c-red)':'var(--c-green)';
-    var safeName=n.replace(/'/g,"\\'").replace(/"/g,'&quot;');
-    html+='<div onclick="cvDrillToOfficer(\''+safeName+'\')" style="background:var(--surface2);border-radius:12px;padding:14px;border:1px solid var(--border);cursor:pointer;transition:all .15s" onmouseover="this.style.borderColor=\'var(--c-blue)\';this.style.boxShadow=\'0 4px 12px rgba(29,78,216,.12)\'" onmouseout="this.style.borderColor=\'var(--border)\';this.style.boxShadow=\'none\'" title="Click to view '+safeName+'\u2019s tasks in Task Tracker">'
-      +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">'
-      +'<div style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,var(--c-blue),var(--c-teal));display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:15px;flex-shrink:0">'+n.charAt(0)+'</div>'
-      +'<div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:700;color:var(--tx1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+n+'</div>'
-      +'<div style="font-size:11px;color:var(--tx3)">'+dept+'</div></div>'
-      +'<div style="font-size:18px;color:'+statusCol+'">'+statusIcon+'</div>'
-      +'<span class="material-icons-round" style="font-size:16px;color:var(--tx3);flex-shrink:0">chevron_right</span>'
-      +'</div>'
-      +'<div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:6px">'
-      +'<span style="color:var(--tx2)"><strong style="color:var(--c-blue)">'+s.total+'</strong> total</span>'
-      +'<span style="color:var(--c-green)"><strong>'+s.completed+'</strong> done</span>'
-      +'<span style="color:var(--c-gold)"><strong>'+s.pending+'</strong> pending</span>'
-      +(s.overdue>0?'<span style="color:var(--c-red)"><strong>'+s.overdue+'</strong> overdue</span>':'')
-      +'</div>'
-      +'<div style="display:flex;align-items:center;gap:6px">'
-      +'<div style="flex:1;background:var(--border);border-radius:999px;height:6px;overflow:hidden">'
-      +'<div style="height:100%;border-radius:999px;background:'+color+';width:'+rate+'%;transition:width .4s"></div></div>'
-      +'<span style="font-size:11px;font-weight:700;color:'+color+'">'+rate+'%</span>'
-      +'</div>'
-      +'</div>';
-  }
-  html+='</div>';
-  el.innerHTML=html;
-}
-
-// Clicking an officer's card in Commissioner View jumps to Task Tracker
-// pre-filtered to show only that officer's tasks — same mechanism the
-// dashboard KPI cards already use for drill-down navigation.
-function cvDrillToOfficer(officerName){
-  S.officerDrillFilter=officerName;
-  go('tracker');
-  setTimeout(function(){
-    var panel=id('advFilterPanel');
-    if(panel&&panel.classList.contains('dn')){
-      advFilterOpen=true;
-      panel.classList.remove('dn');
-    }
-    var fo=id('fOfficer');
-    if(fo){
-      // The officer dropdown may need a moment to populate from lookup
-      // data on a fresh tracker load — try immediately, then retry once
-      // shortly after if the option wasn't there yet.
-      function applyOfficerFilter(){
-        var found=false;
-        for(var i=0;i<fo.options.length;i++){
-          if(fo.options[i].value===officerName){found=true;break;}
-        }
-        if(!found){
-          var opt=document.createElement('option');
-          opt.value=officerName;opt.textContent=officerName;
-          fo.appendChild(opt);
-        }
-        fo.value=officerName;
-        filterTasks();
-      }
-      applyOfficerFilter();
-      setTimeout(applyOfficerFilter,400); // retry once after dropdowns finish populating
-    }
-  },200);
-}
-
 // ── MULTI-OFFICER TASK ASSIGNMENT ────────────────────────────
 // ── MULTI-OFFICER TASK ASSIGNMENT ────────────────────────────
 // Each row in the assign list: {officerID, officerName, dept, designation}
@@ -10916,21 +10458,6 @@ function exportPlDiaryExcel(entries,from,to){
   }
   dlFile(rows.map(function(r){return r.join(',');}).join('\n'),'Notes_'+from+'_to_'+to+'.csv','text/csv');
 }
-function buildCritical(tasksArr){
-  var el=id('criticalList');if(!el)return;
-  // If tasksArr passed use it, otherwise derive from S.tasks
-  var crit=[];
-  if(tasksArr){
-    crit=tasksArr;
-  } else {
-    for(var i=0;i<S.tasks.length;i++)if(S.tasks[i].isOverdue||S.tasks[i].priority==='High')crit.push(S.tasks[i]);
-  }
-  if(!crit.length){el.innerHTML='<div class="card-bd"><div class="alert alert-ok"><span class="material-icons-round mi">check_circle</span>No critical or overdue tasks. All is well.</div></div>';return;}
-  var rows='';for(var i=0;i<crit.length&&i<15;i++){var t=crit[i];rows+='<tr style="'+(t.isOverdue?'background:rgba(239,68,68,.04)':'')+'"><td class="mono" style="color:var(--c-blue)">'+t.taskID+'</td><td style="max-width:200px;font-size:12.5px" class="ellipsis">'+t.description+'</td><td>'+t.officerName+'</td><td '+(t.isOverdue?'style="color:var(--c-red);font-weight:700"':'')+'>'+(t.isOverdue?'\u26a0 ':'')+fDateShort(t.dueDate)+'</td><td><span class="badge badge-'+statusClass(t.status)+'">'+t.status+'</span></td></tr>';}
-  el.innerHTML='<div class="tbl-wrap"><table><thead><tr><th>Task ID</th><th>Description</th><th>Officer</th><th>Due Date</th><th>Status</th></tr></thead><tbody>'+rows+'</tbody></table></div>';
-}
-// Alias for backward compatibility
-function buildCriticalList(arr){buildCritical(arr);}
 function loadUsers(){
   // INSTANT DISPLAY from cache, same pattern as Dashboard/Tasks/Commissioner
   // View — this page previously had no caching at all.
@@ -12935,14 +12462,6 @@ function openCustomReport(){
   if(ld){
     fillSelZone('cr-zone',ld.zones,'All Zones');
     fillSel('cr-dept',ld.departments,'DeptName','DeptName','All Departments');
-    // Pre-select whichever department is currently active in the main
-    // Commissioner View filter, so the report opens already scoped to
-    // match what the Commissioner was just looking at — not reset to
-    // "every department" by default.
-    var deptSel=id('cr-dept');
-    if(deptSel&&typeof CV_DEPT_FILTER!=='undefined'&&CV_DEPT_FILTER){
-      deptSel.value=CV_DEPT_FILTER;
-    }
     crFilterOfficersByDept();
   }
   // Default to this week
