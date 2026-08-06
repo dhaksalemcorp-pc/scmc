@@ -2,7 +2,7 @@
 <html lang="en" data-theme="light">
 <head>
 <meta charset="UTF-8">
-<!-- Prevent mobile browsers and installed PWA shells from serving a stale-1
+<!-- Prevent mobile browsers and installed PWA shells from serving a stale
      cached copy of this page. Without this, a person can keep running an
      old version of the app's JavaScript (with old bugs already fixed in
      later updates) until they happen to do something that forces a reload. -->
@@ -1720,6 +1720,7 @@ tbody tr:hover { background: var(--surface2); }
       <div class="ph">
         <div class="ph-left"><h1>Task Tracker</h1><p>Monitor and manage all tasks</p></div>
         <div class="ph-actions">
+          <button class="btn btn-ghost btn-sm" onclick="forceFullTaskRefresh()" title="Full refresh — guarantees the latest data, not just recent changes"><span class="material-icons-round mi">refresh</span> <span class="nowrap">Refresh</span></button>
           <button class="btn btn-ghost btn-sm" id="findDupBtn" onclick="openDuplicateFinder()" style="display:none"><span class="material-icons-round mi">content_copy</span> <span class="nowrap">Find Duplicates</span></button>
           <button class="btn btn-ghost btn-sm" id="advFilterBtn" onclick="toggleAdvFilter()"><span class="material-icons-round mi">tune</span> <span class="nowrap">Filters</span></button>
           <button class="btn btn-success btn-sm" onclick="showExportChoice('tracker')"><span class="material-icons-round mi">ios_share</span> <span class="nowrap">Export</span></button>
@@ -3814,6 +3815,7 @@ function doLogin(){
 function resetSessionState(){
   S.tasks=[];S.filtered=[];S.drillFilter='';S._deptDrill=null;
   S.preloadedDash=null;S.preloadedTasks=null;
+  S._taskSyncTime=null;S._deltaSyncCount=0; // never carry a delta-sync checkpoint across sessions/users
   S.showCompleted=false;S.showClosed=false;S.taskWindow=90;S.searchQ='';
   if(typeof TRK_COMP_ON!=='undefined')TRK_COMP_ON=false;S._fullList=null;S._trkMeta=null;
   if(typeof TRK_RP_ON!=='undefined')TRK_RP_ON=false;
@@ -4823,6 +4825,12 @@ function trkFilterReviewPending(){
   }
   renderTable(S.filtered);updateTaskCount();
 }
+// Explicit, on-demand guarantee of complete fresh data — bypasses delta
+// sync entirely regardless of how recent the last sync checkpoint is.
+function forceFullTaskRefresh(){
+  S._taskSyncTime=null;
+  loadTasks();
+}
 function loadTasks(){
   TRK_RP_ON=false;
   if(!S.showCompleted)S._fullList=null; // fresh fetch invalidates the re-show cache
@@ -4835,6 +4843,40 @@ function loadTasks(){
     fn='serverGetHODTasks';args=[S.token,reqOpts];
   } else {
     fn='serverGetTasks';args=[S.token,{days:S.taskWindow,includeCompleted:S.showCompleted,includeClosed:S.showClosed}];
+  }
+
+  // ── DELTA SYNC ────────────────────────────────────────────────
+  // Instead of re-fetching and re-transferring the entire task list,
+  // ask the server "what changed since I last synced?" and merge just
+  // that in. Only used when we already have a full copy AND a valid
+  // sync checkpoint from a PLAIN default view — scoped deliberately to
+  // Admin/Commissioner/Supervision (the serverGetTasks path) for now,
+  // since that's the one role-visibility scope verified to match this
+  // delta endpoint exactly. Officer/HOD keep using their existing full
+  // fetches until their own scoping is verified against delta too.
+  var canDelta = fn==='serverGetTasks' && S._taskSyncTime && S.tasks && S.tasks.length
+    && !S.showCompleted && !S.showClosed && S.taskWindow===90
+    && (S._deltaSyncCount||0) < 20; // extra safety net: force a full re-sync periodically regardless of anything else, so any unforeseen edge case can't silently accumulate drift over a long session
+  if(canDelta){
+    S._deltaSyncCount=(S._deltaSyncCount||0)+1;
+    gasCall('serverGetTasksDelta',S.token,S._taskSyncTime).then(function(r){
+      hideLoader();
+      if(!r||!r.success||r.forceFullSync){
+        // Any doubt at all — including the server explicitly asking for
+        // it — falls back to a normal full fetch rather than risking
+        // silently-stale data.
+        S._taskSyncTime=null;
+        loadTasks();
+        return;
+      }
+      applyTaskDelta(r);
+    }).catch(function(){
+      // Network hiccup on the delta call — fall back to full fetch
+      // rather than leaving the list stale with no retry.
+      S._taskSyncTime=null;
+      loadTasks();
+    });
+    return;
   }
 
   // ── INSTANT DISPLAY: render last-known tasks from localStorage ──
@@ -4930,6 +4972,13 @@ function trkApplyResponse(r,fn,fromPreload){
                 totalCount:r.totalCount||0,windowDays:r.windowDays||90};
     if(r.includeCompleted){S._fullList=null;/* rebuilt below after normalize */}
     S.tasks=normalizeTaskList(data);
+    // Capture the delta-sync checkpoint — only meaningful for a PLAIN
+    // default-view full fetch (matches exactly what canDelta requires in
+    // loadTasks()), using the SERVER's clock from the response, never the
+    // client's, so device clock drift can never cause missed updates.
+    if(fn==='serverGetTasks'&&r.syncTime&&!r.includeCompleted&&!S.showClosed&&S.taskWindow===90){
+      S._taskSyncTime=r.syncTime;S._deltaSyncCount=0;
+    }
     if(r.includeCompleted)S._fullList=S.tasks.slice(); // instant re-show cache
     if(S.searchQ){var hidden2=id('fSearch');if(hidden2)hidden2.value=S.searchQ;var bar2=id('trkUniversalSearch');if(bar2&&!bar2.value)bar2.value=S.searchQ;}
     // Always reapply whatever filters are currently active (zone, status,
@@ -4965,7 +5014,42 @@ function trkApplyResponse(r,fn,fromPreload){
       else toast('Could not find that task \u2014 it may have been deleted.','info');
     }
 }
-// Jumps from a note's linked-task badge to that task in the Tracker.
+// Merges a delta-sync response (see getTasksDelta on the backend) into
+// the existing S.tasks — upserts changed tasks by ID, removes deleted
+// ones, then re-applies whatever filters/sort are currently active,
+// exactly like a full fetch would, just without re-transferring or
+// re-processing tasks that didn't actually change.
+function applyTaskDelta(r){
+  var changed=normalizeTaskList(r.changed||[]);
+  var deletedSet={};
+  (r.deletedIds||[]).forEach(function(id){deletedSet[id]=true;});
+
+  if(changed.length||Object.keys(deletedSet).length){
+    var byId={};
+    for(var i=0;i<S.tasks.length;i++)byId[S.tasks[i].taskID]=i;
+    changed.forEach(function(ct){
+      if(deletedSet[ct.taskID])return; // shouldn't happen, but a delete always wins if both appear
+      if(byId[ct.taskID]!==undefined) S.tasks[byId[ct.taskID]]=ct;
+      else { S.tasks.push(ct); byId[ct.taskID]=S.tasks.length-1; }
+    });
+    if(Object.keys(deletedSet).length){
+      S.tasks=S.tasks.filter(function(t){return !deletedSet[t.taskID];});
+    }
+    swrSave('tasks',S.tasks);
+  }
+  S._taskSyncTime=r.syncTime;
+
+  filterTasks();
+  if(S._deptDrill){applyDeptDrill();S._deptDrill=null;}
+  else if(S.drillFilter){applyDrillFilter();}
+  else{renderTable(S.filtered);updateTaskCount();}
+  if(TRK_COMP_ON){
+    S.filtered=S.tasks.filter(function(t){return t.status==='Completed';});
+    renderTable(S.filtered);updateTaskCount();
+  }
+  trkRenderNoteBar();
+}
+
 // Forces a fetch that includes Completed/Closed (the linked task could be
 // in either state, and the normal fetch hides them by default), and
 // waits for trkApplyResponse to actually confirm the data arrived rather
@@ -5027,7 +5111,11 @@ function normalizeTaskList(data){
   var out=[];
   for(var i=0;i<data.length;i++){
     var t=data[i],due=t.dueDate?String(t.dueDate).slice(0,10):'';
-    out.push({taskID:String(t.taskID||''),taskType:String(t.taskType||''),zone:String(t.zone||''),dateAssigned:String(t.dateAssigned||'').slice(0,10),time:String(t.time||''),priority:String(t.priority||'Medium'),department:String(t.department||''),designation:String(t.designation||''),officerID:String(t.officerID||''),officerName:String(t.officerName||''),description:String(t.description||''),dueDate:due,status:String(t.status||'Pending'),createdBy:String(t.createdBy||''),createdAt:String(t.createdAt||''),updatedAt:String(t.updatedAt||''),updatedBy:String(t.updatedBy||''),officerRemarks:String(t.officerRemarks||''),completedAt:String(t.completedAt||''),source:String(t.source||'Manual'),photoLinks:String(t.photoLinks||''),isOverdue:(due&&new Date(due)<new Date()&&t.status!=='Completed'&&t.status!=='Closed')?true:false});
+    out.push({taskID:String(t.taskID||''),taskType:String(t.taskType||''),zone:String(t.zone||''),dateAssigned:String(t.dateAssigned||'').slice(0,10),time:String(t.time||''),priority:String(t.priority||'Medium'),department:String(t.department||''),designation:String(t.designation||''),officerID:String(t.officerID||''),officerName:String(t.officerName||''),description:String(t.description||''),dueDate:due,status:String(t.status||'Pending'),createdBy:String(t.createdBy||''),createdAt:String(t.createdAt||''),updatedAt:String(t.updatedAt||''),updatedBy:String(t.updatedBy||''),officerRemarks:String(t.officerRemarks||''),completedAt:String(t.completedAt||''),source:String(t.source||'Manual'),photoLinks:String(t.photoLinks||''),
+      photoCount:(typeof t.photoCount==='number'?t.photoCount:0),
+      docCount:(typeof t.docCount==='number'?t.docCount:0),
+      sourceNoteID:String(t.sourceNoteID||''),
+      isOverdue:(due&&new Date(due)<new Date()&&t.status!=='Completed'&&t.status!=='Closed')?true:false});
   }
   return out;
 }
