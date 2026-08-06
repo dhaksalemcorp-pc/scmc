@@ -3781,6 +3781,15 @@ function doLogin(){
     if(r&&r.success){
       resetSessionState(); // never carry the previous user's data forward
       S.token=r.token;S.user=r.user;
+      // Consume the bundled lookup data — this is what actually delivers
+      // the single-round-trip login: without this, S.lookup stayed empty
+      // and showApp()'s own fallback check always fired a SEPARATE
+      // loadLookup() call immediately after, turning every login into two
+      // sequential round-trips back to back instead of one.
+      if(r.lookup&&r.lookup.success){
+        S.lookup=r.lookup;
+        swrSave('lookup',r.lookup);
+      }
       var rem=id('rememberMe');if(rem&&rem.checked){LS.set('sc-tok',r.token);LS.set('sc-usr',JSON.stringify(r.user));}
       // Fire the bootstrap BEFORE showApp so BOOT_PENDING is set when the
       // dashboard renders — it then skips its own duplicate fetch.
