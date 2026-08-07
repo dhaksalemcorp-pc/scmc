@@ -459,9 +459,43 @@ body {
   background: var(--sidebar-bg);
   display: flex; flex-direction: column;
   z-index: 300;
-  transition: transform var(--ease), box-shadow var(--ease);
+  transition: transform var(--ease), box-shadow var(--ease), width var(--ease);
   overflow: hidden;
 }
+
+/* ── SIDEBAR COLLAPSE (desktop only — mobile keeps its existing
+   full-width drawer overlay, collapsing to icon-only doesn't make sense
+   there). Toggled via a body-level class rather than overriding
+   --sidebar-w directly, so the responsive width set at different
+   breakpoints (220px/252px/260px) is untouched — this just wins on
+   specificity/cascade order when active, regardless of which responsive
+   width would otherwise apply. */
+.sb-collapse-toggle {
+  position: absolute; top: 22px; right: -13px;
+  width: 26px; height: 26px; border-radius: 50%;
+  background: var(--sidebar-bg); border: 2px solid rgba(255,255,255,.14);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; z-index: 301; color: rgba(255,255,255,.75);
+  transition: background .15s, border-color .15s;
+}
+.sb-collapse-toggle:hover { background: #1a3a6b; border-color: rgba(255,255,255,.3); color: #fff; }
+.sb-collapse-toggle .mi { font-size: 15px; transition: transform .25s; }
+body.sidebar-collapsed .sb-collapse-toggle .mi { transform: rotate(180deg); }
+
+body.sidebar-collapsed .sidebar { width: 68px; }
+body.sidebar-collapsed .topbar { left: 68px; }
+body.sidebar-collapsed .content { margin-left: 68px; }
+body.sidebar-collapsed .sb-brand { padding: 18px 0 14px; justify-content: center; }
+body.sidebar-collapsed .sb-brand-txt { display: none; }
+body.sidebar-collapsed .sb-user { padding: 13px 0; justify-content: center; }
+body.sidebar-collapsed .sb-user > div:not(.sb-avatar) { display: none; }
+body.sidebar-collapsed .sb-user > .material-icons-round { display: none; }
+body.sidebar-collapsed .sb-section-lbl { display: none; }
+body.sidebar-collapsed .sb-item { justify-content: center; padding: 10px; gap: 0; }
+body.sidebar-collapsed .sb-item > *:not(.sb-i) { display: none; }
+body.sidebar-collapsed .sb-logout { justify-content: center; padding: 10px; }
+body.sidebar-collapsed .sb-logout span:not(.sb-i) { display: none; }
+@media (max-width: 767px) { .sb-collapse-toggle { display: none; } }
 
 /* brand strip */
 .sb-brand {
@@ -1362,6 +1396,7 @@ tbody tr:hover { background: var(--surface2); }
 
   <!-- SIDEBAR -->
   <nav class="sidebar" id="sidebar">
+    <div class="sb-collapse-toggle" id="sbCollapseToggle" onclick="toggleSidebarCollapse()" title="Collapse sidebar"><span class="material-icons-round mi">chevron_left</span></div>
     <div class="sb-brand">
       <div class="sb-logo"><img id="sbLogoImg" src="" alt="" style="width:100%;height:100%;border-radius:50%;object-fit:cover;display:none"><span class="material-icons-round mi" id="sbLogoIcon">account_balance</span></div>
       <div class="sb-brand-txt">
@@ -1382,19 +1417,19 @@ tbody tr:hover { background: var(--surface2); }
     </div>
     <div class="sb-nav">
       <div class="sb-section-lbl">Main</div>
-      <div class="sb-item active" data-page="dashboard" id="snav-dashboard" onclick="go('dashboard')"><span class="material-icons-round sb-i">dashboard</span> Dashboard</div>
-      <div class="sb-item" data-page="taskEntry" id="snav-taskEntry" onclick="go('taskEntry')"><span class="material-icons-round sb-i">add_task</span> Task Entry</div>
-      <div class="sb-item" data-page="tracker" onclick="go('tracker')"><span class="material-icons-round sb-i">track_changes</span> Task Tracker<span class="sb-badge" id="overdBadge" style="display:none">0</span></div>
+      <div class="sb-item active" data-page="dashboard" id="snav-dashboard" onclick="go('dashboard')" title="Dashboard"><span class="material-icons-round sb-i">dashboard</span> Dashboard</div>
+      <div class="sb-item" data-page="taskEntry" id="snav-taskEntry" onclick="go('taskEntry')" title="Task Entry"><span class="material-icons-round sb-i">add_task</span> Task Entry</div>
+      <div class="sb-item" data-page="tracker" onclick="go('tracker')" title="Task Tracker"><span class="material-icons-round sb-i">track_changes</span> Task Tracker<span class="sb-badge" id="overdBadge" style="display:none">0</span></div>
       <div class="sb-section-lbl" style="margin-top:8px">Manage</div>
-      <div class="sb-item" data-page="users" id="snav-users" onclick="go('users')"><span class="material-icons-round sb-i">manage_accounts</span> User Management</div>
-      <div class="sb-item" data-page="settings" id="snav-settings" onclick="go('settings')"><span class="material-icons-round sb-i">settings</span> Settings</div>
-      <div class="sb-item" id="snav-chgpw" onclick="showMyProfile()"><span class="material-icons-round sb-i">manage_accounts</span> My Profile</div>
-      <div class="sb-item" id="snav-photolog" data-page="photolog" onclick="go('photolog')"><span class="material-icons-round sb-i">photo_library</span> Notes</div>
-      <div class="sb-item" id="snav-reports" data-page="reports" onclick="go('reports')" style="display:none"><span class="material-icons-round sb-i">summarize</span> Reports</div>
-      <div class="sb-item" data-page="about" onclick="go('about')"><span class="material-icons-round sb-i">info</span> About</div>
+      <div class="sb-item" data-page="users" id="snav-users" onclick="go('users')" title="User Management"><span class="material-icons-round sb-i">manage_accounts</span> User Management</div>
+      <div class="sb-item" data-page="settings" id="snav-settings" onclick="go('settings')" title="Settings"><span class="material-icons-round sb-i">settings</span> Settings</div>
+      <div class="sb-item" id="snav-chgpw" onclick="showMyProfile()" title="My Profile"><span class="material-icons-round sb-i">manage_accounts</span> My Profile</div>
+      <div class="sb-item" id="snav-photolog" data-page="photolog" onclick="go('photolog')" title="Notes"><span class="material-icons-round sb-i">photo_library</span> Notes</div>
+      <div class="sb-item" id="snav-reports" data-page="reports" onclick="go('reports')" style="display:none" title="Reports"><span class="material-icons-round sb-i">summarize</span> Reports</div>
+      <div class="sb-item" data-page="about" onclick="go('about')" title="About"><span class="material-icons-round sb-i">info</span> About</div>
     </div>
     <div class="sb-footer">
-      <button class="sb-logout" onclick="doLogout()"><span class="material-icons-round sb-i">logout</span> <span>Sign Out</span></button>
+      <button class="sb-logout" onclick="doLogout()" title="Sign Out"><span class="material-icons-round sb-i">logout</span> <span>Sign Out</span></button>
     </div>
   </nav>
 
@@ -3651,6 +3686,7 @@ function showApp(){
   try{
     var lp=id('loginPage');if(lp)lp.style.display='none';
     var ap=id('app');if(ap)ap.style.display='block';
+    applySavedSidebarCollapse();
     var u=S.user;
     var av=id('sbAvatarTxt');if(av)av.textContent=u.name.charAt(0).toUpperCase();
     var sn=id('sbName');if(sn)sn.textContent=u.name;
@@ -3811,6 +3847,24 @@ function applyDrillFilter(){
   S.drillFilter='';filterTasks();
 }
 function toggleSidebar(){var s=id('sidebar'),o=id('sbOverlay');if(s)s.classList.toggle('open');if(o)o.classList.toggle('on');}
+// Desktop-only sidebar collapse (icons-only vs. icons+labels) — separate
+// concept from toggleSidebar() above, which is the mobile drawer
+// show/hide. Persisted so the choice sticks across sessions, not just
+// this page load.
+function toggleSidebarCollapse(){
+  var collapsed=!document.body.classList.contains('sidebar-collapsed');
+  document.body.classList.toggle('sidebar-collapsed',collapsed);
+  LS.set('sc-sidebar-collapsed',collapsed?'1':'0');
+  var btn=id('sbCollapseToggle');
+  if(btn)btn.title=collapsed?'Expand sidebar':'Collapse sidebar';
+}
+function applySavedSidebarCollapse(){
+  if(LS.get('sc-sidebar-collapsed')==='1'){
+    document.body.classList.add('sidebar-collapsed');
+    var btn=id('sbCollapseToggle');
+    if(btn)btn.title='Expand sidebar';
+  }
+}
 function closeSidebar(){var s=id('sidebar');if(s)s.classList.remove('open');var o=id('sbOverlay');if(o)o.classList.remove('on');}
 function loadLookup(){return gasCall('serverGetLookupData',S.token).then(function(r){if(r&&r.success){S.lookup=r;populateSelects();}});}
 // Guarantees S.lookup is actually populated before running callback,
