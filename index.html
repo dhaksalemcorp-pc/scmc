@@ -469,32 +469,63 @@ body {
    --sidebar-w directly, so the responsive width set at different
    breakpoints (220px/252px/260px) is untouched — this just wins on
    specificity/cascade order when active, regardless of which responsive
-   width would otherwise apply. */
+   width would otherwise apply.
+
+   Every hideable label lives in its own real element (.sb-label,
+   .sb-brand-txt, .sb-user-txt, etc.) — CSS can only ever hide actual
+   elements, never bare text sitting next to an icon, which is exactly
+   what broke the first pass at this. */
 .sb-collapse-toggle {
-  position: absolute; top: 22px; right: -13px;
-  width: 26px; height: 26px; border-radius: 50%;
-  background: var(--sidebar-bg); border: 2px solid rgba(255,255,255,.14);
+  position: absolute; top: 18px; right: -14px;
+  width: 28px; height: 28px; border-radius: 50%;
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  border: 2.5px solid var(--sidebar-bg);
   display: flex; align-items: center; justify-content: center;
-  cursor: pointer; z-index: 301; color: rgba(255,255,255,.75);
-  transition: background .15s, border-color .15s;
+  cursor: pointer; z-index: 301; color: #0b1f45;
+  box-shadow: 0 2px 8px rgba(0,0,0,.35);
+  transition: transform .15s, box-shadow .15s;
 }
-.sb-collapse-toggle:hover { background: #1a3a6b; border-color: rgba(255,255,255,.3); color: #fff; }
-.sb-collapse-toggle .mi { font-size: 15px; transition: transform .25s; }
+.sb-collapse-toggle:hover { transform: scale(1.1); box-shadow: 0 3px 10px rgba(0,0,0,.45); }
+.sb-collapse-toggle .mi { font-size: 16px; font-weight: 700; transition: transform .25s; }
 body.sidebar-collapsed .sb-collapse-toggle .mi { transform: rotate(180deg); }
 
-body.sidebar-collapsed .sidebar { width: 68px; }
-body.sidebar-collapsed .topbar { left: 68px; }
-body.sidebar-collapsed .content { margin-left: 68px; }
-body.sidebar-collapsed .sb-brand { padding: 18px 0 14px; justify-content: center; }
+body.sidebar-collapsed .sidebar { width: 72px; }
+body.sidebar-collapsed .topbar { left: 72px; }
+body.sidebar-collapsed .content { margin-left: 72px; }
+
+/* Brand — logo mark stays put and centered, only the text beside it hides */
+body.sidebar-collapsed .sb-brand { padding: 18px 0 16px; justify-content: center; }
 body.sidebar-collapsed .sb-brand-txt { display: none; }
-body.sidebar-collapsed .sb-user { padding: 13px 0; justify-content: center; }
-body.sidebar-collapsed .sb-user > div:not(.sb-avatar) { display: none; }
-body.sidebar-collapsed .sb-user > .material-icons-round { display: none; }
+
+/* Profile — avatar only, name/role/edit-icon all hide as real elements */
+body.sidebar-collapsed .sb-user { padding: 14px 0; justify-content: center; }
+body.sidebar-collapsed .sb-user-txt { display: none; }
+body.sidebar-collapsed .sb-user-edit { display: none; }
+
+/* Section labels replaced by a simple divider line so the Main/Manage
+   grouping is still visually legible without any text */
 body.sidebar-collapsed .sb-section-lbl { display: none; }
-body.sidebar-collapsed .sb-item { justify-content: center; padding: 10px; gap: 0; }
-body.sidebar-collapsed .sb-item > *:not(.sb-i) { display: none; }
+body.sidebar-collapsed .sb-divider { display: block; }
+.sb-divider { display: none; height: 1px; background: rgba(255,255,255,.09); margin: 8px 14px; }
+
+/* Nav items — icon perfectly centered in a fixed square, label hidden as
+   a real element (not squeezed text), same rounded hover/active affordance
+   as the expanded view */
+body.sidebar-collapsed .sb-item {
+  justify-content: center;
+  padding: 0; width: 44px; height: 44px; margin: 0 auto 4px;
+}
+body.sidebar-collapsed .sb-label { display: none; }
+body.sidebar-collapsed .sb-badge {
+  position: absolute; top: 2px; right: 2px;
+  min-width: 8px; height: 8px; padding: 0; border-radius: 50%;
+  font-size: 0; /* collapses to a plain dot — the count is still one tap away */
+}
+body.sidebar-collapsed .sb-item { position: relative; }
+
+body.sidebar-collapsed .sb-footer { padding: 10px 0; }
 body.sidebar-collapsed .sb-logout { justify-content: center; padding: 10px; }
-body.sidebar-collapsed .sb-logout span:not(.sb-i) { display: none; }
+body.sidebar-collapsed .sb-logout .sb-label { display: none; }
 @media (max-width: 767px) { .sb-collapse-toggle { display: none; } }
 
 /* brand strip */
@@ -1396,7 +1427,6 @@ tbody tr:hover { background: var(--surface2); }
 
   <!-- SIDEBAR -->
   <nav class="sidebar" id="sidebar">
-    <div class="sb-collapse-toggle" id="sbCollapseToggle" onclick="toggleSidebarCollapse()" title="Collapse sidebar"><span class="material-icons-round mi">chevron_left</span></div>
     <div class="sb-brand">
       <div class="sb-logo"><img id="sbLogoImg" src="" alt="" style="width:100%;height:100%;border-radius:50%;object-fit:cover;display:none"><span class="material-icons-round mi" id="sbLogoIcon">account_balance</span></div>
       <div class="sb-brand-txt">
@@ -1404,32 +1434,34 @@ tbody tr:hover { background: var(--surface2); }
         <div class="sb-brand-sub">Task Management</div>
       </div>
     </div>
+    <div class="sb-collapse-toggle" id="sbCollapseToggle" onclick="toggleSidebarCollapse()" title="Collapse sidebar"><span class="material-icons-round mi">chevron_left</span></div>
     <div class="sb-user" onclick="showMyProfile()" style="cursor:pointer;transition:background .15s" title="Edit My Profile">
       <div class="sb-avatar" id="sbAvatar" style="overflow:hidden;position:relative">
         <img id="sbAvatarImg" src="" alt="" style="width:100%;height:100%;object-fit:cover;display:none;border-radius:50%">
         <span id="sbAvatarTxt">A</span>
       </div>
-      <div style="flex:1;min-width:0">
+      <div class="sb-user-txt" style="flex:1;min-width:0">
         <div class="sb-user-name" id="sbName">Administrator</div>
         <div class="sb-user-role" id="sbRole">Admin</div>
       </div>
-      <span class="material-icons-round" style="color:rgba(255,255,255,.35);font-size:16px;flex-shrink:0">edit</span>
+      <span class="material-icons-round sb-user-edit" style="color:rgba(255,255,255,.35);font-size:16px;flex-shrink:0">edit</span>
     </div>
     <div class="sb-nav">
       <div class="sb-section-lbl">Main</div>
-      <div class="sb-item active" data-page="dashboard" id="snav-dashboard" onclick="go('dashboard')" title="Dashboard"><span class="material-icons-round sb-i">dashboard</span> Dashboard</div>
-      <div class="sb-item" data-page="taskEntry" id="snav-taskEntry" onclick="go('taskEntry')" title="Task Entry"><span class="material-icons-round sb-i">add_task</span> Task Entry</div>
-      <div class="sb-item" data-page="tracker" onclick="go('tracker')" title="Task Tracker"><span class="material-icons-round sb-i">track_changes</span> Task Tracker<span class="sb-badge" id="overdBadge" style="display:none">0</span></div>
-      <div class="sb-section-lbl" style="margin-top:8px">Manage</div>
-      <div class="sb-item" data-page="users" id="snav-users" onclick="go('users')" title="User Management"><span class="material-icons-round sb-i">manage_accounts</span> User Management</div>
-      <div class="sb-item" data-page="settings" id="snav-settings" onclick="go('settings')" title="Settings"><span class="material-icons-round sb-i">settings</span> Settings</div>
-      <div class="sb-item" id="snav-chgpw" onclick="showMyProfile()" title="My Profile"><span class="material-icons-round sb-i">manage_accounts</span> My Profile</div>
-      <div class="sb-item" id="snav-photolog" data-page="photolog" onclick="go('photolog')" title="Notes"><span class="material-icons-round sb-i">photo_library</span> Notes</div>
-      <div class="sb-item" id="snav-reports" data-page="reports" onclick="go('reports')" style="display:none" title="Reports"><span class="material-icons-round sb-i">summarize</span> Reports</div>
-      <div class="sb-item" data-page="about" onclick="go('about')" title="About"><span class="material-icons-round sb-i">info</span> About</div>
+      <div class="sb-item active" data-page="dashboard" id="snav-dashboard" onclick="go('dashboard')" title="Dashboard"><span class="material-icons-round sb-i">dashboard</span><span class="sb-label">Dashboard</span></div>
+      <div class="sb-item" data-page="taskEntry" id="snav-taskEntry" onclick="go('taskEntry')" title="Task Entry"><span class="material-icons-round sb-i">add_task</span><span class="sb-label">Task Entry</span></div>
+      <div class="sb-item" data-page="tracker" onclick="go('tracker')" title="Task Tracker"><span class="material-icons-round sb-i">track_changes</span><span class="sb-label">Task Tracker</span><span class="sb-badge" id="overdBadge" style="display:none">0</span></div>
+      <div class="sb-divider"></div>
+      <div class="sb-section-lbl">Manage</div>
+      <div class="sb-item" data-page="users" id="snav-users" onclick="go('users')" title="User Management"><span class="material-icons-round sb-i">manage_accounts</span><span class="sb-label">User Management</span></div>
+      <div class="sb-item" data-page="settings" id="snav-settings" onclick="go('settings')" title="Settings"><span class="material-icons-round sb-i">settings</span><span class="sb-label">Settings</span></div>
+      <div class="sb-item" id="snav-chgpw" onclick="showMyProfile()" title="My Profile"><span class="material-icons-round sb-i">manage_accounts</span><span class="sb-label">My Profile</span></div>
+      <div class="sb-item" id="snav-photolog" data-page="photolog" onclick="go('photolog')" title="Notes"><span class="material-icons-round sb-i">photo_library</span><span class="sb-label">Notes</span></div>
+      <div class="sb-item" id="snav-reports" data-page="reports" onclick="go('reports')" style="display:none" title="Reports"><span class="material-icons-round sb-i">summarize</span><span class="sb-label">Reports</span></div>
+      <div class="sb-item" data-page="about" onclick="go('about')" title="About"><span class="material-icons-round sb-i">info</span><span class="sb-label">About</span></div>
     </div>
     <div class="sb-footer">
-      <button class="sb-logout" onclick="doLogout()" title="Sign Out"><span class="material-icons-round sb-i">logout</span> <span>Sign Out</span></button>
+      <button class="sb-logout" onclick="doLogout()" title="Sign Out"><span class="material-icons-round sb-i">logout</span><span class="sb-label">Sign Out</span></button>
     </div>
   </nav>
 
