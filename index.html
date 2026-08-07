@@ -474,20 +474,30 @@ body {
    Every hideable label lives in its own real element (.sb-label,
    .sb-brand-txt, .sb-user-txt, etc.) — CSS can only ever hide actual
    elements, never bare text sitting next to an icon, which is exactly
-   what broke the first pass at this. */
+   what broke the first pass at this.
+
+   The toggle button itself is a SIBLING of .sidebar in the markup, not a
+   child — .sidebar has overflow:hidden (needed to keep its own scrolling
+   nav contained), which was silently clipping the button whenever it
+   straddled the sidebar's edge. Being outside that container and
+   position:fixed (not absolute) means it can never be clipped, and it's
+   vertically centered on the viewport — a fixed, obvious landmark on the
+   sidebar's border in both states, clearly separate from the logo. */
 .sb-collapse-toggle {
-  position: absolute; top: 18px; right: -14px;
+  position: fixed; top: 50%; left: calc(var(--sidebar-w) - 14px);
+  transform: translateY(-50%);
   width: 28px; height: 28px; border-radius: 50%;
   background: linear-gradient(135deg, #f59e0b, #d97706);
   border: 2.5px solid var(--sidebar-bg);
   display: flex; align-items: center; justify-content: center;
   cursor: pointer; z-index: 301; color: #0b1f45;
   box-shadow: 0 2px 8px rgba(0,0,0,.35);
-  transition: transform .15s, box-shadow .15s;
+  transition: left var(--ease), transform .15s, box-shadow .15s;
 }
-.sb-collapse-toggle:hover { transform: scale(1.1); box-shadow: 0 3px 10px rgba(0,0,0,.45); }
+.sb-collapse-toggle:hover { transform: translateY(-50%) scale(1.12); box-shadow: 0 3px 10px rgba(0,0,0,.45); }
 .sb-collapse-toggle .mi { font-size: 16px; font-weight: 700; transition: transform .25s; }
 body.sidebar-collapsed .sb-collapse-toggle .mi { transform: rotate(180deg); }
+body.sidebar-collapsed .sb-collapse-toggle { left: 58px; } /* collapsed width (72px) - 14px, matches the same edge-straddle offset */
 
 body.sidebar-collapsed .sidebar { width: 72px; }
 body.sidebar-collapsed .topbar { left: 72px; }
@@ -1434,7 +1444,6 @@ tbody tr:hover { background: var(--surface2); }
         <div class="sb-brand-sub">Task Management</div>
       </div>
     </div>
-    <div class="sb-collapse-toggle" id="sbCollapseToggle" onclick="toggleSidebarCollapse()" title="Collapse sidebar"><span class="material-icons-round mi">chevron_left</span></div>
     <div class="sb-user" onclick="showMyProfile()" style="cursor:pointer;transition:background .15s" title="Edit My Profile">
       <div class="sb-avatar" id="sbAvatar" style="overflow:hidden;position:relative">
         <img id="sbAvatarImg" src="" alt="" style="width:100%;height:100%;object-fit:cover;display:none;border-radius:50%">
@@ -1464,6 +1473,7 @@ tbody tr:hover { background: var(--surface2); }
       <button class="sb-logout" onclick="doLogout()" title="Sign Out"><span class="material-icons-round sb-i">logout</span><span class="sb-label">Sign Out</span></button>
     </div>
   </nav>
+  <div class="sb-collapse-toggle" id="sbCollapseToggle" onclick="toggleSidebarCollapse()" title="Collapse sidebar"><span class="material-icons-round mi">chevron_left</span></div>
 
   <!-- TOP BAR -->
   <header class="topbar" id="topbar">
