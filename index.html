@@ -5646,6 +5646,55 @@ function tvCloseTask(elOrId){var taskID=(typeof elOrId==='string')?elOrId:(elOrI
     else{if(b){b.disabled=false;b.innerHTML='<span class="material-icons-round mi">task_alt</span> Mark Closed';}toast((r&&r.message)||'Could not close.','error');}
   });
 }
+// Admin/Commissioner-only directive note to the assigned officer —
+// deliberately separate from the general comment thread removed from
+// the Task Tracker redesign. Reuses the generic modal rather than
+// building dedicated markup for a single textarea + button.
+function showAddRemarkModal(taskID){
+  var t=null;for(var i=0;i<S.tasks.length;i++)if(S.tasks[i].taskID===taskID){t=S.tasks[i];break;}
+  id('mGenericTitle').textContent='Add Remark \u2014 '+taskID;
+  id('mGenericBody').innerHTML=
+    '<p style="font-size:12.5px;color:var(--tx3);margin-bottom:10px">This remark will be visible to <strong>'+htmlEsc((t&&t.officerName)||'the assigned officer')+'</strong>, and the task status will automatically change to <strong>Review Pending</strong> so it\'s clear action is needed.</p>'
+    +'<textarea id="taskRemarkInput" placeholder="What does the officer need to do or fix?" style="width:100%;min-height:100px;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;background:var(--surface);color:var(--tx1);resize:vertical;font-family:inherit;box-sizing:border-box"></textarea>'
+    +'<div style="display:flex;justify-content:flex-end;gap:8px;margin-top:14px">'
+    +'<button class="btn btn-ghost" onclick="closeModal(\'mGeneric\')">Cancel</button>'
+    +'<button class="btn btn-primary" id="submitRemarkBtn" data-tid="'+taskID+'" onclick="submitTaskRemark(this.dataset.tid)"><span class="material-icons-round mi">send</span> Add Remark</button>'
+    +'</div>';
+  openModal('mGeneric');
+  setTimeout(function(){var ta=id('taskRemarkInput');if(ta)ta.focus();},150);
+}
+function submitTaskRemark(taskID){
+  var input=id('taskRemarkInput');if(!input)return;
+  var text=input.value.trim();
+  if(!text){toast('Please enter a remark.','error');return;}
+  var btn=id('submitRemarkBtn');
+  if(btn){if(btn.disabled)return;btn.disabled=true;btn.innerHTML='<span class="material-icons-round mi" style="animation:spin 1s linear infinite">sync</span> Adding...';}
+  gasCall('serverAddTaskRemark',S.token,{taskID:taskID,remark:text}).then(function(r){
+    if(btn){btn.disabled=false;btn.innerHTML='<span class="material-icons-round mi">send</span> Add Remark';}
+    if(r&&r.success){
+      closeModal('mGeneric');
+      toast('Remark added \u2014 task moved to Review Pending.','ok');
+      // Keep the local task list in sync immediately, same pattern used
+      // elsewhere for optimistic updates after a server confirms success.
+      var t=null;for(var i=0;i<S.tasks.length;i++)if(S.tasks[i].taskID===taskID){t=S.tasks[i];break;}
+      if(t){
+        t.status='Review Pending';
+        if(!t.remarks)t.remarks=[];
+        t.remarks.push(r.remark);
+        if(typeof renderCards==='function'&&S.filtered)renderCards(S.filtered);
+        // Re-render the task detail modal if it's still open on this task —
+        // viewTask() rebuilds both the body AND the footer, which matters
+        // here since Mark Closed needs to disappear once status is no
+        // longer Completed.
+        if(id('mTaskTitle')&&id('mTaskTitle').textContent===taskID){
+          viewTask(taskID);
+        }
+      }
+    } else {
+      toast((r&&r.message)||'Could not add remark.','error');
+    }
+  });
+}
 function viewTask(taskID){
   var t=null;for(var i=0;i<S.tasks.length;i++)if(S.tasks[i].taskID===taskID){t=S.tasks[i];break;}
   if(!t)return;
@@ -5656,7 +5705,8 @@ function viewTask(taskID){
   var isAdmin=(S.user&&(S.user.role==='Admin'||S.user.role==='Commissioner'));
   id('mTaskTitle').textContent=taskID;id('mTaskBody').innerHTML=taskDetailHTML(t);
   var tvClose=(isAdmin&&t&&t.status==='Completed')?'<button class="btn" id="tvCloseBtn" style="background:#059669;color:#fff;margin-right:4px" data-tid="'+taskID+'" onclick="tvCloseTask(this.dataset.tid)"><span class="material-icons-round mi">task_alt</span> Mark Closed</button>':'';
-  id('mTaskFt').innerHTML=isAdmin?tvClose+'<button class="btn btn-ghost" onclick="closeModal(\'mTask\')">Close</button><button class="btn btn-primary" onclick="closeModal(\'mTask\');editTask(\''+taskID+'\')">Edit All Fields</button>':'<button class="btn btn-ghost" onclick="closeModal(\'mTask\')">Close</button><button class="btn btn-primary" onclick="closeModal(\'mTask\');officerUpdate(\''+taskID+'\')">Update Progress</button>';
+  var tvRemark=isAdmin?'<button class="btn btn-ghost" style="border-color:#B45309;color:#B45309;margin-right:4px" onclick="showAddRemarkModal(\''+taskID+'\')"><span class="material-icons-round mi">rate_review</span> Add Remark</button>':'';
+  id('mTaskFt').innerHTML=isAdmin?tvClose+tvRemark+'<button class="btn btn-ghost" onclick="closeModal(\'mTask\')">Close</button><button class="btn btn-primary" onclick="closeModal(\'mTask\');editTask(\''+taskID+'\')">Edit All Fields</button>':'<button class="btn btn-ghost" onclick="closeModal(\'mTask\')">Close</button><button class="btn btn-primary" onclick="closeModal(\'mTask\');officerUpdate(\''+taskID+'\')">Update Progress</button>';
   openModal('mTask');
 
   // Load full task detail on-demand (heavy fields: officerRemarks,
@@ -5684,6 +5734,7 @@ function viewTask(taskID){
         t.docsData=r.task.attachments||[];
         t.sourceNoteID=r.task.sourceNoteID||'';
         t.sourceNote=r.task.sourceNote||null;
+        t.remarks=r.task.remarks||[];
         // Only update if this task's modal is still open
         if(id('mTaskTitle')&&id('mTaskTitle').textContent===taskID){
           id('mTaskBody').innerHTML=taskDetailHTML(t);
@@ -5779,6 +5830,28 @@ function taskDetailHTML(t){
     +'<div style="font-size:10px;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px">Description</div>'
     +'<div style="background:var(--surface2);padding:11px;border-radius:8px;font-size:13px;line-height:1.6">'+(t.description||'\u2014')+'</div>'
     +'</div>';
+  // Admin/Commissioner remarks — a directive TO the assigned officer, so
+  // this is shown prominently right after the description, before the
+  // officer's own remarks. Visible to everyone viewing the task (the
+  // officer needs to actually see it); only Admin/Commissioner can add one.
+  if(t.remarks&&t.remarks.length){
+    detailsHtml+='<div style="margin-bottom:12px">'
+      +'<div style="font-size:10px;font-weight:700;color:#B45309;text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px">&#128276; Admin/Commissioner Remarks</div>'
+      +'<div style="display:flex;flex-direction:column;gap:8px">';
+    for(var ri=0;ri<t.remarks.length;ri++){
+      var rmk=t.remarks[ri];
+      var rwhen=rmk.addedAt?new Date(rmk.addedAt).toLocaleString('en-IN',{day:'numeric',month:'short',hour:'numeric',minute:'2-digit'}):'';
+      detailsHtml+='<div style="background:rgba(180,83,9,.08);border:1px solid rgba(180,83,9,.3);padding:11px;border-radius:8px">'
+        +'<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;flex-wrap:wrap">'
+        +'<span style="font-size:12px;font-weight:700;color:#B45309">'+htmlEsc(rmk.addedBy)+'</span>'
+        +'<span style="font-size:10px;color:var(--tx3);background:var(--surface);border:1px solid var(--border);border-radius:999px;padding:1px 7px">'+htmlEsc(rmk.addedByRole)+'</span>'
+        +'<span style="font-size:10.5px;color:var(--tx3);margin-left:auto">'+rwhen+'</span>'
+        +'</div>'
+        +'<div style="font-size:13px;line-height:1.6;white-space:pre-wrap">'+htmlEsc(rmk.remark)+'</div>'
+        +'</div>';
+    }
+    detailsHtml+='</div></div>';
+  }
   // Originating inspection note — most tasks in this system start life
   // as a field note, so surfacing it directly here (rather than making
   // someone go search Notes separately) is what actually makes review
