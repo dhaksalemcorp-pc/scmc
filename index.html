@@ -2366,13 +2366,13 @@ tbody tr:hover { background: var(--surface2); }
         <table>
           <thead>
             <tr>
-              <th style="text-align:left;padding:8px 10px;font-size:11px;font-weight:700;color:var(--tx3);text-transform:uppercase;border-bottom:2px solid var(--border)">Date</th>
-              <th style="text-align:left;padding:8px 10px;font-size:11px;font-weight:700;color:var(--tx3);text-transform:uppercase;border-bottom:2px solid var(--border)">Type</th>
-              <th style="text-align:left;padding:8px 10px;font-size:11px;font-weight:700;color:var(--tx3);text-transform:uppercase;border-bottom:2px solid var(--border)">Petitioner</th>
-              <th style="text-align:left;padding:8px 10px;font-size:11px;font-weight:700;color:var(--tx3);text-transform:uppercase;border-bottom:2px solid var(--border)">Subject</th>
-              <th style="text-align:left;padding:8px 10px;font-size:11px;font-weight:700;color:var(--tx3);text-transform:uppercase;border-bottom:2px solid var(--border)">Zone</th>
-              <th style="text-align:left;padding:8px 10px;font-size:11px;font-weight:700;color:var(--tx3);text-transform:uppercase;border-bottom:2px solid var(--border)">Div. No</th>
-              <th style="text-align:left;padding:8px 10px;font-size:11px;font-weight:700;color:var(--tx3);text-transform:uppercase;border-bottom:2px solid var(--border)">Files</th>
+              <th style="text-align:left;padding:8px 10px;font-size:11px;font-weight:700;color:var(--tx3);text-transform:uppercase;border-bottom:2px solid var(--border);cursor:pointer;user-select:none" onclick="sortTappal('date')">Date<span id="tplsort-date"></span></th>
+              <th style="text-align:left;padding:8px 10px;font-size:11px;font-weight:700;color:var(--tx3);text-transform:uppercase;border-bottom:2px solid var(--border);cursor:pointer;user-select:none" onclick="sortTappal('petitionType')">Type<span id="tplsort-petitionType"></span></th>
+              <th style="text-align:left;padding:8px 10px;font-size:11px;font-weight:700;color:var(--tx3);text-transform:uppercase;border-bottom:2px solid var(--border);cursor:pointer;user-select:none" onclick="sortTappal('petitionerName')">Petitioner<span id="tplsort-petitionerName"></span></th>
+              <th style="text-align:left;padding:8px 10px;font-size:11px;font-weight:700;color:var(--tx3);text-transform:uppercase;border-bottom:2px solid var(--border);cursor:pointer;user-select:none" onclick="sortTappal('subject')">Subject<span id="tplsort-subject"></span></th>
+              <th style="text-align:left;padding:8px 10px;font-size:11px;font-weight:700;color:var(--tx3);text-transform:uppercase;border-bottom:2px solid var(--border);cursor:pointer;user-select:none" onclick="sortTappal('zone')">Zone<span id="tplsort-zone"></span></th>
+              <th style="text-align:left;padding:8px 10px;font-size:11px;font-weight:700;color:var(--tx3);text-transform:uppercase;border-bottom:2px solid var(--border);cursor:pointer;user-select:none" onclick="sortTappal('divisionNo')">Div. No<span id="tplsort-divisionNo"></span></th>
+              <th style="text-align:left;padding:8px 10px;font-size:11px;font-weight:700;color:var(--tx3);text-transform:uppercase;border-bottom:2px solid var(--border);cursor:pointer;user-select:none" onclick="sortTappal('files')">Files<span id="tplsort-files"></span></th>
               <th style="text-align:right;padding:8px 10px;font-size:11px;font-weight:700;color:var(--tx3);text-transform:uppercase;border-bottom:2px solid var(--border)">Actions</th>
             </tr>
           </thead>
@@ -11230,7 +11230,6 @@ function loadTappalPage(){
     var r1=results[0],r2=results[1],r3=results[2];
     if(r1&&r1.success){
       S.tappal=r1.data||[];
-      S.tappal.sort(function(a,b){return (b.date||'')<(a.date||'')?-1:(b.date||'')>(a.date||'')?1:0;});
     } else {
       S.tappal=[];
       toast((r1&&r1.message)||'Could not load Tappal records.','error');
@@ -11249,9 +11248,50 @@ function tappalFillDatalist(id_,values){
   for(var i=0;i<values.length;i++)html+='<option value="'+htmlEsc(values[i])+'">';
   dl.innerHTML=html;
 }
+// Formats a 'YYYY-MM-DD' date string (as normalized by the backend) into
+// 'DD/MM/YY - DAY' for display, e.g. "22/08/26 - Sat". Falls back to the
+// raw value if it doesn't look like a date, rather than showing nothing.
+function tappalFormatDate(dateStr){
+  if(!dateStr)return'';
+  var m=/^(\d{4})-(\d{2})-(\d{2})/.exec(dateStr);
+  if(!m)return dateStr;
+  var d=new Date(Number(m[1]),Number(m[2])-1,Number(m[3]));
+  if(isNaN(d.getTime()))return dateStr;
+  var days=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  return m[3]+'/'+m[2]+'/'+m[1].slice(2)+' - '+days[d.getDay()];
+}
+// ── Sorting: click a header to sort by that column, click again to
+// reverse. Default: Date, newest first (matches load order).
+var TPL_SORT={col:'date',dir:-1};
+function sortTappal(col){
+  if(TPL_SORT.col===col)TPL_SORT.dir*=-1;
+  else{TPL_SORT.col=col;TPL_SORT.dir=1;}
+  var cols=['date','petitionType','petitionerName','subject','zone','divisionNo','files'];
+  for(var i=0;i<cols.length;i++){var el=id('tplsort-'+cols[i]);if(el)el.textContent='';}
+  var active=id('tplsort-'+col);if(active)active.textContent=TPL_SORT.dir===1?' \u25b2':' \u25bc';
+  filterTappal();
+}
+function applyTappalSort(list){
+  var col=TPL_SORT.col,dir=TPL_SORT.dir;
+  list.sort(function(a,b){
+    var av,bv;
+    if(col==='files'){av=(a.attachments||[]).length;bv=(b.attachments||[]).length;return(av-bv)*dir;}
+    if(col==='divisionNo'){
+      // Numeric compare when both values look like plain numbers, so "9"
+      // sorts before "10" instead of falling back to lexical order.
+      av=a.divisionNo||'';bv=b.divisionNo||'';
+      var an=Number(av),bn=Number(bv);
+      if(av!==''&&bv!==''&&!isNaN(an)&&!isNaN(bn))return(an-bn)*dir;
+      return av<bv?-dir:av>bv?dir:0;
+    }
+    av=(a[col]||'').toString().toLowerCase();bv=(b[col]||'').toString().toLowerCase();
+    return av<bv?-dir:av>bv?dir:0;
+  });
+  return list;
+}
 function filterTappal(){
   var q=(V('tappalSearch')||'').toLowerCase().trim();
-  var list=S.tappal||[];
+  var list=(S.tappal||[]).slice();
   if(q){
     var tokens=q.replace(/\s+/g,' ').split(' ');
     list=list.filter(function(t){
@@ -11260,6 +11300,7 @@ function filterTappal(){
       return true;
     });
   }
+  applyTappalSort(list);
   renderTappalTable(list);
 }
 function renderTappalTable(list){
@@ -11288,7 +11329,7 @@ function renderTappalTable(list){
       fileChips='<span style="font-size:11px;color:var(--tx3)">&#8212;</span>';
     }
     html+='<tr style="border-bottom:1px solid var(--border)">'
-      +'<td style="padding:8px 10px;font-size:12.5px;white-space:nowrap">'+htmlEsc(t.date)+'</td>'
+      +'<td style="padding:8px 10px;font-size:12.5px;white-space:nowrap">'+htmlEsc(tappalFormatDate(t.date))+'</td>'
       +'<td style="padding:8px 10px;font-size:12.5px">'+htmlEsc(t.petitionType)+'</td>'
       +'<td style="padding:8px 10px;font-size:12.5px">'+htmlEsc(t.petitionerName)+'</td>'
       +'<td style="padding:8px 10px;font-size:12.5px;max-width:260px">'+htmlEsc(t.subject)+'</td>'
