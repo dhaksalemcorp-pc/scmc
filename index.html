@@ -1467,6 +1467,7 @@ tbody tr:hover { background: var(--surface2); }
       <div class="sb-item" id="snav-chgpw" onclick="showMyProfile()" title="My Profile"><span class="material-icons-round sb-i">manage_accounts</span><span class="sb-label">My Profile</span></div>
       <div class="sb-item" id="snav-photolog" data-page="photolog" onclick="go('photolog')" title="Notes"><span class="material-icons-round sb-i">photo_library</span><span class="sb-label">Notes</span></div>
       <div class="sb-item" id="snav-reports" data-page="reports" onclick="go('reports')" style="display:none" title="Reports"><span class="material-icons-round sb-i">summarize</span><span class="sb-label">Reports</span></div>
+      <div class="sb-item" id="snav-tappal" data-page="tappal" onclick="go('tappal')" style="display:none" title="Tappal Tracker"><span class="material-icons-round sb-i">markunread_mailbox</span><span class="sb-label">Tappal Tracker</span></div>
       <div class="sb-item" data-page="about" onclick="go('about')" title="About"><span class="material-icons-round sb-i">info</span><span class="sb-label">About</span></div>
     </div>
     <div class="sb-footer">
@@ -2346,6 +2347,95 @@ tbody tr:hover { background: var(--surface2); }
       </div>
     </div>
 
+    <!-- TAPPAL TRACKER PAGE (Admin & Commissioner only) -->
+    <div class="page" id="page-tappal">
+      <div class="ph">
+        <div class="ph-left"><h1>&#128239; Tappal Tracker</h1><p>Special tappals received at the office &mdash; record-keeping</p></div>
+        <div class="ph-actions">
+          <button class="btn btn-primary btn-sm" onclick="showTappalModal()"><span class="material-icons-round mi">add</span> <span class="nowrap">New Tappal</span></button>
+        </div>
+      </div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px;align-items:center">
+        <div class="search-wrap" style="width:300px;max-width:100%">
+          <span class="material-icons-round mi-prefix">search</span>
+          <input type="text" class="f-ctrl" id="tappalSearch" placeholder="Search date, type, petitioner, subject, zone, division, remarks..." oninput="filterTappal()" style="font-size:13px">
+        </div>
+        <span class="c-muted" id="tappalCount" style="font-size:12px;white-space:nowrap;margin-left:auto">&#8212;</span>
+      </div>
+      <div class="tbl-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th style="text-align:left;padding:8px 10px;font-size:11px;font-weight:700;color:var(--tx3);text-transform:uppercase;border-bottom:2px solid var(--border)">Date</th>
+              <th style="text-align:left;padding:8px 10px;font-size:11px;font-weight:700;color:var(--tx3);text-transform:uppercase;border-bottom:2px solid var(--border)">Type</th>
+              <th style="text-align:left;padding:8px 10px;font-size:11px;font-weight:700;color:var(--tx3);text-transform:uppercase;border-bottom:2px solid var(--border)">Petitioner</th>
+              <th style="text-align:left;padding:8px 10px;font-size:11px;font-weight:700;color:var(--tx3);text-transform:uppercase;border-bottom:2px solid var(--border)">Subject</th>
+              <th style="text-align:left;padding:8px 10px;font-size:11px;font-weight:700;color:var(--tx3);text-transform:uppercase;border-bottom:2px solid var(--border)">Zone</th>
+              <th style="text-align:left;padding:8px 10px;font-size:11px;font-weight:700;color:var(--tx3);text-transform:uppercase;border-bottom:2px solid var(--border)">Div. No</th>
+              <th style="text-align:left;padding:8px 10px;font-size:11px;font-weight:700;color:var(--tx3);text-transform:uppercase;border-bottom:2px solid var(--border)">Files</th>
+              <th style="text-align:right;padding:8px 10px;font-size:11px;font-weight:700;color:var(--tx3);text-transform:uppercase;border-bottom:2px solid var(--border)">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="tappalTableBody"></tbody>
+        </table>
+      </div>
+      <div id="tappalEmpty" class="dn" style="text-align:center;padding:48px 24px">
+        <span class="material-icons-round" style="font-size:48px;color:var(--tx3)">markunread_mailbox</span>
+        <h3 style="color:var(--tx2);margin:12px 0 6px">No tappal records found</h3>
+        <p style="color:var(--tx3)" id="tappalEmptyMsg">Add your first tappal record to get started.</p>
+      </div>
+    </div>
+
+    <!-- ADD/EDIT TAPPAL MODAL -->
+    <div class="modal-bg" id="mTappal">
+      <div class="modal-box" style="max-width:560px">
+        <div class="modal-hd"><span class="modal-title" id="mTappalTitle">New Tappal</span><button class="modal-close" onclick="closeModal('mTappal')"><span class="material-icons-round">close</span></button></div>
+        <div class="modal-body">
+          <input type="hidden" id="tpl-id">
+          <div class="f-row">
+            <div class="f-group"><label class="f-label">Date <span class="req">*</span></label><input type="date" class="f-ctrl" id="tpl-date"></div>
+            <div class="f-group">
+              <label class="f-label">Type of Petition <span class="req">*</span></label>
+              <input type="text" class="f-ctrl" id="tpl-type" placeholder="Select or type a new one" list="tappalTypeList">
+              <datalist id="tappalTypeList"></datalist>
+            </div>
+          </div>
+          <div class="f-group">
+            <label class="f-label">Name of the Petitioner <span class="req">*</span></label>
+            <input type="text" class="f-ctrl" id="tpl-petitioner" placeholder="Select or type a new name" list="tappalPetitionerList">
+            <datalist id="tappalPetitionerList"></datalist>
+          </div>
+          <div class="f-group">
+            <label class="f-label">Subject <span class="req">*</span></label>
+            <textarea class="f-ctrl" id="tpl-subject" rows="2" placeholder="Brief subject of the tappal"></textarea>
+          </div>
+          <div class="f-row">
+            <div class="f-group"><label class="f-label">Zone <span style="font-size:11px;color:var(--tx3);font-weight:400">(optional)</span></label><select class="f-sel" id="tpl-zone"><option value="">Not specified</option></select></div>
+            <div class="f-group"><label class="f-label">Division No <span style="font-size:11px;color:var(--tx3);font-weight:400">(optional)</span></label><input type="text" class="f-ctrl" id="tpl-division" placeholder="e.g. 24"></div>
+          </div>
+          <div class="f-group">
+            <label class="f-label">Remarks</label>
+            <textarea class="f-ctrl" id="tpl-remarks" rows="2" placeholder="Any additional notes"></textarea>
+          </div>
+          <div class="f-group">
+            <label class="f-label">File Upload <span style="font-size:11px;color:var(--tx3);font-weight:400">(PDF or image, saved to Google Drive)</span></label>
+            <div id="tappalDropZone" style="border:2px dashed var(--border);border-radius:10px;padding:18px;text-align:center;cursor:pointer;background:var(--surface2)"
+              onclick="document.getElementById('tappalFileInput').click()">
+              <span class="material-icons-round mi" style="font-size:28px;color:var(--tx3)">upload_file</span>
+              <div style="font-size:13px;color:var(--tx3);margin-top:6px">Tap to upload PDF or image files</div>
+            </div>
+            <input type="file" id="tappalFileInput" accept="application/pdf,image/jpeg,image/png" multiple style="display:none" onchange="tappalHandleFileSelect(this.files)">
+            <div id="tappalFilePreview" style="display:flex;flex-direction:column;gap:6px;margin-top:10px"></div>
+            <div id="tappalExistingFiles" style="display:flex;flex-direction:column;gap:6px;margin-top:10px"></div>
+          </div>
+        </div>
+        <div class="modal-ft">
+          <button class="btn btn-ghost" onclick="closeModal('mTappal')">Cancel</button>
+          <button class="btn btn-primary" id="tappalSaveBtn" onclick="saveTappal()"><span class="material-icons-round mi">save</span> Save Tappal</button>
+        </div>
+      </div>
+    </div>
+
     <!-- ABOUT PAGE -->
     <div class="page" id="page-about">
       <div class="ph"><div class="ph-left"><h1>About</h1><p>Application information and credits</p></div></div>
@@ -2660,7 +2750,20 @@ tbody tr:hover { background: var(--surface2); }
   <div class="modal-box" style="max-width:420px">
     <div class="modal-hd"><span class="modal-title" id="mExportTitle">Export Report</span><button class="modal-close" onclick="closeModal('mExport')"><span class="material-icons-round">close</span></button></div>
     <div class="modal-body">
-      <p class="c-muted mb16" id="mExportDesc">Choose export format.</p>
+      <p class="c-muted mb12" id="mExportDesc">Choose export format.</p>
+      <!-- Scope toggle — moved ABOVE the format buttons and turned into two
+           explicit, equally-weighted buttons (was a checkbox tucked below
+           the format buttons, easy to miss). Choosing scope first, format
+           second, matches the actual decision order: "what" then "how". -->
+      <div id="mExportScopeRow" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px">
+        <button type="button" class="mExportScopeBtn" id="mExportScopeAll" onclick="setExportScope(true)" style="border:1.5px solid var(--c-blue);background:var(--c-blue);color:#fff;border-radius:8px;padding:9px 8px;font-size:12px;font-weight:700;cursor:pointer;text-align:center;line-height:1.3">
+          Complete Export<br><span style="font-size:10.5px;font-weight:400;opacity:.85">Every task, all statuses</span>
+        </button>
+        <button type="button" class="mExportScopeBtn" id="mExportScopeFiltered" onclick="setExportScope(false)" style="border:1.5px solid var(--border);background:var(--surface);color:var(--tx2);border-radius:8px;padding:9px 8px;font-size:12px;font-weight:700;cursor:pointer;text-align:center;line-height:1.3">
+          Filtered Export<br><span style="font-size:10.5px;font-weight:400;opacity:.85">Only what's shown now</span>
+        </button>
+      </div>
+      <div id="mExportFilterSummary" style="margin-bottom:14px;padding:10px;background:var(--surface2);border-radius:8px;font-size:12.5px;color:var(--tx2)"></div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
         <button class="btn btn-primary w100" style="flex-direction:column;padding:20px 12px;gap:8px;font-size:13px" onclick="doExport('excel')">
           <span class="material-icons-round mi" style="font-size:32px">table_chart</span>
@@ -2671,11 +2774,10 @@ tbody tr:hover { background: var(--surface2); }
           Export as PDF<br><span style="font-size:11px;font-weight:400;opacity:.8">Print-ready report</span>
         </button>
       </div>
-      <label style="display:flex;align-items:center;gap:8px;margin-bottom:14px;padding:10px 12px;background:var(--surface2);border-radius:8px;cursor:pointer;font-size:12.5px;color:var(--tx2)">
-        <input type="checkbox" id="mExportAllTasks" checked onchange="updateExportSummary()" style="width:16px;height:16px;cursor:pointer;flex-shrink:0">
-        <span><strong>Include every task</strong>, including Completed and Closed (recommended for reports) &mdash; uncheck to export only what's currently shown on screen.</span>
-      </label>
-      <div id="mExportFilterSummary" style="margin-top:14px;padding:10px;background:var(--surface2);border-radius:8px;font-size:12.5px;color:var(--tx2)"></div>
+      <!-- Hidden checkbox kept so existing updateExportSummary()/doExport()
+           logic (which reads #mExportAllTasks) needs zero changes — the two
+           scope buttons above just drive this value now. -->
+      <input type="checkbox" id="mExportAllTasks" checked style="display:none">
     </div>
     <div class="modal-ft"><button class="btn btn-ghost" onclick="closeModal('mExport')">Cancel</button></div>
   </div>
@@ -3129,7 +3231,7 @@ tbody tr:hover { background: var(--surface2); }
 <div id="toasts"></div>
 <script>
 var LS={get:function(k){try{return localStorage.getItem(k);}catch(e){return null;}},set:function(k,v){try{localStorage.setItem(k,v);}catch(e){}},del:function(k){try{localStorage.removeItem(k);}catch(e){}}};
-var S={token:null,user:null,lookup:null,tasks:[],users:[],filtered:[],drillFilter:'',page:'dashboard',allowedPages:[],theme:LS.get('sc-theme')||'light',charts:{},exportCtx:'tracker',aiTasks:[],selPhotos:[],driveLinks:[],puDocs:[],sortCol:'updatedAt',sortDir:-1,taskWindow:90,showCompleted:false,showClosed:false,searchQ:'',_trkMeta:null,_deptDrill:null,_qfMine:false,_qfAllMode:false};
+var S={token:null,user:null,lookup:null,tasks:[],users:[],filtered:[],drillFilter:'',page:'dashboard',allowedPages:[],theme:LS.get('sc-theme')||'light',charts:{},exportCtx:'tracker',aiTasks:[],selPhotos:[],driveLinks:[],puDocs:[],sortCol:'updatedAt',sortDir:-1,taskWindow:90,showCompleted:false,showClosed:false,searchQ:'',_trkMeta:null,_deptDrill:null,_qfMine:false,_qfAllMode:false,tappal:[]};
 
 // ─── STALE-WHILE-REVALIDATE (instant display) ──────────────────
 // Saves the last-loaded data in localStorage so the NEXT visit renders
@@ -3774,6 +3876,7 @@ function applyRoleNav(role){
   show('snav-users', isAdminOnly);
   show('snav-settings', isAdminOnly);
   show('snav-reports', isAdminOnly);
+  show('snav-tappal', isAdmin); // Admin AND Commissioner, per requirement — unlike Reports which is Admin-only
   show('snav-chgpw', true);
   show('snav-photolog', true); // All roles can view Notes/Photo Log
   show('snav-dashboard', true);
@@ -3794,11 +3897,12 @@ function applyRoleNav(role){
     // and full Notes create/delete access (enforced server-side).
     S.allowedPages=['dashboard','taskEntry','tracker','photolog','about'];
   } else if(isAdminOnly){
-    S.allowedPages=['dashboard','taskEntry','tracker','users','settings','reports','photolog','about'];
+    S.allowedPages=['dashboard','taskEntry','tracker','users','settings','reports','photolog','tappal','about'];
   } else {
     // Commissioner: full visibility into tasks and analytics, but
     // User Management, Settings, and Reports remain Admin-only.
-    S.allowedPages=['dashboard','taskEntry','tracker','photolog','about'];
+    // Tappal Tracker IS included here — Admin AND Commissioner both get it.
+    S.allowedPages=['dashboard','taskEntry','tracker','photolog','tappal','about'];
   }
 
   var ad=id('adminDash'),od=id('officerDash'),hd=id('hodDash'),spd=id('supDash');
@@ -3812,7 +3916,7 @@ function applyRoleNav(role){
     if(ad)ad.classList.remove('dn');if(od)od.classList.add('dn');if(hd)hd.classList.add('dn');if(spd)spd.classList.add('dn');
   }
 }
-var PAGE_META={dashboard:['Dashboard','Overview & Analytics'],taskEntry:['Task Entry','Create and assign tasks'],tracker:['Task Tracker','Monitor all tasks'],users:['User Management','Manage accounts'],settings:['Settings','System configuration'],photolog:['Notes','Inspection & Meeting Records'],reports:['Reports','Dynamic Report Generator'],about:['About','Application information']};
+var PAGE_META={dashboard:['Dashboard','Overview & Analytics'],taskEntry:['Task Entry','Create and assign tasks'],tracker:['Task Tracker','Monitor all tasks'],users:['User Management','Manage accounts'],settings:['Settings','System configuration'],photolog:['Notes','Inspection & Meeting Records'],reports:['Reports','Dynamic Report Generator'],tappal:['Tappal Tracker','Special tappals received at the office'],about:['About','Application information']};
 function go(page){
   if(S.allowedPages&&S.allowedPages.length&&S.allowedPages.indexOf(page)===-1){toast('Access restricted.','error');return;}
   S.page=page;
@@ -3845,6 +3949,7 @@ function go(page){
   else if(page==='settings')loadSettings();
   else if(page==='photolog')loadPhotoLog();
   else if(page==='reports')loadReportsPage();
+  else if(page==='tappal')loadTappalPage();
   else if(page==='about')loadAboutPage();
 }
 function refreshPage(){
@@ -7606,11 +7711,23 @@ function clearAI(){S.aiTasks=[];var r=id('aiResults');if(r)r.classList.add('dn')
 function showExportChoice(ctx){
   S.exportCtx=ctx||'tracker';
   var cb=id('mExportAllTasks');if(cb)cb.checked=true; // default to complete data every time the modal opens
-  var cbRow=cb?cb.closest('label'):null;
-  if(cbRow)cbRow.style.display=(S.exportCtx==='commissioner')?'none':'flex';
+  var scopeRow=id('mExportScopeRow');
+  if(scopeRow)scopeRow.style.display=(S.exportCtx==='commissioner')?'none':'grid';
+  setExportScope(true); // reset the two scope buttons to "Complete" every time the modal opens
   var title=id('mExportTitle');if(title)title.textContent=(S.exportCtx==='commissioner')?'Export Commissioner Report':'Export Task Data';
   updateExportSummary();
   openModal('mExport');
+}
+// Drives the two scope buttons (Complete Export / Filtered Export) added
+// to replace the old, easy-to-miss checkbox. Keeps writing to the same
+// hidden #mExportAllTasks checkbox that updateExportSummary()/doExport()
+// already read, so none of that downstream logic needed to change.
+function setExportScope(allMode){
+  var cb=id('mExportAllTasks');if(cb)cb.checked=allMode;
+  var allBtn=id('mExportScopeAll'),fBtn=id('mExportScopeFiltered');
+  if(allBtn)allBtn.style.cssText='border:1.5px solid '+(allMode?'var(--c-blue)':'var(--border)')+';background:'+(allMode?'var(--c-blue)':'var(--surface)')+';color:'+(allMode?'#fff':'var(--tx2)')+';border-radius:8px;padding:9px 8px;font-size:12px;font-weight:700;cursor:pointer;text-align:center;line-height:1.3';
+  if(fBtn)fBtn.style.cssText='border:1.5px solid '+(!allMode?'var(--c-blue)':'var(--border)')+';background:'+(!allMode?'var(--c-blue)':'var(--surface)')+';color:'+(!allMode?'#fff':'var(--tx2)')+';border-radius:8px;padding:9px 8px;font-size:12px;font-weight:700;cursor:pointer;text-align:center;line-height:1.3';
+  updateExportSummary();
 }
 // Keeps the summary line honest about what will actually be exported —
 // previously the modal always just showed whatever was in the currently
@@ -11088,6 +11205,261 @@ function deleteReportLink(reportID,name){
   });
 }
 
+// ═══════════════════════════════════════════════════════════════
+// ── TAPPAL TRACKER (Admin & Commissioner only) ────────────────
+// Follows the same overall shape as the Reports module above: a flat
+// list loaded once into S.tappal, filtered client-side, rendered into a
+// table. Files picked in the modal are held as raw File objects in
+// TPL.files until save — uploaded to Drive only AFTER the tappal record
+// itself has been created (same "text first, attachments after" pattern
+// used throughout Notes/Task attachments), so a failed upload never
+// blocks or corrupts the core record.
+// ═══════════════════════════════════════════════════════════════
+var TPL={files:[],editID:null,existingAtt:[]};
+
+function loadTappalPage(){
+  var body=id('tappalTableBody');
+  if(body)body.innerHTML='<tr><td colspan="8" style="text-align:center;padding:24px;color:var(--tx3)">Loading\u2026</td></tr>';
+  // Zone dropdown + petition type/petitioner datalists all need fresh data
+  // whenever the page opens — zones rarely change but types/petitioners
+  // grow over time as new ones get added inline.
+  var p1=gasCall('serverGetTappalRecords',S.token);
+  var p2=gasCall('serverGetTappalPetitionTypes',S.token);
+  var p3=gasCall('serverGetTappalPetitioners',S.token);
+  Promise.all([p1,p2,p3]).then(function(results){
+    var r1=results[0],r2=results[1],r3=results[2];
+    if(r1&&r1.success){
+      S.tappal=r1.data||[];
+      S.tappal.sort(function(a,b){return (b.date||'')<(a.date||'')?-1:(b.date||'')>(a.date||'')?1:0;});
+    } else {
+      S.tappal=[];
+      toast((r1&&r1.message)||'Could not load Tappal records.','error');
+    }
+    S._tappalTypes=(r2&&r2.success)?(r2.data||[]):[];
+    S._tappalPetitioners=(r3&&r3.success)?(r3.data||[]):[];
+    tappalFillDatalist('tappalTypeList',S._tappalTypes);
+    tappalFillDatalist('tappalPetitionerList',S._tappalPetitioners);
+    if(S.lookup&&S.lookup.zones)fillSelZone('tpl-zone',S.lookup.zones,'Not specified');
+    filterTappal();
+  });
+}
+function tappalFillDatalist(id_,values){
+  var dl=id(id_);if(!dl)return;
+  var html='';
+  for(var i=0;i<values.length;i++)html+='<option value="'+htmlEsc(values[i])+'">';
+  dl.innerHTML=html;
+}
+function filterTappal(){
+  var q=(V('tappalSearch')||'').toLowerCase().trim();
+  var list=S.tappal||[];
+  if(q){
+    var tokens=q.replace(/\s+/g,' ').split(' ');
+    list=list.filter(function(t){
+      var hay=((t.date||'')+' '+(t.petitionType||'')+' '+(t.petitionerName||'')+' '+(t.subject||'')+' '+(t.zone||'')+' '+(t.divisionNo||'')+' '+(t.remarks||'')).toLowerCase();
+      for(var i=0;i<tokens.length;i++){if(tokens[i]&&hay.indexOf(tokens[i])<0)return false;}
+      return true;
+    });
+  }
+  renderTappalTable(list);
+}
+function renderTappalTable(list){
+  var body=id('tappalTableBody'),wrap=id('tappalEmpty'),cnt=id('tappalCount');
+  if(cnt)cnt.textContent=list.length+' record'+(list.length!==1?'s':'');
+  if(!body)return;
+  if(!list.length){
+    body.innerHTML='';
+    if(wrap){
+      wrap.classList.remove('dn');
+      var msg=id('tappalEmptyMsg');
+      if(msg)msg.textContent=(S.tappal&&S.tappal.length)?'No records match your search.':'Add your first tappal record to get started.';
+    }
+    return;
+  }
+  if(wrap)wrap.classList.add('dn');
+  var html='';
+  for(var i=0;i<list.length;i++){
+    var t=list[i];
+    var fileChips='';
+    if(t.attachments&&t.attachments.length){
+      for(var f=0;f<t.attachments.length;f++){
+        fileChips+='<a href="'+htmlEsc(t.attachments[f].driveURL)+'" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:3px;font-size:11px;color:var(--c-blue);text-decoration:none;margin-right:6px"><span class="material-icons-round" style="font-size:13px">description</span>'+(f===0?'View':'')+'</a>';
+      }
+    } else {
+      fileChips='<span style="font-size:11px;color:var(--tx3)">&#8212;</span>';
+    }
+    html+='<tr style="border-bottom:1px solid var(--border)">'
+      +'<td style="padding:8px 10px;font-size:12.5px;white-space:nowrap">'+htmlEsc(t.date)+'</td>'
+      +'<td style="padding:8px 10px;font-size:12.5px">'+htmlEsc(t.petitionType)+'</td>'
+      +'<td style="padding:8px 10px;font-size:12.5px">'+htmlEsc(t.petitionerName)+'</td>'
+      +'<td style="padding:8px 10px;font-size:12.5px;max-width:260px">'+htmlEsc(t.subject)+'</td>'
+      +'<td style="padding:8px 10px;font-size:12.5px">'+htmlEsc(t.zone||'\u2014')+'</td>'
+      +'<td style="padding:8px 10px;font-size:12.5px">'+htmlEsc(t.divisionNo||'\u2014')+'</td>'
+      +'<td style="padding:8px 10px">'+fileChips+'</td>'
+      +'<td style="padding:8px 10px;text-align:right;white-space:nowrap">'
+      +'<button class="btn btn-ghost btn-sm" style="padding:4px 8px" onclick="editTappalRecord(\''+t.tappalID+'\')" title="Edit"><span class="material-icons-round" style="font-size:16px">edit</span></button> '
+      +'<button class="btn btn-ghost btn-sm" style="padding:4px 8px;color:var(--c-red)" onclick="deleteTappalRecord(\''+t.tappalID+'\',\''+htmlEsc(t.subject).replace(/'/g,"\\'")+'\')" title="Delete"><span class="material-icons-round" style="font-size:16px">delete</span></button>'
+      +'</td></tr>';
+  }
+  body.innerHTML=html;
+}
+function showTappalModal(){
+  TPL.files=[];TPL.editID=null;TPL.existingAtt=[];
+  id('mTappalTitle').textContent='New Tappal';
+  id('tpl-id').value='';
+  id('tpl-date').value=new Date().toISOString().slice(0,10);
+  id('tpl-type').value='';id('tpl-petitioner').value='';id('tpl-subject').value='';
+  id('tpl-zone').value='';id('tpl-division').value='';id('tpl-remarks').value='';
+  tappalRenderFilePreview();
+  var ex=id('tappalExistingFiles');if(ex)ex.innerHTML='';
+  openModal('mTappal');
+}
+function editTappalRecord(tappalID){
+  var t=null;for(var i=0;i<S.tappal.length;i++)if(S.tappal[i].tappalID===tappalID){t=S.tappal[i];break;}
+  if(!t)return;
+  TPL.files=[];TPL.editID=tappalID;TPL.existingAtt=(t.attachments||[]).slice();
+  id('mTappalTitle').textContent='Edit Tappal';
+  id('tpl-id').value=tappalID;
+  id('tpl-date').value=t.date||'';
+  id('tpl-type').value=t.petitionType||'';
+  id('tpl-petitioner').value=t.petitionerName||'';
+  id('tpl-subject').value=t.subject||'';
+  id('tpl-zone').value=t.zone||'';
+  id('tpl-division').value=t.divisionNo||'';
+  id('tpl-remarks').value=t.remarks||'';
+  tappalRenderFilePreview();
+  tappalRenderExistingFiles();
+  openModal('mTappal');
+}
+function tappalRenderExistingFiles(){
+  var ex=id('tappalExistingFiles');if(!ex)return;
+  var html='';
+  for(var i=0;i<TPL.existingAtt.length;i++){
+    var a=TPL.existingAtt[i];
+    html+='<div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:8px">'
+      +'<span class="material-icons-round" style="color:var(--c-blue);font-size:20px;flex-shrink:0">description</span>'
+      +'<a href="'+htmlEsc(a.driveURL)+'" target="_blank" rel="noopener" style="flex:1;min-width:0;font-size:12.5px;color:var(--tx1);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+htmlEsc(a.fileName)+'</a>'
+      +'<button type="button" onclick="tappalDeleteExistingFile(\''+a.attachmentID+'\')" style="background:none;border:none;color:var(--tx3);cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;width:24px;height:24px"><span class="material-icons-round" style="font-size:16px">close</span></button>'
+      +'</div>';
+  }
+  ex.innerHTML=html;
+}
+function tappalDeleteExistingFile(attachmentID){
+  if(!confirm('Remove this file from the tappal record?'))return;
+  gasCall('serverDeleteTappalAttachment',S.token,attachmentID).then(function(r){
+    if(r&&r.success){
+      TPL.existingAtt=TPL.existingAtt.filter(function(a){return a.attachmentID!==attachmentID;});
+      tappalRenderExistingFiles();
+      toast('File removed.','ok');
+      loadTappalPage();
+    } else {
+      toast((r&&r.message)||'Could not remove file.','error');
+    }
+  });
+}
+function tappalHandleFileSelect(files){
+  var rem=10-TPL.files.length,wrongType=0,tooBig=[];
+  var allowed=['application/pdf','image/jpeg','image/png'];
+  for(var i=0;i<files.length&&i<rem;i++){
+    if(allowed.indexOf(files[i].type)===-1){wrongType++;continue;}
+    if(files[i].size>8*1024*1024){tooBig.push(files[i].name);continue;}
+    TPL.files.push(files[i]);
+  }
+  if(wrongType)toast(wrongType+' file(s) skipped \u2014 only PDF or JPG/PNG images are accepted.','info');
+  if(tooBig.length)toast('Too large (max 8MB): '+tooBig.join(', '),'error');
+  tappalRenderFilePreview();
+}
+function tappalRenderFilePreview(){
+  var prev=id('tappalFilePreview');if(!prev)return;
+  var html='';
+  for(var i=0;i<TPL.files.length;i++){
+    html+='<div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:8px">'
+      +'<span class="material-icons-round" style="color:var(--c-red);font-size:20px;flex-shrink:0">'+(TPL.files[i].type==='application/pdf'?'picture_as_pdf':'image')+'</span>'
+      +'<div style="flex:1;min-width:0;font-size:12.5px;color:var(--tx1);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+htmlEsc(TPL.files[i].name)+' ('+Math.round(TPL.files[i].size/1024)+' KB)</div>'
+      +'<button type="button" onclick="tappalRemoveFile('+i+')" style="background:none;border:none;color:var(--tx3);cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;width:24px;height:24px"><span class="material-icons-round" style="font-size:16px">close</span></button>'
+      +'</div>';
+  }
+  prev.innerHTML=html;
+}
+function tappalRemoveFile(idx){TPL.files.splice(idx,1);tappalRenderFilePreview();}
+function saveTappal(){
+  if(!btnFreeze('saveTappal','tappalSaveBtn','<span class="material-icons-round mi" style="animation:spin 1s linear infinite">sync</span> Saving...'))return;
+  var payload={
+    date:V('tpl-date').trim(),
+    petitionType:V('tpl-type').trim(),
+    petitionerName:V('tpl-petitioner').trim(),
+    subject:id('tpl-subject')?id('tpl-subject').value.trim():'',
+    zone:V('tpl-zone'),
+    divisionNo:V('tpl-division').trim(),
+    remarks:id('tpl-remarks')?id('tpl-remarks').value.trim():''
+  };
+  if(!payload.date){toast('Please select a date.','error');btnRelease('saveTappal','tappalSaveBtn');return;}
+  if(!payload.petitionType){toast('Please enter the Type of Petition.','error');btnRelease('saveTappal','tappalSaveBtn');return;}
+  if(!payload.petitionerName){toast('Please enter the Name of the Petitioner.','error');btnRelease('saveTappal','tappalSaveBtn');return;}
+  if(!payload.subject){toast('Please enter the Subject.','error');btnRelease('saveTappal','tappalSaveBtn');return;}
+
+  var editID=TPL.editID;
+  showLoader(editID?'Updating tappal...':'Adding tappal...');
+  var call=editID
+    ? gasCall('serverUpdateTappal',S.token,Object.assign({tappalID:editID},payload))
+    : gasCall('serverAddTappal',S.token,payload);
+
+  call.then(function(r){
+    hideLoader();
+    if(!r||!r.success){
+      btnRelease('saveTappal','tappalSaveBtn');
+      toast((r&&r.message)||'Failed to save tappal.','error');
+      return;
+    }
+    var savedID=editID||r.tappalID;
+    var filesToUpload=TPL.files.slice();
+    if(!filesToUpload.length){
+      btnRelease('saveTappal','tappalSaveBtn');
+      toast(editID?'Tappal updated!':'Tappal added!','ok');
+      closeModal('mTappal');
+      loadTappalPage();
+      return;
+    }
+    // Files upload AFTER the record is confirmed saved — close the modal
+    // right away so the officer isn't stuck waiting on a slow upload;
+    // progress reported via toast, same pattern as Notes PDF uploads.
+    btnRelease('saveTappal','tappalSaveBtn');
+    toast(editID?'Tappal updated!':'Tappal added!','ok');
+    closeModal('mTappal');
+    loadTappalPage();
+    toast('Uploading '+filesToUpload.length+' file'+(filesToUpload.length>1?'s':'')+' in background\u2026','info');
+    var idx=0,failed=0;
+    function uploadNext(){
+      if(idx>=filesToUpload.length){
+        if(failed)toast(failed+' file(s) failed to upload. Please try attaching them again from Edit.','error');
+        else toast('All files uploaded.','ok');
+        loadTappalPage();
+        return;
+      }
+      var f=filesToUpload[idx++];
+      var reader=new FileReader();
+      reader.onload=function(ev){
+        var b64=ev.target.result.split(',')[1];
+        gasCall('serverUploadTappalAttachment',S.token,{tappalID:savedID,fileName:f.name,mimeType:f.type,base64Data:b64}).then(function(ur){
+          if(!ur||!ur.success)failed++;
+          uploadNext();
+        });
+      };
+      reader.onerror=function(){failed++;uploadNext();};
+      reader.readAsDataURL(f);
+    }
+    uploadNext();
+  });
+}
+function deleteTappalRecord(tappalID,subject){
+  if(!confirm('Delete the tappal record "'+subject+'"? This cannot be undone.'))return;
+  showLoader('Deleting tappal...');
+  gasCall('serverDeleteTappal',S.token,tappalID).then(function(r){
+    hideLoader();
+    if(r&&r.success){toast('Tappal deleted.','ok');loadTappalPage();}
+    else toast((r&&r.message)||'Failed to delete tappal.','error');
+  });
+}
+
 function renderSettings(){
   var ld=S.lookup;if(!ld)return;
   // Show current logo in settings
@@ -11156,7 +11528,19 @@ function initDB(){
     else toast((r&&r.message)||'Initialization failed. Check Apps Script logs.','error');
   });
 }
-function openModal(mid){var e=document.getElementById(mid);if(e)e.classList.add('open');}
+// All .modal-bg elements share the same CSS z-index (500), so when two
+// modals are open at once (e.g. "Add Remark" opened from on top of an
+// already-open "View Task"), plain source order decides which one paints
+// on top — NOT which one was opened more recently. Whichever modal
+// happens to sit later in the HTML always wins visually, regardless of
+// open/close order. That's what caused Add Remark to render BEHIND View
+// Task: it only became visible once View Task's modal closed.
+// Fix: give every modal its own incrementing inline z-index at the
+// moment it's opened, so the most-recently-opened modal is always on
+// top — this fixes the Add Remark case and prevents the same class of
+// bug for any other modal-over-modal combination, present or future.
+var _modalZTop=500;
+function openModal(mid){var e=document.getElementById(mid);if(e){_modalZTop++;e.style.zIndex=_modalZTop;e.classList.add('open');}}
 function closeModal(mid){var e=document.getElementById(mid);if(e)e.classList.remove('open');}
 function toast(msg,type){
   type=type||'info';var c=id('toasts');if(!c)return;
