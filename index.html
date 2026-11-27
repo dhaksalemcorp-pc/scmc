@@ -988,7 +988,7 @@ body.sidebar-collapsed .sb-logout .sb-label { display: none; }
 
 /* Buttons */
 .btn {
-  display: inline-flex; align-items: center; gap: 6px;
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
   padding: 8px 16px;
   border-radius: var(--r);
   font-size: 13px; font-weight: 600; font-family: inherit;
@@ -1407,9 +1407,9 @@ tbody tr:hover { background: var(--surface2); }
   .task-row-line .c-9{grid-area:act;justify-self:end}
   .task-row-line .c-5 .badge-medium{display:none} /* "Normal" adds nothing on a phone; Urgent still shows */
   .task-row-actions{gap:6px}
-  .task-row-actions .btn-icon{width:38px;height:38px;min-width:38px;border-radius:10px}
+  .task-row-actions .btn-icon{width:38px;height:38px;min-width:38px;border-radius:10px;padding:0 !important;justify-content:center}
   .task-row-actions .btn-icon .mi{font-size:19px}
-  .task-row-actions .btn-icon.has-lbl{width:auto;padding:0 14px;gap:5px}
+  .task-row-actions .btn-icon.has-lbl{width:auto;padding:0 14px !important;gap:5px}
   .task-row-actions .btn-icon.has-lbl .btn-lbl{display:inline;font-weight:700;font-size:13px}
 
   /* pop-ups: bottom sheet */
@@ -1485,6 +1485,7 @@ tbody tr:hover { background: var(--surface2); }
   .kpi-val { font-size: 18px; }
   .ph-left h1 { font-size: 16px; }
   .btn { padding: 7px 12px; font-size: 12.5px; }
+  .btn.btn-icon { padding: 7px; } /* v137c: keep icon-only buttons centred on small phones (Samsung ~360-384px) */
   .topbar-title { font-size: 14px; }
 
   /* hide subtitle text on smallest phones */
@@ -3733,9 +3734,10 @@ function applyRoleNav(role){
     S.allowedPages=['dashboard','taskEntry','tracker','users','settings','reports','review','photolog','tappal','about'];
   } else {
     // Commissioner: full visibility into tasks and analytics, but
-    // User Management, Settings, and Reports remain Admin-only.
+    // User Management and Settings remain Admin-only.
     // Tappal Tracker IS included here — Admin AND Commissioner both get it.
-    S.allowedPages=['dashboard','taskEntry','tracker','photolog','tappal','about'];
+    // v137: Review page (workload, backlog clean-up, printout, period report) too.
+    S.allowedPages=['dashboard','taskEntry','tracker','review','reports','photolog','tappal','about'];
   }
 
   var ad=id('adminDash'),od=id('officerDash'),hd=id('hodDash'),spd=id('supDash');
