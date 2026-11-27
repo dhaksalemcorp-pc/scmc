@@ -1671,11 +1671,11 @@ tbody tr:hover { background: var(--surface2); }
           <div class="card-hd"><span class="card-title">New Task</span></div>
           <div class="card-bd">
             <div class="f-row">
-              <div class="f-group">
+              <div class="f-group" style="display:none"><!-- v133: task type defaults to Inspection (497 of 508 tasks were Inspection) -->
                 <label class="f-label">Task Type <span class="req">*</span></label>
                 <select class="f-sel" id="t-type">
                   <option value="">Select</option>
-                  <option>Inspection</option><option>Meeting</option><option>Follow-up</option><option>Review</option><option>Action</option>
+                  <option selected>Inspection</option><option>Meeting</option><option>Follow-up</option><option>Review</option><option>Action</option>
                 </select>
               </div>
               <div class="f-group">
@@ -1793,39 +1793,12 @@ tbody tr:hover { background: var(--surface2); }
         <div class="ph-left"><h1>Task Tracker</h1><p>Monitor and manage all tasks</p></div>
         <div class="ph-actions">
           <button class="btn btn-ghost btn-sm" onclick="forceFullTaskRefresh()" title="Full refresh — guarantees the latest data, not just recent changes"><span class="material-icons-round mi">refresh</span> <span class="nowrap">Refresh</span></button>
-          <button class="btn btn-ghost btn-sm" id="findDupBtn" onclick="openDuplicateFinder()" style="display:none"><span class="material-icons-round mi">content_copy</span> <span class="nowrap">Find Duplicates</span></button>
           <button class="btn btn-ghost btn-sm" id="advFilterBtn" onclick="toggleAdvFilter()"><span class="material-icons-round mi">tune</span> <span class="nowrap">Filters</span></button>
           <button class="btn btn-success btn-sm" onclick="showExportChoice('tracker')"><span class="material-icons-round mi">ios_share</span> <span class="nowrap">Export</span></button>
           <button class="btn btn-primary btn-sm" id="newTaskBtn" onclick="go('taskEntry')"><span class="material-icons-round mi">add</span> <span class="nowrap">New Task</span></button>
         </div>
       </div>
 
-      <!-- DUPLICATE FINDER MODAL -->
-      <div class="modal-bg" id="mDuplicateFinder">
-        <div class="modal-box" style="max-width:700px">
-          <div class="modal-hd">
-            <span class="modal-title">&#128203; Find &amp; Remove Duplicate Tasks</span>
-            <button class="modal-close" onclick="closeModal('mDuplicateFinder')"><span class="material-icons-round">close</span></button>
-          </div>
-          <div class="modal-body">
-            <div id="dupFinderIntro" style="font-size:12.5px;color:var(--tx3);margin-bottom:14px">
-              Scanning for tasks with the same officer, date, and description &mdash; the usual signs of an accidental
-              double-save (e.g. from a slow AI extraction or clicking Save more than once).
-            </div>
-            <div id="dupFinderLoading" style="text-align:center;padding:30px"><span class="material-icons-round" style="font-size:32px;color:var(--tx3);animation:spin 1.1s linear infinite">sync</span></div>
-            <div id="dupFinderEmpty" class="dn" style="text-align:center;padding:30px">
-              <span class="material-icons-round" style="font-size:40px;color:var(--c-green)">verified</span>
-              <h3 style="color:var(--tx2);margin:10px 0 4px">No duplicates found</h3>
-              <p style="color:var(--tx3);font-size:12.5px">Your Task Tracker looks clean &mdash; no repeated entries detected.</p>
-            </div>
-            <div id="dupFinderResults"></div>
-          </div>
-          <div class="modal-ft" id="dupFinderFooter" style="display:none">
-            <button class="btn btn-ghost" onclick="closeModal('mDuplicateFinder')">Close</button>
-            <button class="btn btn-danger" id="dupDeleteAllBtn" onclick="deleteAllSelectedDuplicates()"><span class="material-icons-round mi">delete_forever</span> Delete <span id="dupDeleteCount">0</span> Selected</button>
-          </div>
-        </div>
-      </div>
       <!-- Advanced Filter Panel - redesigned -->
       <div id="advFilterPanel" class="dn">
         <div class="card mb12" style="border:2px solid var(--c-blue);border-radius:14px;overflow:hidden">
@@ -1866,9 +1839,8 @@ tbody tr:hover { background: var(--surface2); }
                 <button onclick="toggleChip(this,'fStatus')" data-val="" class="filt-btn active">All</button>
                 <button onclick="toggleChip(this,'fStatus')" data-val="Pending" class="filt-btn">⏳ Pending</button>
                 <button onclick="toggleChip(this,'fStatus')" data-val="In Progress" class="filt-btn">🔄 In Progress</button>
-                <button onclick="toggleChip(this,'fStatus')" data-val="Completed" class="filt-btn">✅ Completed</button>
-                <button onclick="toggleChip(this,'fStatus')" data-val="Review Pending" class="filt-btn">🔍 Review</button>
-                <button onclick="toggleChip(this,'fStatus')" data-val="Closed" class="filt-btn">🔒 Closed</button>
+                <button onclick="toggleChip(this,'fStatus')" data-val="Done" class="filt-btn">✅ Done (to verify)</button>
+                <button onclick="toggleChip(this,'fStatus')" data-val="Verified" class="filt-btn">🔒 Verified</button>
                 <button onclick="toggleChip(this,'fStatus')" data-val="Overdue" class="filt-btn filt-btn-danger">⚠ Overdue</button>
               </div>
               <input type="hidden" id="fStatus" value="">
@@ -1945,8 +1917,7 @@ tbody tr:hover { background: var(--surface2); }
         <button class="filt-btn" data-qf="pending" onclick="quickFilter('pending')"><span class="material-icons-round mi" style="font-size:14px;vertical-align:-2px">hourglass_empty</span> Pending</button>
         <button class="filt-btn" data-qf="inprogress" onclick="quickFilter('inprogress')"><span class="material-icons-round mi" style="font-size:14px;vertical-align:-2px">autorenew</span> In Progress</button>
         <button class="filt-btn filt-btn-high" data-qf="highpri" onclick="quickFilter('highpri')"><span class="material-icons-round mi" style="font-size:14px;vertical-align:-2px">priority_high</span> High Priority</button>
-        <button class="filt-btn" data-qf="review" onclick="quickFilter('review')"><span class="material-icons-round mi" style="font-size:14px;vertical-align:-2px">rate_review</span> Pending Review</button>
-        <button class="filt-btn" data-qf="completed" onclick="quickFilter('completed')"><span class="material-icons-round mi" style="font-size:14px;vertical-align:-2px">check_circle</span> Completed</button>
+        <button class="filt-btn" data-qf="completed" onclick="quickFilter('completed')"><span class="material-icons-round mi" style="font-size:14px;vertical-align:-2px">check_circle</span> Done (to verify)</button>
         <button class="filt-btn filt-btn-danger" data-qf="overdue" onclick="quickFilter('overdue')"><span class="material-icons-round mi" style="font-size:14px;vertical-align:-2px">warning</span> Overdue</button>
       </div>
       <!-- UNIVERSAL SEARCH BAR — always visible, no filter panel needed -->
@@ -2012,13 +1983,6 @@ tbody tr:hover { background: var(--surface2); }
         <div class="card">
           <div class="card-hd"><span class="card-title">Activity Logs</span></div>
           <div class="card-bd" style="max-height:320px;overflow-y:auto;font-size:12px" id="actLogs">Loading...</div>
-        </div>
-      </div>
-      <div class="card mt24">
-        <div class="card-hd"><span class="card-title">Database Initialization</span></div>
-        <div class="card-bd">
-          <p class="c-muted mb16">Run once only during initial system setup. This creates all required Google Sheet tables and seed data.</p>
-          <button class="btn btn-warning" onclick="initDB()"><span class="material-icons-round mi">storage</span> Initialize Database</button>
         </div>
       </div>
       <div class="card mt24">
@@ -2292,60 +2256,14 @@ tbody tr:hover { background: var(--surface2); }
     <!-- DYNAMIC REPORT GENERATOR PAGE -->
     <div class="page" id="page-reports">
       <div class="ph">
-        <div class="ph-left"><h1>&#128202; Reports</h1><p>Dynamic Report Generator &mdash; quick links to specialised report tools</p></div>
+        <div class="ph-left"><h1>&#128202; Reports</h1><p>Generate a task report for any period</p></div>
         <div class="ph-actions">
           <button class="btn btn-ghost" onclick="openCustomReport()"><span class="material-icons-round mi">tune</span> Custom Period Report</button>
-          <button class="btn btn-primary" onclick="showAddReportModal()"><span class="material-icons-round mi">add_link</span> Add Report</button>
         </div>
       </div>
 
-      <div id="reportsEmptyState" class="card" style="display:none">
-        <div class="card-bd" style="text-align:center;padding:48px 24px">
-          <span class="material-icons-round" style="font-size:48px;color:var(--tx3)">summarize</span>
-          <h3 style="color:var(--tx2);margin:12px 0 6px">No reports added yet</h3>
-          <p style="color:var(--tx3);margin-bottom:16px">Add a link to your first hosted report tool &mdash; e.g. the Morning Inspection Report Generator.</p>
-          <button class="btn btn-primary" onclick="showAddReportModal()"><span class="material-icons-round mi">add_link</span> Add Your First Report</button>
-        </div>
-      </div>
-
-      <div id="reportsGroupsWrap"></div>
     </div>
 
-    <!-- ADD / EDIT REPORT LINK MODAL -->
-    <div class="modal-bg" id="mAddReport">
-      <div class="modal-box" style="max-width:460px">
-        <div class="modal-hd"><span class="modal-title" id="reportModalTitle">&#128279; Add Report Link</span><button class="modal-close" onclick="closeModal('mAddReport')"><span class="material-icons-round">close</span></button></div>
-        <div class="modal-body">
-          <div class="f-group">
-            <label class="f-label">Icon / Emoji</label>
-            <div style="display:flex;gap:8px;align-items:center">
-              <input type="text" class="f-ctrl" id="rpt-icon" placeholder="&#128203;" maxlength="4" style="width:64px;text-align:center;font-size:22px">
-              <div style="display:flex;gap:6px;flex-wrap:wrap">
-                <button type="button" class="rpt-icon-pick" onclick="rptPickIcon('&#127780;')">&#127780;</button>
-                <button type="button" class="rpt-icon-pick" onclick="rptPickIcon('&#128203;')">&#128203;</button>
-                <button type="button" class="rpt-icon-pick" onclick="rptPickIcon('&#128202;')">&#128202;</button>
-                <button type="button" class="rpt-icon-pick" onclick="rptPickIcon('&#128197;')">&#128197;</button>
-                <button type="button" class="rpt-icon-pick" onclick="rptPickIcon('&#128269;')">&#128269;</button>
-                <button type="button" class="rpt-icon-pick" onclick="rptPickIcon('&#9989;')">&#9989;</button>
-                <button type="button" class="rpt-icon-pick" onclick="rptPickIcon('&#128241;')">&#128241;</button>
-              </div>
-            </div>
-          </div>
-          <div class="f-group"><label class="f-label">Report Name <span class="req">*</span></label><input type="text" class="f-ctrl" id="rpt-name" placeholder="e.g. Morning Inspection Report"></div>
-          <div class="f-group">
-            <label class="f-label">Category <span class="req">*</span></label>
-            <input type="text" class="f-ctrl" id="rpt-category" placeholder="e.g. Daily, Weekly, Review" list="rptCategoryList">
-            <datalist id="rptCategoryList"></datalist>
-          </div>
-          <div class="f-group"><label class="f-label">Report URL <span class="req">*</span></label><input type="url" class="f-ctrl" id="rpt-url" placeholder="https://yourname.github.io/report-name/"></div>
-          <div class="f-group mb0"><label class="f-label">Description (optional)</label><textarea class="f-ctrl" id="rpt-desc" rows="2" placeholder="Brief note about what this report covers"></textarea></div>
-        </div>
-        <div class="modal-ft">
-          <button class="btn btn-ghost" onclick="closeModal('mAddReport')">Cancel</button>
-          <button class="btn btn-primary" id="rptSaveBtn" onclick="saveReportLink()"><span class="material-icons-round mi">save</span> Save Report</button>
-        </div>
-      </div>
-    </div>
 
     <!-- TAPPAL TRACKER PAGE (Admin & Commissioner only) -->
     <div class="page" id="page-tappal">
@@ -2586,7 +2504,7 @@ tbody tr:hover { background: var(--surface2); }
                 <div style="position:relative">
                   <div style="position:absolute;left:-21px;top:2px;width:10px;height:10px;border-radius:50%;background:#7c3aed"></div>
                   <div style="font-size:13px;font-weight:600;color:var(--tx1)">One-Tap Quick Filters</div>
-                  <div style="font-size:11.5px;color:var(--tx3);margin-top:2px">Jump straight to My Tasks, Pending, In Progress, High Priority, Pending Review, Completed, or Overdue &mdash; no more setting filters manually every time.</div>
+                  <div style="font-size:11.5px;color:var(--tx3);margin-top:2px">Jump straight to My Tasks, Pending, In Progress, High Priority, Done (to verify), or Overdue &mdash; no more setting filters manually every time.</div>
                 </div>
                 <div style="position:relative">
                   <div style="position:absolute;left:-21px;top:2px;width:10px;height:10px;border-radius:50%;background:#d97706"></div>
@@ -2826,7 +2744,7 @@ tbody tr:hover { background: var(--surface2); }
       <div style="background:var(--surface2);padding:10px;border-radius:8px;font-size:13px;margin-bottom:14px;line-height:1.5;color:var(--tx2)" id="pu-desc"></div>
       <div class="f-row">
         <div class="f-group"><label class="f-label">Status</label>
-          <select class="f-sel" id="pu-status"><option>In Progress</option><option>Completed</option><option>Review Pending</option></select>
+          <select class="f-sel" id="pu-status"><option value="In Progress">In Progress</option><option value="Done">Done</option></select><div style="font-size:11px;color:var(--tx3);margin-top:4px">📷 A photo is required to mark a task <b>Done</b>.</div>
         </div>
         <div class="f-group"><label class="f-label">Priority</label>
           <select class="f-sel" id="pu-priority"><option>High</option><option>Medium</option><option>Low</option></select>
@@ -2988,8 +2906,8 @@ tbody tr:hover { background: var(--surface2); }
           <label class="f-label">Status</label>
           <select class="f-sel" id="cr-status">
             <option value="">All Status</option>
-            <option>Pending</option><option>In Progress</option>
-            <option>Completed</option><option>Review Pending</option><option>Closed</option>
+            <option value="Pending">Pending</option><option value="In Progress">In Progress</option>
+            <option value="Done">Done</option><option value="Verified">Verified</option>
           </select>
         </div>
         <div class="f-group mb0">
@@ -3005,7 +2923,7 @@ tbody tr:hover { background: var(--surface2); }
           <label class="f-label">Officer</label>
           <select class="f-sel" id="cr-officer"><option value="">All Officers</option></select>
         </div>
-        <div class="f-group mb0">
+        <div class="f-group mb0" style="display:none">
           <label class="f-label">Task Type</label>
           <select class="f-sel" id="cr-type">
             <option value="">All Types</option>
@@ -3082,7 +3000,6 @@ tbody tr:hover { background: var(--surface2); }
             <div><div style="font-size:10px;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">Email</div><div style="font-size:14px;font-weight:600" id="mpV-email">—</div></div>
             <div><div style="font-size:10px;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">Designation</div><div style="font-size:14px;font-weight:600" id="mpV-desig">—</div></div>
             <div><div style="font-size:10px;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">Department</div><div style="font-size:14px;font-weight:600" id="mpV-dept">—</div></div>
-            <div><div style="font-size:10px;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">Email Notifications</div><div style="font-size:14px;font-weight:600" id="mpV-emailNotify">—</div></div>
           </div>
           <button class="btn btn-primary btn-sm" onclick="mpEnableEdit()"><span class="material-icons-round mi">edit</span> Edit Profile</button>
         </div>
@@ -3107,15 +3024,6 @@ tbody tr:hover { background: var(--surface2); }
               <label class="f-label">Email Address</label>
               <input type="email" class="f-ctrl" id="mp-email" placeholder="name@corp.gov.in">
             </div>
-          </div>
-          <div class="f-group" style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-top:4px">
-            <label style="display:flex;align-items:center;gap:10px;cursor:pointer;margin:0">
-              <input type="checkbox" id="mp-emailNotify" onchange="mpToggleEmailNotify(this)" style="width:18px;height:18px;cursor:pointer;flex-shrink:0">
-              <span style="flex:1">
-                <span style="font-size:13px;font-weight:600;color:var(--tx1);display:block">Email me when a new task is assigned</span>
-                <span style="font-size:11.5px;color:var(--tx3)">You'll receive an email with task details whenever a task is assigned to you. Requires a valid email address above.</span>
-              </span>
-            </label>
           </div>
           <div style="background:var(--surface2);border-radius:8px;padding:9px 12px;font-size:11.5px;color:var(--tx3);margin-top:4px;margin-bottom:12px">
             <span class="material-icons-round mi" style="font-size:13px;vertical-align:middle">info</span>
@@ -3243,13 +3151,13 @@ var S={token:null,user:null,lookup:null,tasks:[],users:[],filtered:[],drillFilte
 function swrSave(key,data){
   try{
     if(!S.user)return;
-    LS.set('swr-'+S.user.userID+'-'+key,JSON.stringify({t:Date.now(),d:data}));
+    LS.set('swr2-'+S.user.userID+'-'+key,JSON.stringify({t:Date.now(),d:data})); // v133: swr2 = new status names
   }catch(e){/* quota exceeded — silently skip */}
 }
 function swrLoad(key,maxAgeMs){
   try{
     if(!S.user)return null;
-    var raw=LS.get('swr-'+S.user.userID+'-'+key);
+    var raw=LS.get('swr2-'+S.user.userID+'-'+key);
     if(!raw)return null;
     var o=JSON.parse(raw);
     if(maxAgeMs&&(Date.now()-o.t)>maxAgeMs)return null; // too old
@@ -3414,8 +3322,7 @@ function gasCallInner(fn,args){
       try{runner[fn].apply(runner,args);}
       catch(e){resolve({success:false,message:'Call error: '+e.message});}
     }else{
-      try{resolve(demoFn(fn,args));}
-      catch(e){resolve({success:false,message:'Demo error: '+e.message});}
+      resolve({success:false,message:'Server address (GAS_URL) is not set.'});
     }
   });
 }
@@ -3444,227 +3351,7 @@ function fDate(d){
 }
 function V(x){var e=document.getElementById(x);return e?e.value:'';}
 function show(elId,visible){var e=document.getElementById(elId);if(e)e.style.display=visible?'':'none';}
-var DEMO={
-users:[
-{userID:'USR001',employeeID:'EMP001',name:'Admin User',designation:'Deputy Commissioner',department:'General',zone:'Main Office',mobile:'9999999999',email:'admin@corp.gov.in',username:'admin',role:'Admin',status:'Active'},
-{userID:'USR002',employeeID:'EMP002',name:'Commissioner Raj',designation:'Deputy Commissioner',department:'General',zone:'Main Office',mobile:'9999999998',email:'comm@corp.gov.in',username:'commissioner',role:'Commissioner',status:'Active'},
-{userID:'USR003',employeeID:'EMP003',name:'Priya Nair',designation:'City Health Officer',department:'Public Health',zone:'Ammapet Zone-3',mobile:'9876543210',email:'priya@corp.gov.in',username:'priya.nair',role:'Officer',status:'Active'},
-{userID:'USR004',employeeID:'EMP004',name:'Suresh Kumar',designation:'AEE Works',department:'Engineering',zone:'Suramangalam Zone-1',mobile:'9876543211',email:'suresh@corp.gov.in',username:'suresh.k',role:'Officer',status:'Active'},
-{userID:'USR005',employeeID:'EMP005',name:'Lakshmi Raj',designation:'AE Electrical',department:'Electrical',zone:'Hasthampatti Zone-2',mobile:'9876543212',email:'lakshmi@corp.gov.in',username:'lakshmi.r',role:'Officer',status:'Active'}
-],
-tasks:[
-{taskID:'TSK2406001',taskType:'Inspection',zone:'Ammapet Zone-3',dateAssigned:'2024-06-01',time:'09:00',priority:'High',department:'Engineering',designation:'AEE Works',officerID:'USR004',officerName:'Suresh Kumar',description:'Drain blockage near Ammapet bus stand. Inspect and clear within 2 days.',dueDate:'2024-06-03',status:'In Progress',createdBy:'admin',createdAt:'2024-06-01T09:00:00Z',source:'Manual',officerRemarks:'',photoLinks:''},
-{taskID:'TSK2406002',taskType:'Inspection',zone:'Suramangalam Zone-1',dateAssigned:'2024-06-01',time:'10:00',priority:'Medium',department:'Electrical',designation:'AE Electrical',officerID:'USR005',officerName:'Lakshmi Raj',description:'Street light issue near Suramangalam market.',dueDate:'2024-06-02',status:'Overdue',isOverdue:true,createdBy:'admin',createdAt:'2024-06-01T10:00:00Z',source:'AI',officerRemarks:'',photoLinks:''},
-{taskID:'TSK2406003',taskType:'Inspection',zone:'Ammapet Zone-3',dateAssigned:'2024-06-01',time:'11:00',priority:'High',department:'Public Health',designation:'City Health Officer',officerID:'USR003',officerName:'Priya Nair',description:'Sanitation issue in Ward 12. Conduct inspection and submit report by Friday.',dueDate:'2024-06-04',status:'Pending',createdBy:'admin',createdAt:'2024-06-01T11:00:00Z',source:'AI',officerRemarks:'',photoLinks:''},
-{taskID:'TSK2406004',taskType:'Meeting',zone:'Main Office',dateAssigned:'2024-06-02',time:'14:00',priority:'Low',department:'Revenue',designation:'Superintendent',officerID:'USR003',officerName:'Priya Nair',description:'Weekly revenue collection report review.',dueDate:'',status:'Completed',createdBy:'admin',createdAt:'2024-06-02T14:00:00Z',source:'Manual',officerRemarks:'Meeting completed. Report submitted.',photoLinks:''},
-{taskID:'TSK2406005',taskType:'Inspection',zone:'Hasthampatti Zone-2',dateAssigned:'2024-06-03',time:'09:30',priority:'High',department:'Engineering',designation:'AEE Works',officerID:'USR004',officerName:'Suresh Kumar',description:'Road damage near Hasthampatti market. Urgent repair required.',dueDate:'2024-06-05',status:'Pending',createdBy:'admin',createdAt:'2024-06-03T09:30:00Z',source:'Manual',officerRemarks:'',photoLinks:''}
-],
-aiMappings:[
-{Keyword:'drain',Department:'Engineering',Priority:'High',Synonyms:'drainage,blockage,clogged,sewer'},
-{Keyword:'road',Department:'Engineering',Priority:'High',Synonyms:'pothole,pavement,street,highway,tarmac'},
-{Keyword:'sanitation',Department:'Public Health',Priority:'High',Synonyms:'hygiene,cleanliness,health,sewage'},
-{Keyword:'garbage',Department:'SWM',Priority:'High',Synonyms:'trash,waste,litter,rubbish,dumping'},
-{Keyword:'street light',Department:'Electrical',Priority:'Medium',Synonyms:'lighting,lamp,illumination,streetlamp'},
-{Keyword:'encroachment',Department:'Revenue',Priority:'High',Synonyms:'illegal,occupation,unauthorised,squatter'},
-{Keyword:'water',Department:'Water Supply',Priority:'High',Synonyms:'pipe,leakage,leak,supply,tap,borewell'},
-{Keyword:'building',Department:'Town Planning',Priority:'Medium',Synonyms:'plan,approval,permit,construction,violation'},
-{Keyword:'tax',Department:'Revenue',Priority:'Medium',Synonyms:'assessment,property,revenue,collection'}
-]
-};
-function buildLookupData(){
-  var depts=['Public Health','Engineering','Town Planning','Revenue','General','Water Supply','SWM','Electrical'];
-  var desigs=['Deputy Commissioner','Assistant Commissioner','City Health Officer','Executive Engineer','AEE Works','AEE Planning','AE Works','AE Planning','Superintendent','Sanitary Inspector'];
-  var zones=['Suramangalam Zone-1','Hasthampatti Zone-2','Ammapet Zone-3','Kondalampatti Zone-4','Main Office'];
-  return {
-    success:true,
-    departments:depts.map(function(n,i){return{DeptID:'D'+i,DeptName:n,Status:'Active'};}),
-    designations:desigs.map(function(n,i){return{DesigID:'DG'+i,DesigName:n,Status:'Active'};}),
-    zones:zones.map(function(n,i){return{ZoneID:'Z'+i,ZoneName:n,Status:'Active'};}),
-    aiMappings:DEMO.aiMappings,
-    officers:DEMO.users.filter(function(u){return u.role==='Officer';})
-  };
-}
-function demoFn(fn,args){
-  if(fn==='serverLogin'){
-    var lu=buildLookupData();
-    if(args[0]==='admin'&&args[1]==='admin123')return{success:true,token:'tok-admin',lookup:lu,user:{userID:'USR001',name:'Admin User',designation:'Deputy Commissioner',department:'General',zone:'Main Office',role:'Admin',username:'admin'}};
-    if(args[0]==='commissioner'&&args[1]==='comm123')return{success:true,token:'tok-comm',lookup:lu,user:{userID:'USR002',name:'Commissioner Raj',designation:'Deputy Commissioner',department:'General',zone:'Main Office',role:'Commissioner',username:'commissioner'}};
-    if(args[0]==='priya.nair'&&args[1]==='officer123')return{success:true,token:'tok-off',lookup:lu,user:{userID:'USR003',name:'Priya Nair',designation:'City Health Officer',department:'Public Health',zone:'Ammapet Zone-3',role:'Officer',username:'priya.nair'}};
-    return{success:false,message:'Invalid credentials.'};
-  }
-  if(fn==='serverLoginLight'){
-    // Light auth — same demo credentials, no lookup/dash/tasks bundled
-    if(args[0]==='admin'&&args[1]==='admin123')return{success:true,token:'tok-admin',user:{userID:'USR001',name:'Admin User',designation:'Deputy Commissioner',department:'General',zone:'Main Office',role:'Admin',username:'admin'}};
-    if(args[0]==='commissioner'&&args[1]==='comm123')return{success:true,token:'tok-comm',user:{userID:'USR002',name:'Commissioner Raj',designation:'Deputy Commissioner',department:'General',zone:'Main Office',role:'Commissioner',username:'commissioner'}};
-    if(args[0]==='priya.nair'&&args[1]==='officer123')return{success:true,token:'tok-off',user:{userID:'USR003',name:'Priya Nair',designation:'City Health Officer',department:'Public Health',zone:'Ammapet Zone-3',role:'Officer',username:'priya.nair'}};
-    return{success:false,message:'Invalid credentials.'};
-  }
-  if(fn==='serverGetBootstrap'){
-    var role=S.user?S.user.role:'Admin';
-    var out={success:true,lookup:buildLookupData()};
-    if(role==='Officer'){
-      out.dashData={success:true,stats:{total:5,pending:2,inProgress:1,completed:2,overdue:1,dueToday:0,highPriority:1},completionRate:40,recentTasks:[]};
-      var bo=[],bc=0,bz=0;
-      for(var bi=0;bi<DEMO.tasks.length;bi++){var bt=DEMO.tasks[bi];
-        if(bt.officerID!=='USR003'&&bt.officerName!=='Priya Nair')continue;
-        if(bt.status==='Completed'){bc++;continue;}
-        if(bt.status==='Closed'){bz++;continue;}
-        bo.push(bt);}
-      out.tasksData={success:true,data:bo,completedCount:bc,closedCount:bz,includeCompleted:false,includeClosed:false};
-    } else {
-      out.dashData={success:true,stats:{total:5,pending:2,inProgress:1,completed:2,overdue:1,dueToday:0,highPriority:1},completionRate:40,zoneStats:{},deptStats:{},officerStats:{}};
-      var ba=[],bc2=0,bz2=0;
-      for(var bj=0;bj<DEMO.tasks.length;bj++){var bt2=DEMO.tasks[bj];
-        if(bt2.status==='Completed'){bc2++;continue;}
-        if(bt2.status==='Closed'){bz2++;continue;}
-        ba.push(bt2);}
-      out.tasksData={success:true,data:ba,totalCount:DEMO.tasks.length,windowDays:90,completedCount:bc2,closedCount:bz2,includeCompleted:false,includeClosed:false};
-    }
-    return out;
-  }
-  if(fn==='serverLoginAndLoad'){
-    // Demo: same as serverLogin but also includes dashboard data
-    var lu2=buildLookupData();
-    var dashResult=null;
-    var loginR=null;
-    if(args[0]==='admin'&&args[1]==='admin123'){loginR={success:true,token:'tok-admin',lookup:lu2,user:{userID:'USR001',name:'Admin User',designation:'Deputy Commissioner',department:'General',zone:'Main Office',role:'Admin',username:'admin'}};}
-    else if(args[0]==='commissioner'&&args[1]==='comm123'){loginR={success:true,token:'tok-comm',lookup:lu2,user:{userID:'USR002',name:'Commissioner Raj',designation:'Deputy Commissioner',department:'General',zone:'Main Office',role:'Commissioner',username:'commissioner'}};}
-    else if(args[0]==='priya.nair'&&args[1]==='officer123'){loginR={success:true,token:'tok-off',lookup:lu2,user:{userID:'USR003',name:'Priya Nair',designation:'City Health Officer',department:'Public Health',zone:'Ammapet Zone-3',role:'Officer',username:'priya.nair'}};}
-    else{return{success:false,message:'Invalid credentials.'};}
-    // Bundle a minimal dashboard payload
-    if(loginR.user.role==='Officer'){
-      loginR.dashData={success:true,stats:{total:5,pending:2,inProgress:1,completed:2,overdue:1,dueToday:0,highPriority:1},completionRate:40,recentTasks:[]};
-      // v116: bundle the officer's own tasks (completed hidden) like the real backend
-      var offT2=[],cc2=0;
-      for(var oi=0;oi<DEMO.tasks.length;oi++){
-        var ot=DEMO.tasks[oi];
-        if(ot.officerID!=='USR003'&&ot.officerName!=='Priya Nair')continue;
-        if(ot.status==='Completed'||ot.status==='Closed'){cc2++;continue;}
-        offT2.push(ot);
-      }
-      loginR.tasksData={success:true,data:offT2,completedCount:cc2,includeCompleted:false};
-    } else {
-      loginR.dashData={success:true,stats:{total:5,pending:2,inProgress:1,completed:2,overdue:1,dueToday:0,highPriority:1},completionRate:40,zoneStats:{},deptStats:{},officerStats:{}};
-    }
-    return loginR;
-  }
-  if(fn==='serverGetNoteDetail'){
-    // Return demo photos for a note
-    return{success:true,noteID:args[1],photos:[],attachments:[]};
-  }
-  if(fn==='serverValidateSession')return{valid:false};
-  if(fn==='serverLogout')return{success:true};
-  if(fn==='serverGetLookupData')return buildLookupData();
-  if(fn==='serverFindDuplicateTasks'){
-    var groups={};
-    for(var i=0;i<DEMO.tasks.length;i++){
-      var t=DEMO.tasks[i];
-      var sig=(t.officerID||'')+'||'+(t.dateAssigned||'')+'||'+(t.description||'').trim().toLowerCase();
-      if(!groups[sig])groups[sig]=[];
-      groups[sig].push(t);
-    }
-    var sets=[];
-    for(var k in groups){if(groups[k].length>1){groups[k].sort(function(a,b){return new Date(a.createdAt)-new Date(b.createdAt);});sets.push(groups[k]);}}
-    return{success:true,data:sets};
-  }
-  if(fn==='serverBulkDeleteTasks'){
-    var idsToDelete=args[1]||[];
-    DEMO.tasks=DEMO.tasks.filter(function(t){return idsToDelete.indexOf(t.taskID)===-1;});
-    return{success:true,deletedCount:idsToDelete.length};
-  }
-  if(fn==='serverGetUsers')return{success:true,data:DEMO.users};
-  if(fn==='serverGetTasks'){
-    var inc=args[1]&&args[1].includeCompleted;var incC=args[1]&&args[1].includeClosed;
-    var outT=[],cc=0,zc=0;
-    for(var i=0;i<DEMO.tasks.length;i++){var st=DEMO.tasks[i].status;
-      if(st==='Completed'){cc++;if(!inc)continue;}
-      if(st==='Closed'){zc++;if(!incC)continue;}
-      outT.push(DEMO.tasks[i]);}
-    return{success:true,data:outT,totalCount:DEMO.tasks.length,windowDays:90,completedCount:cc,closedCount:zc,includeCompleted:!!inc,includeClosed:!!incC};
-  }
-  if(fn==='serverGetOfficerTasks'){
-    var incO=args[1]&&args[1].includeCompleted;var incOC=args[1]&&args[1].includeClosed;
-    var offT=[],ccO=0,zcO=0;
-    for(var i=0;i<DEMO.tasks.length;i++){
-      if(DEMO.tasks[i].officerID!=='USR003'&&DEMO.tasks[i].officerName!=='Priya Nair')continue;
-      var stO=DEMO.tasks[i].status;
-      if(stO==='Completed'){ccO++;if(!incO)continue;}
-      if(stO==='Closed'){zcO++;if(!incOC)continue;}
-      offT.push(DEMO.tasks[i]);}
-    return{success:true,data:offT,completedCount:ccO,closedCount:zcO,includeCompleted:!!incO,includeClosed:!!incOC};
-  }
-  if(fn==='serverGetTaskDetail'){
-    var dt=null;for(var i=0;i<DEMO.tasks.length;i++)if(DEMO.tasks[i].taskID===args[1]){dt=DEMO.tasks[i];break;}
-    if(!dt)return{success:false,message:'Not found'};
-    return{success:true,task:{taskID:dt.taskID,description:dt.description||'',officerRemarks:dt.officerRemarks||'',completedAt:dt.completedAt||'',updatedBy:dt.updatedBy||'',photoLinks:dt.photoLinks||'',updatedAt:dt.updatedAt||'',status:dt.status,dueDate:dt.dueDate}};
-  }
-  if(fn==='serverGetCommissionerView'){
-    var stats={total:DEMO.tasks.length,pending:0,inProgress:0,completed:0,overdue:0,dueToday:0,highPriority:0};
-    for(var i=0;i<DEMO.tasks.length;i++){var t=DEMO.tasks[i];if(t.status==='Pending')stats.pending++;else if(t.status==='In Progress')stats.inProgress++;else if(t.status==='Completed')stats.completed++;if(t.isOverdue)stats.overdue++;}
-    return{success:true,tasks:DEMO.tasks,stats:{success:true,stats:stats,completionRate:stats.total?Math.round(stats.completed/stats.total*100):0,zoneStats:{},deptStats:{},officerStats:{}}};
-  }
-  if(fn==='serverGetDashboardStats'){
-    var t=DEMO.tasks,now=new Date(),todayStr=now.toDateString();
-    var pending=0,inProgress=0,completed=0,overdue=0,dueToday=0,high=0;
-    var zoneStats={},deptStats={},officerStats={};
-    for(var i=0;i<t.length;i++){
-      var tk=t[i];
-      if(tk.status==='Pending')pending++;
-      else if(tk.status==='In Progress')inProgress++;
-      else if(tk.status==='Completed'||tk.status==='Closed')completed++;
-      if(tk.isOverdue)overdue++;
-      if(tk.dueDate&&new Date(tk.dueDate).toDateString()===todayStr)dueToday++;
-      if(tk.priority==='High')high++;
-      var z=tk.zone;if(z){if(!zoneStats[z])zoneStats[z]={total:0,completed:0,pending:0};zoneStats[z].total++;if(tk.status==='Completed')zoneStats[z].completed++;else zoneStats[z].pending++;}
-      var d=tk.department;if(d){if(!deptStats[d])deptStats[d]={total:0,completed:0,pending:0};deptStats[d].total++;if(tk.status==='Completed')deptStats[d].completed++;else deptStats[d].pending++;}
-      var o=tk.officerName;if(o){if(!officerStats[o])officerStats[o]={total:0,completed:0,pending:0,overdue:0,dept:tk.department||''};officerStats[o].total++;if(tk.status==='Completed')officerStats[o].completed++;else officerStats[o].pending++;if(tk.isOverdue)officerStats[o].overdue++;}
-    }
-    var total=t.length,rate=total>0?Math.round(completed/total*100):0;
-    return{success:true,stats:{total:total,pending:pending,inProgress:inProgress,completed:completed,overdue:overdue,dueToday:dueToday,highPriority:high},zoneStats:zoneStats,deptStats:deptStats,officerStats:officerStats,completionRate:rate};
-  }
-  if(fn==='serverCreateTask'){var nt={};for(var k in args[1])nt[k]=args[1][k];nt.taskID='TSK'+Date.now();nt.status='Pending';nt.createdAt=new Date().toISOString();nt.photoLinks='';DEMO.tasks.push(nt);return{success:true,message:'Task created',taskID:nt.taskID};}
-  if(fn==='serverUpdateTask'){var idx=-1;for(var i=0;i<DEMO.tasks.length;i++)if(DEMO.tasks[i].taskID===args[1]){idx=i;break;}if(idx>=0){var upd=args[2];for(var k in upd)DEMO.tasks[idx][k]=upd[k];}return{success:true};}
-  if(fn==='serverDeleteTask'){var di=-1;for(var i=0;i<DEMO.tasks.length;i++)if(DEMO.tasks[i].taskID===args[1]){di=i;break;}if(di>=0)DEMO.tasks.splice(di,1);return{success:true};}
-  if(fn==='serverCreateUser'){var nu={};for(var k in args[1])nu[k]=args[1][k];nu.userID='USR'+Date.now();nu.status='Active';DEMO.users.push(nu);return{success:true};}
-  if(fn==='serverUpdateUser'){var ui=-1;for(var i=0;i<DEMO.users.length;i++)if(DEMO.users[i].userID===args[1].userID){ui=i;break;}if(ui>=0){var ud=args[1];for(var k in ud)DEMO.users[ui][k]=ud[k];}return{success:true};}
-  if(fn==='serverToggleUserStatus'){var u=-1;for(var i=0;i<DEMO.users.length;i++)if(DEMO.users[i].userID===args[1]){u=i;break;}if(u>=0)DEMO.users[u].status=args[2];return{success:true};}
-  if(fn==='serverDeleteUser'){var di=-1;for(var i=0;i<DEMO.users.length;i++)if(DEMO.users[i].userID===args[1]){di=i;break;}if(di>=0)DEMO.users.splice(di,1);return{success:true};}
-  if(fn==='serverUpdateAIMapping'){var found=false;for(var i=0;i<DEMO.aiMappings.length;i++)if(DEMO.aiMappings[i].Keyword===args[1]){DEMO.aiMappings[i]={Keyword:args[1],Department:args[2],Priority:args[3],Synonyms:args[4]||''};found=true;break;}if(!found)DEMO.aiMappings.push({Keyword:args[1],Department:args[2],Priority:args[3],Synonyms:args[4]||''});return{success:true};}
-  if(fn==='serverDeleteAIMapping'){var di=-1;for(var i=0;i<DEMO.aiMappings.length;i++)if(DEMO.aiMappings[i].Keyword===args[1]){di=i;break;}if(di>=0)DEMO.aiMappings.splice(di,1);return{success:true};}
-  if(fn==='serverChangePassword')return{success:true};
-  if(fn==='serverResetPassword')return{success:true};
-  if(fn==='serverUpdateProfile'){
-    var d=args[1]||{};
-    if(S.user){if(d.employeeID!==undefined)S.user.employeeID=d.employeeID;if(d.username!==undefined)S.user.username=d.username;if(d.mobile!==undefined)S.user.mobile=d.mobile;if(d.email!==undefined)S.user.email=d.email;}
-    return{success:true};
-  }
-  if(fn==='serverUploadPhoto')return{success:true,url:'https://drive.google.com/file/d/demo_'+Date.now()+'/view',fileId:'demo_'+Date.now()};
-  if(fn==='serverAddTaskPhoto')return{success:true,photoID:'TPH'+Date.now()};
-  if(fn==='serverAddTaskPhotosBatch'){var bd=args[1]||{};var n=(bd.photos||[]).length;var ids=[];for(var bi=0;bi<n;bi++)ids.push('TPH'+(Date.now()+bi));return{success:true,photoIDs:ids};}
-  if(fn==='serverCleanupInvalidTaskPhotos')return{success:true,removedCount:0,affectedTaskCount:0};
-  if(fn==='serverGetActivityLogs')return{success:true,data:[{username:'admin',action:'LOGIN',details:'User logged in successfully',timestamp:new Date().toISOString()},{username:'admin',action:'CREATE_TASK',details:'Task TSK2406001 created',timestamp:new Date().toISOString()}]};
-  if(fn==='serverInitDatabase')return{success:true,message:'Database initialized successfully'};
-  if(fn==='serverGetLogo'){var lv=LS.get('sc-logo')||'';return{success:true,value:lv};}
-  if(fn==='serverSaveLogo'){if(args[1]){LS.set('sc-logo',args[1]);}else{LS.del('sc-logo');}return{success:true};}
-  if(fn==='serverBulkCreateTasks'){var cnt=0;if(args[1])for(var i=0;i<args[1].length;i++){DEMO.tasks.push(args[1][i]);cnt++;}return{success:true,count:cnt,created:[]};}
-  if(fn==='serverCreateNote'){var nid='NOTE'+Date.now();return{success:true,noteID:nid};}
-  if(fn==='serverGetNotes'){return{success:true,data:[]};}
-  if(fn==='serverAddNotePhoto'){return{success:true,photoID:'PH'+Date.now()};}
-  if(fn==='serverDeleteNotePhoto'){return{success:true};}
-  if(fn==='serverUpdateNote'){return{success:true};}
-  if(fn==='serverDeleteNote'){return{success:true};}
-
-  if(fn==='serverAddDepartment'){if(!IS_GAS&&S.lookup&&S.lookup.departments){var found2=false;for(var i=0;i<S.lookup.departments.length;i++)if(S.lookup.departments[i].DeptName===args[1]){found2=true;break;}if(!found2)S.lookup.departments.push({DeptID:'D'+Date.now(),DeptName:args[1],Status:'Active'});}return{success:true};}
-  if(fn==='serverAddDesignation'){if(!IS_GAS&&S.lookup&&S.lookup.designations){var found3=false;for(var i=0;i<S.lookup.designations.length;i++)if(S.lookup.designations[i].DesigName===args[1]){found3=true;break;}if(!found3)S.lookup.designations.push({DesigID:'DG'+Date.now(),DesigName:args[1],Status:'Active'});}return{success:true};}
-  if(fn==='serverGetOfficerDashboard'){
-    var myUser=S.user;var myTasks=DEMO.tasks.filter(function(t){return t.officerID===(myUser?myUser.userID:'');});
-    var p=0,ip=0,c=0,ov=0,dt=0,h=0,today=new Date().toDateString();
-    for(var i=0;i<myTasks.length;i++){var t=myTasks[i];if(t.status==='Pending')p++;else if(t.status==='In Progress')ip++;else if(t.status==='Completed')c++;if(t.isOverdue)ov++;if(t.dueDate&&new Date(t.dueDate).toDateString()===today)dt++;if(t.priority==='High')h++;}
-    var total=myTasks.length,rate=total>0?Math.round(c/total*100):0;
-    return{success:true,officerName:myUser?myUser.name:'',stats:{total:total,pending:p,inProgress:ip,completed:c,overdue:ov,dueToday:dt,highPriority:h},completionRate:rate,recentTasks:myTasks.slice(-5).reverse()};
-  }
-  return{success:false,message:'Unknown function: '+fn};
-}
+// (v133: built-in demo mode removed — the app always talks to the real server)
 // PWA: register service worker for offline shell caching.
 // sw.js must sit next to index.html on GitHub Pages; registration
 // silently skips if the file isn't deployed or on http (non-secure).
@@ -3883,7 +3570,6 @@ function applyRoleNav(role){
   show('bnDashboard', true);
   show('bnEntry', isAdmin||isSupervision);
   show('newTaskBtn', isAdmin||isSupervision);
-  show('findDupBtn', isAdmin);
   show('aiExtractorTab', isAdmin); // Supervision gets manual entry only, no AI Extractor
 
   if(isOfficer){
@@ -3985,7 +3671,7 @@ function applyDrillFilter(){
   var fs=id('fStatus'),fp=id('fPri'),ff=id('fDueFrom'),ft=id('fDueTo');
   if(S.drillFilter==='pending'&&fs)fs.value='Pending';
   else if(S.drillFilter==='inprogress'&&fs)fs.value='In Progress';
-  else if(S.drillFilter==='completed'&&fs)fs.value='Completed';
+  else if(S.drillFilter==='completed'&&fs)fs.value='Done';
   else if(S.drillFilter==='overdue'&&fs)fs.value='Overdue';
   else if(S.drillFilter==='high'&&fp)fp.value='High';
   else if(S.drillFilter==='duetoday'){var today=new Date().toISOString().slice(0,10);if(ff)ff.value=today;if(ft)ft.value=today;}
@@ -4198,18 +3884,17 @@ function loadHODDashboard(){
       total=allTasks.length;done=0;pending=0;inProg=0;overdue=0;review=0;
       for(var i=0;i<allTasks.length;i++){
         var t=allTasks[i];
-        if(t.status==='Completed'||t.status==='Closed')done++;
+        if(t.status==='Done'||t.status==='Verified')done++;
         else if(t.status==='In Progress')inProg++;
         else if(t.status==='Pending')pending++;
-        else if(t.status==='Review Pending')review++;
         if(t.isOverdue)overdue++;
         var on=t.officerName||'Unknown';
         if(!officerMap[on])officerMap[on]={total:0,done:0};
         officerMap[on].total++;
-        if(t.status==='Completed'||t.status==='Closed')officerMap[on].done++;
+        if(t.status==='Done'||t.status==='Verified')officerMap[on].done++;
       }
       // Keep the working task list actionable-only for consistency
-      S.tasks=allTasks.filter(function(t){return t.status!=='Completed'&&t.status!=='Closed';});
+      S.tasks=allTasks.filter(function(t){return t.status!=='Verified';});
       S.filtered=S.tasks.slice();
     }
     // KPIs
@@ -4222,7 +3907,7 @@ function loadHODDashboard(){
     if(sbEl){
       var total2=done+inProg+pending+review+overdue;
       var statuses=[
-        {label:'Completed',val:done,col:'#10b981'},
+        {label:'Done',val:done,col:'#10b981'},
         {label:'In Progress',val:inProg,col:'#0ea5e9'},
         {label:'Pending',val:pending,col:'#f59e0b'},
         {label:'Review',val:review,col:'#8b5cf6'},
@@ -4313,7 +3998,7 @@ function loadSupervisionDashboard(){
     var officerMap={};
     for(var i=0;i<allTasks.length;i++){
       var t=allTasks[i];
-      if(t.status==='Completed'||t.status==='Closed')done++;
+      if(t.status==='Done'||t.status==='Verified')done++;
       else if(t.status==='In Progress')inProg++;
       else if(t.status==='Pending')pending++;
       if(t.isOverdue)overdue++;
@@ -4321,7 +4006,7 @@ function loadSupervisionDashboard(){
       if(!officerMap[on])officerMap[on]={total:0,done:0,inProg:0,pending:0,overdue:0,tasks:[]};
       officerMap[on].total++;
       officerMap[on].tasks.push(t);
-      if(t.status==='Completed'||t.status==='Closed')officerMap[on].done++;
+      if(t.status==='Done'||t.status==='Verified')officerMap[on].done++;
       else if(t.status==='In Progress')officerMap[on].inProg++;
       else if(t.status==='Pending')officerMap[on].pending++;
       if(t.isOverdue)officerMap[on].overdue++;
@@ -4446,7 +4131,7 @@ function supRenderOfficerCards(officerMap){
           row.onclick=function(ev){ev.stopPropagation();viewTask(t.taskID);};
 
           var statusDot=document.createElement('span');
-          var dotColor=t.isOverdue?'#ef4444':(t.status==='Completed'||t.status==='Closed')?'#10b981':(t.status==='In Progress')?'#0ea5e9':'#f59e0b';
+          var dotColor=t.isOverdue?'#ef4444':(t.status==='Done'||t.status==='Verified')?'#10b981':(t.status==='In Progress')?'#0ea5e9':'#f59e0b';
           statusDot.style.cssText='width:8px;height:8px;border-radius:50%;background:'+dotColor+';flex-shrink:0';
 
           var taskInfo=document.createElement('div');
@@ -4558,7 +4243,7 @@ function buildOfficerDashFromTasks(){
   var todayStr=new Date().toDateString();
   for(var i=0;i<tasks.length;i++){
     var t=tasks[i];
-    if(t.status==='Pending')pending++;else if(t.status==='In Progress')inProgress++;else if(t.status==='Completed'||t.status==='Closed')completed++;
+    if(t.status==='Pending')pending++;else if(t.status==='In Progress')inProgress++;else if(t.status==='Done'||t.status==='Verified')completed++;
     if(t.isOverdue)overdue++;if(t.dueDate&&new Date(t.dueDate).toDateString()===todayStr)dueToday++;if(t.priority==='High')high++;
   }
   var total=tasks.length,rate=total>0?Math.round(completed/total*100):0;
@@ -4571,7 +4256,7 @@ function buildOfficerDashFromTasks(){
 }
 function buildOfficerChart(s){
   var ctx=id('offChart');if(!ctx)return;if(S.charts.offChart)S.charts.offChart.destroy();
-  S.charts.offChart=new Chart(ctx,{type:'doughnut',data:{labels:['Pending','In Progress','Completed','Overdue'],datasets:[{data:[s.pending,s.inProgress,s.completed,s.overdue],backgroundColor:['#f59e0b','#0ea5e9','#10b981','#ef4444'],borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,cutout:'60%',plugins:{legend:{position:'right',labels:{padding:16,font:{size:12,family:'Inter'}}}}}});
+  S.charts.offChart=new Chart(ctx,{type:'doughnut',data:{labels:['Pending','In Progress','Done','Overdue'],datasets:[{data:[s.pending,s.inProgress,s.completed,s.overdue],backgroundColor:['#f59e0b','#0ea5e9','#10b981','#ef4444'],borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,cutout:'60%',plugins:{legend:{position:'right',labels:{padding:16,font:{size:12,family:'Inter'}}}}}});
 }
 function buildOfficerRecentTasks(tasks){
   var tbody=id('offRecentTasks');if(!tbody)return;
@@ -4609,7 +4294,7 @@ function buildZoneChart(zs){
              .replace('Main Office','Main Office');
   });
   S.charts.zone=new Chart(ctx,{type:'bar',data:{labels:labels,datasets:[
-    {label:'Completed',data:doneData,backgroundColor:'#10b981',borderRadius:4},
+    {label:'Done',data:doneData,backgroundColor:'#10b981',borderRadius:4},
     {label:'Pending',data:pendData,backgroundColor:'#f59e0b',borderRadius:4}
   ]},options:{responsive:true,maintainAspectRatio:false,
     scales:{x:{stacked:true,grid:{display:false},ticks:{font:{size:10}}},y:{stacked:true,beginAtZero:true,ticks:{font:{size:10}}}},
@@ -4618,7 +4303,7 @@ function buildZoneChart(zs){
 function deptDrillTo(dept,status){
   // Persist drill intent — trkApplyResponse re-applies after loadTasks returns
   S._deptDrill={dept:dept,status:status};
-  if(status==='Completed'||status==='Closed'){S.showCompleted=true;S.showClosed=true;}
+  if(status==='Done'||status==='Verified'){S.showCompleted=true;S.showClosed=true;}
   else{S.showCompleted=false;S.showClosed=false;}
   go('tracker');
 }
@@ -4650,7 +4335,7 @@ function buildDeptBreakdown(ds){
     html+='<button class="dept-drill-btn" data-dept="'+d+'" data-status="" style="padding:2px 9px;border-radius:999px;border:1.5px solid var(--border);background:var(--surface);color:var(--tx2);font-size:11.5px;font-weight:600;cursor:pointer">All: '+s.total+'</button>';
     if(pending>0)html+='<button class="dept-drill-btn" data-dept="'+d+'" data-status="Pending" style="padding:2px 9px;border-radius:999px;border:1.5px solid #fed7aa;background:#fff7ed;color:#c2410c;font-size:11.5px;font-weight:700;cursor:pointer">Pending: '+pending+'</button>';
     if((s.inProgress||0)>0)html+='<button class="dept-drill-btn" data-dept="'+d+'" data-status="In Progress" style="padding:2px 9px;border-radius:999px;border:1.5px solid #bfdbfe;background:#eff6ff;color:#1d4ed8;font-size:11.5px;font-weight:700;cursor:pointer">In Progress: '+s.inProgress+'</button>';
-    if(s.completed>0)html+='<button class="dept-drill-btn" data-dept="'+d+'" data-status="Completed" style="padding:2px 9px;border-radius:999px;border:1.5px solid #bbf7d0;background:#f0fdf4;color:#15803d;font-size:11.5px;font-weight:700;cursor:pointer">Completed: '+s.completed+'</button>';
+    if(s.completed>0)html+='<button class="dept-drill-btn" data-dept="'+d+'" data-status="Done" style="padding:2px 9px;border-radius:999px;border:1.5px solid #bbf7d0;background:#f0fdf4;color:#15803d;font-size:11.5px;font-weight:700;cursor:pointer">Completed: '+s.completed+'</button>';
     if((s.overdue||0)>0)html+='<button class="dept-drill-btn" data-dept="'+d+'" data-status="Overdue" style="padding:2px 9px;border-radius:999px;border:1.5px solid #fecdd3;background:#fff1f2;color:#be123c;font-size:11.5px;font-weight:700;cursor:pointer">Overdue: '+s.overdue+'</button>';
     html+='</div></div>';
   }
@@ -4673,17 +4358,17 @@ function trkToggleCompletedView(){
     // Do we already have completed tasks in memory? (fullList from an
     // earlier show, or a load done with includeCompleted)
     var have=false;
-    for(var i=0;i<S.tasks.length;i++)if(S.tasks[i].status==='Completed'){have=true;break;}
+    for(var i=0;i<S.tasks.length;i++)if(S.tasks[i].status==='Done'){have=true;break;}
     if(!have&&S._fullList&&S._fullList.length){
       S.showCompleted=true;
       S.tasks=S._fullList.slice();
-      for(var j=0;j<S.tasks.length;j++)if(S.tasks[j].status==='Completed'){have=true;break;}
+      for(var j=0;j<S.tasks.length;j++)if(S.tasks[j].status==='Done'){have=true;break;}
     }
     if(!have){
       // Network — once; trkApplyResponse applies the completed-only view
       S.showCompleted=true;loadTasks();return;
     }
-    S.filtered=S.tasks.filter(function(t){return t.status==='Completed';});
+    S.filtered=S.tasks.filter(function(t){return t.status==='Done';});
     applyCurrentSort();
     renderTable(S.filtered);updateTaskCount();
     trkRenderNoteBar();
@@ -4696,8 +4381,8 @@ function trkToggleClosed(show){
   if(show){S.showClosed=true;loadTasks();return;} // fetch once
   // Hiding is instant — filter out closed from what we already have
   S.showClosed=false;
-  S.tasks=S.tasks.filter(function(t){return t.status!=='Closed';});
-  if(S._fullList)S._fullList=S._fullList.filter(function(t){return t.status!=='Closed';});
+  S.tasks=S.tasks.filter(function(t){return t.status!=='Verified';});
+  if(S._fullList)S._fullList=S._fullList.filter(function(t){return t.status!=='Verified';});
   S.filtered=S.tasks.slice();applyCurrentSort();
   renderTable(S.filtered);updateTaskCount();
   trkRenderNoteBar();
@@ -4705,8 +4390,8 @@ function trkToggleClosed(show){
 function trkFilterReviewPending(){
   TRK_RP_ON=!TRK_RP_ON;
   if(TRK_RP_ON){
-    S.filtered=S.tasks.filter(function(t){return t.status==='Review Pending';});
-    toast('Showing Review Pending only \u2014 tap the chip again to clear.','info');
+    S.filtered=S.tasks.filter(function(t){return t.status==='Done';});
+    toast('Showing Done (to verify) only \u2014 tap the chip again to clear.','info');
   } else {
     S.filtered=S.tasks.slice();
   }
@@ -4840,7 +4525,7 @@ function trkToggleCompleted(show){
     S.showCompleted=false;
     if(S.tasks&&S.tasks.length){
       if(!S._fullList)S._fullList=S.tasks.slice(); // remember for instant re-show
-      S.tasks=S.tasks.filter(function(t){return t.status!=='Completed'&&t.status!=='Closed';});
+      S.tasks=S.tasks.filter(function(t){return t.status!=='Verified';}); // v133: Done stays visible (to verify)
       S.filtered=S.tasks.slice();applyCurrentSort();
       renderTable(S.filtered);updateTaskCount();
       trkRenderNoteBar();
@@ -4884,7 +4569,7 @@ function trkApplyResponse(r,fn,fromPreload){
     if(advFilterOpen) populateOfficerFilter();
     // Green chip active: show ONLY the completed tasks (sign-off queue)
     if(TRK_COMP_ON){
-      S.filtered=S.tasks.filter(function(t){return t.status==='Completed';});
+      S.filtered=S.tasks.filter(function(t){return t.status==='Done';});
       renderTable(S.filtered);updateTaskCount();
     }
     trkRenderNoteBar();
@@ -4931,7 +4616,7 @@ function applyTaskDelta(r){
   else if(S.drillFilter){applyDrillFilter();}
   else{renderTable(S.filtered);updateTaskCount();}
   if(TRK_COMP_ON){
-    S.filtered=S.tasks.filter(function(t){return t.status==='Completed';});
+    S.filtered=S.tasks.filter(function(t){return t.status==='Done';});
     renderTable(S.filtered);updateTaskCount();
   }
   trkRenderNoteBar();
@@ -4956,7 +4641,7 @@ function trkRenderNoteBar(){
   var isAdm=(S.user&&(S.user.role==='Admin'||S.user.role==='Commissioner'));
   // Amber chip: tasks the admin pushed back, awaiting the officer
   var rpCount=0;
-  for(var ri=0;ri<S.tasks.length;ri++)if(S.tasks[ri].status==='Review Pending')rpCount++;
+  // v133: "Review Pending" no longer exists — a send-back now returns the task to In Progress.
   if(isAdm&&rpCount>0){
     parts.push('<a onclick="trkFilterReviewPending()" style="cursor:pointer;color:#b45309;background:rgba(217,119,6,.12);padding:2px 10px;border-radius:999px;font-weight:700;text-decoration:none">\u23f3 '+rpCount+' awaiting review</a>');
   }
@@ -4994,15 +4679,19 @@ function showTrackerError(msg){
     +'<button class="btn btn-primary" onclick="loadTasks()"><span class="material-icons-round mi">refresh</span> Retry</button>'
     +'</div>';
 }
+// v133: statuses are Pending / In Progress / Done / Verified. Old names
+// (from phones' saved copies or old rows) are translated here.
+var LEGACY_STATUS={'Review Pending':'Done','Completed':'Done','Closed':'Verified','Overdue':'Pending'};
+function normStatusClient(s){s=String(s||'Pending');return LEGACY_STATUS[s]||s;}
 function normalizeTaskList(data){
   var out=[];
   for(var i=0;i<data.length;i++){
-    var t=data[i],due=t.dueDate?String(t.dueDate).slice(0,10):'';
+    var t=data[i];if(t&&t.status)t.status=normStatusClient(t.status);var due=t.dueDate?String(t.dueDate).slice(0,10):'';
     out.push({taskID:String(t.taskID||''),taskType:String(t.taskType||''),zone:String(t.zone||''),dateAssigned:String(t.dateAssigned||'').slice(0,10),time:String(t.time||''),priority:String(t.priority||'Medium'),department:String(t.department||''),designation:String(t.designation||''),officerID:String(t.officerID||''),officerName:String(t.officerName||''),description:String(t.description||''),dueDate:due,status:String(t.status||'Pending'),createdBy:String(t.createdBy||''),createdAt:String(t.createdAt||''),updatedAt:String(t.updatedAt||''),updatedBy:String(t.updatedBy||''),officerRemarks:String(t.officerRemarks||''),completedAt:String(t.completedAt||''),source:String(t.source||'Manual'),photoLinks:String(t.photoLinks||''),
       photoCount:(typeof t.photoCount==='number'?t.photoCount:0),
       docCount:(typeof t.docCount==='number'?t.docCount:0),
       sourceNoteID:String(t.sourceNoteID||''),
-      isOverdue:(due&&new Date(due)<new Date()&&t.status!=='Completed'&&t.status!=='Closed')?true:false});
+      isOverdue:(due&&new Date(due)<new Date()&&t.status!=='Done'&&t.status!=='Verified')?true:false});
   }
   outboxOverlay(out);
   return out;
@@ -5240,15 +4929,15 @@ function toggleChip(btn,hiddenId){
   if(hiddenId==='fStatus'){
     var val=btn.dataset.val||'';
     var newShowCompleted,newShowClosed;
-    if(val==='Completed'){newShowCompleted=true;newShowClosed=false;}
-    else if(val==='Closed'){newShowCompleted=false;newShowClosed=true;}
+    if(val==='Done'){newShowCompleted=true;newShowClosed=false;}
+    else if(val==='Verified'){newShowCompleted=false;newShowClosed=true;}
     else if(val===''){
       // "All" selected — respect All-Tasks mode if that's separately
       // active (the Admin/Commissioner quick chip), otherwise back to
       // the default hidden-by-default state.
       newShowCompleted=!!S._qfAllMode;newShowClosed=!!S._qfAllMode;
     } else {
-      // Pending / In Progress / Overdue / Review Pending — none of these
+      // Pending / In Progress / Overdue — none of these
       // need Completed or Closed tasks fetched at all.
       newShowCompleted=false;newShowClosed=false;
     }
@@ -5294,9 +4983,9 @@ function quickFilter(kind){
   var groupId,targetVal;
   if(kind==='pending'){groupId='statusChips';targetVal='Pending';}
   else if(kind==='inprogress'){groupId='statusChips';targetVal='In Progress';}
-  else if(kind==='completed'){groupId='statusChips';targetVal='Completed';}
+  else if(kind==='completed'){groupId='statusChips';targetVal='Done';}
   else if(kind==='overdue'){groupId='statusChips';targetVal='Overdue';}
-  else if(kind==='review'){groupId='statusChips';targetVal='Review Pending';}
+  else if(kind==='review'){groupId='statusChips';targetVal='Done';}
   else if(kind==='highpri'){groupId='priorityChips';targetVal='High';}
   else return;
   var group=id(groupId);if(!group)return;
@@ -5330,7 +5019,7 @@ function syncQuickFilterRow(){
   var row=id('quickFilterRow');if(!row)return;
   var status=V('fStatus'),pri=V('fPri');
   var isAdminLike=S.user&&(S.user.role==='Admin'||S.user.role==='Commissioner');
-  var map={primary:isAdminLike?!!S._qfAllMode:!!S._qfMine,pending:status==='Pending',inprogress:status==='In Progress',highpri:pri==='High',review:status==='Review Pending',completed:status==='Completed',overdue:status==='Overdue'};
+  var map={primary:isAdminLike?!!S._qfAllMode:!!S._qfMine,pending:status==='Pending',inprogress:status==='In Progress',highpri:pri==='High',review:status==='Done',completed:status==='Done',overdue:status==='Overdue'};
   var btns=row.querySelectorAll('[data-qf]');
   for(var i=0;i<btns.length;i++){
     var k=btns[i].dataset.qf;
@@ -5757,7 +5446,7 @@ function saveTask(){
   });
 }
 function clearTaskForm(){
-  var ids=['t-type','t-zone','t-priority','t-desig','t-attach'];
+  var ids=['t-zone','t-priority','t-desig','t-attach']; // v133: t-type stays 'Inspection'
   for(var i=0;i<ids.length;i++){var e=id(ids[i]);if(e)e.value='';}
   var td=id('t-desc');if(td)td.value='';
   var ti=id('t-time');if(ti)ti.value='';
@@ -5793,6 +5482,7 @@ function ensureTaskDetail(t,cb){
       t.updatedBy=r.task.updatedBy;
       t.photoLinks=r.task.photoLinks;
       if(r.task.history)t._history=r.task.history;
+      if(r.task.timeline)t._timeline=r.task.timeline;
     }
     cb();
   });
@@ -5824,11 +5514,11 @@ function btnRelease(key,btnId,newHtml,fromSafety){
 var TV_BUSY=false;
 function tvCloseTask(elOrId){var taskID=(typeof elOrId==='string')?elOrId:(elOrId&&elOrId.dataset?elOrId.dataset.tid:elOrId);
   if(TV_BUSY)return;TV_BUSY=true;
-  var b=id('tvCloseBtn');if(b){b.disabled=true;b.innerHTML='<span class="material-icons-round mi" style="animation:spin 1s linear infinite">sync</span> Closing...';}
-  gasCall('serverUpdateTask',S.token,taskID,{status:'Closed'}).then(function(r){
+  var b=id('tvCloseBtn');if(b){b.disabled=true;b.innerHTML='<span class="material-icons-round mi" style="animation:spin 1s linear infinite">sync</span> Verifying...';}
+  gasCall('serverUpdateTask',S.token,taskID,{status:'Verified'}).then(function(r){
     TV_BUSY=false;
-    if(r&&r.success){toast('Task '+taskID+' closed \u2713','ok');closeModal('mTask');loadTasks();}
-    else{if(b){b.disabled=false;b.innerHTML='<span class="material-icons-round mi">task_alt</span> Mark Closed';}toast((r&&r.message)||'Could not close.','error');}
+    if(r&&r.success){toast('Task '+taskID+' verified \u2713','ok');closeModal('mTask');loadTasks();}
+    else{if(b){b.disabled=false;b.innerHTML='<span class="material-icons-round mi">verified</span> Mark Verified';}toast((r&&r.message)||'Could not verify.','error');}
   });
 }
 // Admin/Commissioner-only directive note to the assigned officer —
@@ -5839,7 +5529,7 @@ function showAddRemarkModal(taskID){
   var t=null;for(var i=0;i<S.tasks.length;i++)if(S.tasks[i].taskID===taskID){t=S.tasks[i];break;}
   id('mGenericTitle').textContent='Add Remark \u2014 '+taskID;
   id('mGenericBody').innerHTML=
-    '<p style="font-size:12.5px;color:var(--tx3);margin-bottom:10px">This remark will be visible to <strong>'+htmlEsc((t&&t.officerName)||'the assigned officer')+'</strong>, and the task status will automatically change to <strong>Review Pending</strong> so it\'s clear action is needed.</p>'
+    '<p style="font-size:12.5px;color:var(--tx3);margin-bottom:10px">This remark will be visible to <strong>'+htmlEsc((t&&t.officerName)||'the assigned officer')+'</strong>, and if the task is <strong>Done</strong> it will be <strong>sent back to In Progress</strong> so it\'s clear action is needed.</p>'
     +'<textarea id="taskRemarkInput" placeholder="What does the officer need to do or fix?" style="width:100%;min-height:100px;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;background:var(--surface);color:var(--tx1);resize:vertical;font-family:inherit;box-sizing:border-box"></textarea>'
     +'<div style="display:flex;justify-content:flex-end;gap:8px;margin-top:14px">'
     +'<button class="btn btn-ghost" onclick="closeModal(\'mGeneric\')">Cancel</button>'
@@ -5858,14 +5548,16 @@ function submitTaskRemark(taskID){
     if(btn){btn.disabled=false;btn.innerHTML='<span class="material-icons-round mi">send</span> Add Remark';}
     if(r&&r.success){
       closeModal('mGeneric');
-      toast('Remark added \u2014 task moved to Review Pending.','ok');
+      toast((r.newStatus==='In Progress')?'Remark added \u2014 task sent back to In Progress.':'Remark added.','ok');
       // Keep the local task list in sync immediately, same pattern used
       // elsewhere for optimistic updates after a server confirms success.
       var t=null;for(var i=0;i<S.tasks.length;i++)if(S.tasks[i].taskID===taskID){t=S.tasks[i];break;}
       if(t){
-        t.status='Review Pending';
+        if(r.newStatus)t.status=r.newStatus;
         if(!t.remarks)t.remarks=[];
         t.remarks.push(r.remark);
+        if(!t._timeline)t._timeline=[];
+        t._timeline.push({kind:'note',at:r.remark.addedAt,by:r.remark.addedBy,role:r.remark.addedByRole,text:r.remark.remark});
         if(typeof renderCards==='function'&&S.filtered)renderCards(S.filtered);
         // Re-render the task detail modal if it's still open on this task —
         // viewTask() rebuilds both the body AND the footer, which matters
@@ -5889,7 +5581,7 @@ function viewTask(taskID){
   if(S._taskDetailTaskID!==taskID){S._taskDetailTab='details';S._taskDetailTaskID=taskID;}
   var isAdmin=(S.user&&(S.user.role==='Admin'||S.user.role==='Commissioner'));
   id('mTaskTitle').textContent=taskID;id('mTaskBody').innerHTML=taskDetailHTML(t);
-  var tvClose=(isAdmin&&t&&t.status==='Completed')?'<button class="btn" id="tvCloseBtn" style="background:#059669;color:#fff;margin-right:4px" data-tid="'+taskID+'" onclick="tvCloseTask(this.dataset.tid)"><span class="material-icons-round mi">task_alt</span> Mark Closed</button>':'';
+  var tvClose=(isAdmin&&t&&t.status==='Done')?'<button class="btn" id="tvCloseBtn" style="background:#059669;color:#fff;margin-right:4px" data-tid="'+taskID+'" onclick="tvCloseTask(this.dataset.tid)"><span class="material-icons-round mi">verified</span> Mark Verified</button>':'';
   var tvRemark=isAdmin?'<button class="btn btn-ghost" style="border-color:#B45309;color:#B45309;margin-right:4px" onclick="showAddRemarkModal(\''+taskID+'\')"><span class="material-icons-round mi">rate_review</span> Add Remark</button>':'';
   id('mTaskFt').innerHTML=isAdmin?tvClose+tvRemark+'<button class="btn btn-ghost" onclick="closeModal(\'mTask\')">Close</button><button class="btn btn-primary" onclick="closeModal(\'mTask\');editTask(\''+taskID+'\')">Edit All Fields</button>':'<button class="btn btn-ghost" onclick="closeModal(\'mTask\')">Close</button><button class="btn btn-primary" onclick="closeModal(\'mTask\');officerUpdate(\''+taskID+'\')">Update Progress</button>';
   openModal('mTask');
@@ -5913,6 +5605,7 @@ function viewTask(taskID){
         t.updatedBy=r.task.updatedBy;
         t.photoLinks=r.task.photoLinks;
         if(r.task.history)t._history=r.task.history;
+        if(r.task.timeline)t._timeline=r.task.timeline;
         // Photos and attachments arrive in this SAME response now —
         // consume them directly instead of firing more calls for it.
         t.newPhotos=r.task.photos||[];
@@ -6015,27 +5708,16 @@ function taskDetailHTML(t){
     +'<div style="font-size:10px;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px">Description</div>'
     +'<div style="background:var(--surface2);padding:11px;border-radius:8px;font-size:13px;line-height:1.6">'+(t.description||'\u2014')+'</div>'
     +'</div>';
-  // Admin/Commissioner remarks — a directive TO the assigned officer, so
-  // this is shown prominently right after the description, before the
-  // officer's own remarks. Visible to everyone viewing the task (the
-  // officer needs to actually see it); only Admin/Commissioner can add one.
-  if(t.remarks&&t.remarks.length){
-    detailsHtml+='<div style="margin-bottom:12px">'
-      +'<div style="font-size:10px;font-weight:700;color:#B45309;text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px">&#128276; Admin/Commissioner Remarks</div>'
-      +'<div style="display:flex;flex-direction:column;gap:8px">';
-    for(var ri=0;ri<t.remarks.length;ri++){
-      var rmk=t.remarks[ri];
-      var rwhen=rmk.addedAt?new Date(rmk.addedAt).toLocaleString('en-IN',{day:'numeric',month:'short',hour:'numeric',minute:'2-digit'}):'';
-      detailsHtml+='<div style="background:rgba(180,83,9,.08);border:1px solid rgba(180,83,9,.3);padding:11px;border-radius:8px">'
-        +'<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;flex-wrap:wrap">'
-        +'<span style="font-size:12px;font-weight:700;color:#B45309">'+htmlEsc(rmk.addedBy)+'</span>'
-        +'<span style="font-size:10px;color:var(--tx3);background:var(--surface);border:1px solid var(--border);border-radius:999px;padding:1px 7px">'+htmlEsc(rmk.addedByRole)+'</span>'
-        +'<span style="font-size:10.5px;color:var(--tx3);margin-left:auto">'+rwhen+'</span>'
-        +'</div>'
-        +'<div style="font-size:13px;line-height:1.6;white-space:pre-wrap">'+htmlEsc(rmk.remark)+'</div>'
-        +'</div>';
-    }
-    detailsHtml+='</div></div>';
+  // v133: remarks, officer updates and status changes are shown together
+  // in the Timeline tab. Here we only show the latest note as a preview.
+  var tlAll=t._timeline||[];
+  var lastNote=null;for(var lni=tlAll.length-1;lni>=0;lni--){if(tlAll[lni].text){lastNote=tlAll[lni];break;}}
+  if(!lastNote&&t.officerRemarks&&String(t.officerRemarks).trim())lastNote={text:t.officerRemarks,by:t.updatedBy||'',at:t.updatedAt||''};
+  if(lastNote){
+    detailsHtml+='<div style="margin-bottom:12px;cursor:pointer" onclick="switchTaskDetailTab(\'history\')" title="Open the full timeline">'
+      +'<div style="font-size:10px;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px">&#128172; Latest update'+(tlAll.length?' \u2014 see Timeline ('+tlAll.length+')':'')+'</div>'
+      +'<div style="background:var(--surface2);border:1px solid var(--border);padding:11px;border-radius:8px;font-size:13px;line-height:1.6;white-space:pre-wrap">'+htmlEsc(String(lastNote.text))
+      +'<div style="font-size:11px;color:var(--tx3);margin-top:4px">'+htmlEsc(lastNote.by||'')+(lastNote.at?' \u00b7 '+new Date(lastNote.at).toLocaleString('en-IN',{day:'numeric',month:'short',hour:'numeric',minute:'2-digit'}):'')+'</div></div></div>';
   }
   // Originating inspection note — most tasks in this system start life
   // as a field note, so surfacing it directly here (rather than making
@@ -6054,12 +5736,7 @@ function taskDetailHTML(t){
     // say so plainly rather than silently showing nothing.
     detailsHtml+='<div style="margin-bottom:12px;font-size:12px;color:var(--tx3)">Originating note ('+t.sourceNoteID+') could not be found \u2014 it may have been deleted.</div>';
   }
-  if(t.officerRemarks&&t.officerRemarks.trim()){
-    detailsHtml+='<div style="margin-bottom:12px">'
-      +'<div style="font-size:10px;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px">Officer Remarks</div>'
-      +'<div style="background:rgba(5,150,105,.06);border:1px solid rgba(5,150,105,.2);padding:11px;border-radius:8px;font-size:13px;line-height:1.6">'+t.officerRemarks+'</div>'
-      +'</div>';
-  }
+
 
   // ── PHOTOS & DOCS TAB ────────────────────────────────────────
   // Photos — combines OLD Drive-link photos (proxy fetched via GAS) with
@@ -6099,30 +5776,40 @@ function taskDetailHTML(t){
     +'<div id="taskDetailDocsList" style="font-size:12px;color:var(--tx3)">Loading documents...</div>'
     +'</div>';
 
-  // ── HISTORY TAB ──────────────────────────────────────────────
+  // ── TIMELINE TAB (v133) ──────────────────────────────────────
+  // One list, newest first: Commissioner/Admin remarks, officers' notes
+  // and every status change (with the remark typed at that time).
   var historyHtml='';
-  if(t._history&&t._history.length){
-    historyHtml+='<div style="border-left:2px solid var(--border);padding-left:12px;display:flex;flex-direction:column;gap:8px">';
-    // newest first
-    for(var hi=t._history.length-1;hi>=0;hi--){
-      var h=t._history[hi];
-      var icon=h.action==='Created'?'add_circle':(h.action==='Status changed'?'swap_horiz':(h.action==='Progress update'?'trending_up':'edit'));
-      var iconColor=h.action==='Created'?'var(--c-green)':(h.action==='Status changed'?'var(--c-blue)':'var(--tx3)');
+  var tl=t._timeline;
+  if(!tl&&t._history){tl=t._history.map(function(h){return {kind:'status',at:h.at,by:h.by,action:h.action,fromStatus:h.fromStatus,toStatus:h.toStatus,text:h.detail};});}
+  if(tl&&tl.length){
+    historyHtml+='<div style="border-left:2px solid var(--border);padding-left:14px;display:flex;flex-direction:column;gap:10px">';
+    for(var hi=tl.length-1;hi>=0;hi--){
+      var h=tl[hi];
       var when=h.at?new Date(h.at).toLocaleString('en-IN',{day:'numeric',month:'short',hour:'numeric',minute:'2-digit'}):'';
-      var line=h.action==='Status changed'
-        ? htmlEsc(h.fromStatus)+' \u2192 <b>'+htmlEsc(h.toStatus)+'</b>'
-        : htmlEsc(h.action);
-      historyHtml+='<div style="position:relative;font-size:12px">'
-        +'<span class="material-icons-round" style="position:absolute;left:-20px;top:0;font-size:14px;color:'+iconColor+';background:var(--surface);border-radius:50%">'+icon+'</span>'
-        +'<div style="color:var(--tx1)">'+line+'</div>'
-        +'<div style="font-size:11px;color:var(--tx3)">'+htmlEsc(h.by)+' \u00b7 '+when+(h.detail?' \u00b7 '+htmlEsc(h.detail.slice(0,80)):'')+'</div>'
+      var isBoss=(h.role==='Admin'||h.role==='Commissioner');
+      var icon,iconColor,line;
+      if(h.kind==='note'){
+        icon=isBoss?'campaign':'chat';iconColor=isBoss?'#B45309':'var(--c-green)';
+        line='<span style="font-weight:700;color:'+iconColor+'">'+htmlEsc(h.by||'')+'</span>'+(h.role?' <span style="font-size:10px;color:var(--tx3);border:1px solid var(--border);border-radius:999px;padding:0 6px">'+htmlEsc(h.role)+'</span>':'');
+      } else {
+        var stChange=h.toStatus&&h.fromStatus&&h.fromStatus!==h.toStatus;
+        icon=h.action==='Created'?'add_circle':(h.action==='Sent back'?'undo':(stChange?'swap_horiz':'trending_up'));
+        iconColor=h.action==='Created'?'var(--c-green)':(h.action==='Sent back'?'#B45309':(stChange?'var(--c-blue)':'var(--tx3)'));
+        line=h.action==='Created'?'Task created':(stChange?htmlEsc(h.fromStatus)+' \u2192 <b>'+htmlEsc(h.toStatus)+'</b>'+(h.action==='Sent back'?' (sent back)':''):htmlEsc(h.action||'Update'));
+        line+=' <span style="font-size:11px;color:var(--tx3)">by '+htmlEsc(h.by||'')+'</span>';
+      }
+      historyHtml+='<div style="position:relative;font-size:12.5px">'
+        +'<span class="material-icons-round" style="position:absolute;left:-23px;top:0;font-size:15px;color:'+iconColor+';background:var(--surface);border-radius:50%">'+icon+'</span>'
+        +'<div style="color:var(--tx1)">'+line+'<span style="font-size:10.5px;color:var(--tx3);margin-left:6px">'+when+'</span></div>'
+        +(h.text?'<div style="margin-top:3px;font-size:13px;line-height:1.5;white-space:pre-wrap;'+(h.kind==='note'?('background:'+(isBoss?'rgba(180,83,9,.08)':'rgba(5,150,105,.06)')+';border-radius:8px;padding:7px 9px'):'color:var(--tx2)')+'">'+htmlEsc(String(h.text))+'</div>':'')
         +'</div>';
     }
     historyHtml+='</div>';
-  } else if(typeof t._history!=='undefined'){
-    historyHtml='<div style="font-size:12px;color:var(--tx3)">No history recorded yet (history starts from v112).</div>';
+  } else if(tl){
+    historyHtml='<div style="font-size:12px;color:var(--tx3)">No updates yet.</div>';
   } else {
-    historyHtml='<div style="font-size:12px;color:var(--tx3)">Loading history...</div>';
+    historyHtml='<div style="font-size:12px;color:var(--tx3)">Loading timeline...</div>';
   }
 
   // ── TAB BAR ──────────────────────────────────────────────────
@@ -6130,11 +5817,11 @@ function taskDetailHTML(t){
   // elsewhere, so this looks consistent with the rest of the app rather
   // than introducing a one-off style.
   var mediaBadge=(totalPhotoCount+docsCount)>0?' ('+(totalPhotoCount+docsCount)+')':'';
-  var historyBadge=(t._history&&t._history.length)?' ('+t._history.length+')':'';
+  var historyBadge=(t._timeline&&t._timeline.length)?' ('+t._timeline.length+')':((t._history&&t._history.length)?' ('+t._history.length+')':'');
   var tabBar='<div class="tabs" id="taskDetailTabs" style="margin-bottom:14px">'
     +'<button class="tab'+(activeTab==='details'?' active':'')+'" onclick="switchTaskDetailTab(\'details\')">Details</button>'
     +'<button class="tab'+(activeTab==='media'?' active':'')+'" onclick="switchTaskDetailTab(\'media\')">Photos &amp; Docs'+mediaBadge+'</button>'
-    +'<button class="tab'+(activeTab==='history'?' active':'')+'" onclick="switchTaskDetailTab(\'history\')">History'+historyBadge+'</button>'
+    +'<button class="tab'+(activeTab==='history'?' active':'')+'" onclick="switchTaskDetailTab(\'history\')">Timeline'+historyBadge+'</button>'
     +'</div>';
 
   return tabBar
@@ -6177,7 +5864,7 @@ function editTaskBuildForm(t,taskID){
     +'<div class="f-group"><label class="f-label">Designation</label><select class="f-sel" id="e-desig">'+desigOpts+'</select></div></div>'
     +'<div class="f-group"><label class="f-label">Assigned Officer</label><select class="f-sel" id="e-officer">'+offOpts+'</select></div>'
     +'<div class="f-row"><div class="f-group"><label class="f-label">Priority</label><select class="f-sel" id="e-priority"><option>High</option><option>Medium</option><option>Low</option></select></div>'
-    +'<div class="f-group"><label class="f-label">Status</label><select class="f-sel" id="e-status"><option>Pending</option><option>In Progress</option><option>Completed</option><option>Review Pending</option><option>Closed</option></select></div></div>'
+    +'<div class="f-group"><label class="f-label">Status</label><select class="f-sel" id="e-status"><option value="Pending">Pending</option><option value="In Progress">In Progress</option><option value="Done">Done</option><option value="Verified">Verified</option></select></div></div>'
     +'<div class="f-row"><div class="f-group"><label class="f-label">Date Assigned</label><input type="date" class="f-ctrl" id="e-date" value="'+(t.dateAssigned||'')+'"></div>'
     +'<div class="f-group"><label class="f-label">Due Date <span style="font-size:10px;color:var(--tx3)">(Optional)</span></label><input type="date" class="f-ctrl" id="e-due" value="'+(t.dueDate||'')+'"></div></div>'
     +'<div class="f-group"><label class="f-label">Task Description</label><textarea class="f-ctrl" id="e-desc" rows="3">'+(t.description||'')+'</textarea></div>'
@@ -6505,117 +6192,9 @@ function delTask(taskID){
 // ════════════════════════════════════════════════════════════
 var DUP_FINDER={sets:[],selectedIDs:{}};
 
-function openDuplicateFinder(){
-  openModal('mDuplicateFinder');
-  id('dupFinderLoading').classList.remove('dn');
-  id('dupFinderEmpty').classList.add('dn');
-  id('dupFinderResults').innerHTML='';
-  id('dupFinderFooter').style.display='none';
-  DUP_FINDER.selectedIDs={};
 
-  gasCall('serverFindDuplicateTasks',S.token).then(function(r){
-    id('dupFinderLoading').classList.add('dn');
-    if(!r||!r.success){
-      toast((r&&r.message)||'Could not scan for duplicates.','error');
-      closeModal('mDuplicateFinder');
-      return;
-    }
-    DUP_FINDER.sets=r.data||[];
-    if(!DUP_FINDER.sets.length){
-      id('dupFinderEmpty').classList.remove('dn');
-      return;
-    }
-    renderDuplicateSets(DUP_FINDER.sets);
-  });
-}
 
-function renderDuplicateSets(sets){
-  var wrap=id('dupFinderResults');
-  wrap.innerHTML='';
-  var totalDuplicateTasks=0;
-  sets.forEach(function(t){totalDuplicateTasks+=t.length;});
 
-  var summary=document.createElement('div');
-  summary.style.cssText='background:var(--surface2);border-radius:10px;padding:12px 14px;margin-bottom:14px;font-size:13px';
-  summary.innerHTML='<strong>'+sets.length+'</strong> duplicate set'+(sets.length!==1?'s':'')+' found, covering <strong>'+totalDuplicateTasks+'</strong> tasks total. '
-    +'The <span style="color:var(--c-green);font-weight:700">oldest entry</span> in each set is kept by default &mdash; later copies are pre-selected for deletion. Review and adjust before confirming.';
-  wrap.appendChild(summary);
-
-  sets.forEach(function(set,setIdx){
-    var card=document.createElement('div');
-    card.style.cssText='border:1px solid var(--border);border-radius:10px;margin-bottom:12px;overflow:hidden';
-
-    var header=document.createElement('div');
-    header.style.cssText='background:var(--surface2);padding:9px 14px;font-size:12px;font-weight:700;color:var(--tx2);display:flex;align-items:center;justify-content:space-between';
-    header.innerHTML='<span>Duplicate Set '+(setIdx+1)+' &mdash; '+set.length+' copies</span><span style="font-size:11px;font-weight:500;color:var(--tx3)">'+htmlEsc(set[0].officerName||'Unassigned')+'</span>';
-    card.appendChild(header);
-
-    set.forEach(function(t,i){
-      var isOriginal=(i===0); // oldest, since sets arrive sorted oldest-first from the backend
-      var row=document.createElement('div');
-      row.style.cssText='display:flex;align-items:flex-start;gap:10px;padding:10px 14px;border-top:1px solid var(--border)'+(isOriginal?';background:rgba(5,150,105,.04)':'');
-
-      var cb=document.createElement('input');
-      cb.type='checkbox';
-      cb.style.cssText='margin-top:3px;width:16px;height:16px;cursor:pointer;flex-shrink:0';
-      cb.checked=!isOriginal; // pre-select every copy EXCEPT the original to keep
-      cb.disabled=isOriginal;
-      cb.onchange=function(){
-        if(cb.checked)DUP_FINDER.selectedIDs[t.taskID]=true;
-        else delete DUP_FINDER.selectedIDs[t.taskID];
-        updateDupDeleteCount();
-      };
-      if(cb.checked)DUP_FINDER.selectedIDs[t.taskID]=true;
-
-      var info=document.createElement('div');
-      info.style.cssText='flex:1;min-width:0';
-      info.innerHTML='<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">'
-        +'<span style="font-family:monospace;font-size:11.5px;color:var(--tx3)">'+t.taskID+'</span>'
-        +(isOriginal?'<span style="background:rgba(5,150,105,.15);color:var(--c-green);font-size:10px;font-weight:700;padding:1px 7px;border-radius:999px">KEEP &middot; OLDEST</span>':'<span style="background:rgba(220,38,38,.1);color:var(--c-red);font-size:10px;font-weight:700;padding:1px 7px;border-radius:999px">LIKELY DUPLICATE</span>')
-        +'<span style="font-size:10.5px;color:var(--tx3)">'+(t.source||'Manual')+' &middot; '+t.status+'</span>'
-        +'</div>'
-        +'<div style="font-size:12.5px;color:var(--tx1);margin-top:3px">'+htmlEsc(t.description)+'</div>'
-        +'<div style="font-size:11px;color:var(--tx3);margin-top:2px">'+htmlEsc(t.department)+' &middot; '+htmlEsc(t.zone)+' &middot; Created '+fDateShort(t.createdAt)+'</div>';
-
-      row.appendChild(cb);row.appendChild(info);
-      card.appendChild(row);
-    });
-
-    wrap.appendChild(card);
-  });
-
-  id('dupFinderFooter').style.display='flex';
-  updateDupDeleteCount();
-}
-
-function updateDupDeleteCount(){
-  var count=Object.keys(DUP_FINDER.selectedIDs).length;
-  var el=id('dupDeleteCount');if(el)el.textContent=count;
-  var btn=id('dupDeleteAllBtn');if(btn)btn.disabled=(count===0);
-}
-
-function deleteAllSelectedDuplicates(){
-  if(!btnFreeze('deleteDupes','dupDeleteAllBtn','<span class="material-icons-round mi" style="animation:spin 1s linear infinite">sync</span> Deleting...'))return;
-  var ids=Object.keys(DUP_FINDER.selectedIDs);
-  if(!ids.length){toast('No duplicates selected.','info');btnRelease('deleteDupes','dupDeleteAllBtn');return;}
-  if(!confirm('Delete '+ids.length+' duplicate task'+(ids.length!==1?'s':'')+'? This cannot be undone.')){btnRelease('deleteDupes','dupDeleteAllBtn');return;}
-
-  showLoader('Removing '+ids.length+' duplicate task'+(ids.length!==1?'s':'')+'...');
-  gasCall('serverBulkDeleteTasks',S.token,ids).then(function(r){
-    // NOTE: this used to release the wrong key ('bulkDelete' instead of
-    // 'deleteDupes') — a copy-paste leftover — which meant this exact
-    // button was never actually un-frozen after a real delete, success
-    // or failure, until the 60s safety timeout quietly reset it.
-    btnRelease('deleteDupes','dupDeleteAllBtn');hideLoader();
-    if(r&&r.success){
-      toast('Removed '+r.deletedCount+' duplicate task'+(r.deletedCount!==1?'s':'')+'!','ok');
-      closeModal('mDuplicateFinder');
-      loadTasks();
-    } else {
-      toast((r&&r.message)||'Failed to delete duplicates.','error');
-    }
-  });
-}
 
 
 function adminUpdate(taskID){
@@ -6830,13 +6409,14 @@ function officerUpdate(taskID){
 function setPuStatusOptions(forAdmin,current){
   var ps=id('pu-status');if(!ps)return;
   // Officers/HOD/Supervision can only move work to In Progress or
-  // Review Pending — "Completed" is reserved for Admin/Commissioner,
+  // Done — "Verified" is reserved for Admin/Commissioner,
   // who mark it after actually reviewing the work. This is also
   // enforced server-side; the dropdown just makes the rule visible.
-  // v118 workflow: field roles mark In Progress / Review Pending /
+  // (v118 workflow comment kept for history) field roles mark In Progress /
   // Completed. Admin/Commissioner additionally set Pending and Closed —
   // Closed is the final sign-off after reviewing completed work.
-  var opts=forAdmin?['Pending','In Progress','Review Pending','Completed','Closed']:['In Progress','Review Pending','Completed'];
+  // v133 flow: Pending -> In Progress -> Done (photo proof) -> Verified (Commissioner/Admin)
+  var opts=forAdmin?['Pending','In Progress','Done','Verified']:['In Progress','Done'];
   ps.innerHTML='';
   for(var i=0;i<opts.length;i++){var o=document.createElement('option');o.value=opts[i];o.textContent=opts[i];ps.appendChild(o);}
   if(current&&opts.indexOf(current)>=0)ps.value=current;
@@ -6845,7 +6425,7 @@ function officerUpdateOpen(t,taskID,isHOD){
   setPuStatusOptions(false,t.status==='Pending'?'In Progress':t.status);
   var pu=id('pu-taskid');if(pu)pu.value=taskID;
   var pd=id('pu-desc');if(pd)pd.textContent=t.description.substring(0,150)+(t.description.length>150?'\u2026':'');
-  var ps=id('pu-status');if(ps)ps.value=(t.status==='Completed'?'Completed':'In Progress');
+  var ps=id('pu-status');if(ps)ps.value=(t.status==='Done'?'Done':'In Progress');
   var pp=id('pu-priority');if(pp)pp.value=t.priority||'Medium';
   var pr=id('pu-remarks');if(pr)pr.value=t.officerRemarks||'';
   var pprev=id('photoPreview');if(pprev)pprev.innerHTML='';
@@ -7043,6 +6623,19 @@ function submitPhotoUpdate(){
   var pickedDocs=S.puDocs.slice();
   var hasAttachments=(pickedPhotos.length+pickedDocs.length)>0;
 
+  // v133: marking a task Done needs at least one photo as proof (for
+  // field roles — Commissioner/Admin are not blocked). An existing photo
+  // on the task counts.
+  var isAdminLikePU=(S.user&&(S.user.role==='Admin'||S.user.role==='Commissioner'));
+  if(status==='Done'&&!isAdminLikePU&&!pickedPhotos.length){
+    var tPU=null;for(var pi2=0;pi2<S.tasks.length;pi2++){if(S.tasks[pi2].taskID===taskID){tPU=S.tasks[pi2];break;}}
+    var hasPhotoAlready=!!(tPU&&((tPU.photoCount||0)>0||tPU.hasPhotos||(tPU._detail&&tPU._detail.photos&&tPU._detail.photos.length)));
+    if(!hasPhotoAlready){
+      toast('Please add at least one photo as proof before marking this task Done.','error');
+      return;
+    }
+  }
+
   // If there's nothing to upload, the old instant-close behaviour is fine —
   // there's no upload to wait for, so no risk of someone re-clicking.
   if(!hasAttachments){
@@ -7193,7 +6786,8 @@ function submitPhotoUpdate(){
   }
 
   // STEP 2 — save status/remarks/priority to the server
-  gasCall('serverUpdateTask',S.token,taskID,{status:status,officerRemarks:remarks,priority:priority}).then(function(r){
+  // (photosAttached tells the server photos are being uploaded right after)
+  gasCall('serverUpdateTask',S.token,taskID,{status:status,officerRemarks:remarks,priority:priority,photosAttached:pickedPhotos.length>0}).then(function(r){
     if(!r||!r.success){
       setUploadingUI(false);
       var failMsg=(r&&r.message)||'Update failed to save.';
@@ -7455,22 +7049,6 @@ function submitPhotoUpdate(){
     for(var cs=0;cs<compStart;cs++)launchNextCompress();
   });
 }
-function uploadPhotosSeq(taskID,photos,idx,urls,done){
-  if(idx>=photos.length){done(urls);return;}
-  var f=photos[idx];
-  var pt=id('photoProgressText');if(pt)pt.textContent='Uploading '+(idx+1)+' of '+photos.length+'...';
-  var pb=id('photoProgressBar');if(pb)pb.style.width=Math.round(idx/photos.length*100)+'%';
-  var reader=new FileReader();
-  reader.onload=function(e){var b64=e.target.result.split(',')[1];gasCall('serverUploadPhoto',S.token,taskID,f.name,f.type,b64).then(function(r){if(r&&r.success&&r.url)urls.push(r.url);uploadPhotosSeq(taskID,photos,idx+1,urls,done);});};
-  reader.readAsDataURL(f);
-}
-function doTaskUpdate(taskID,status,remarks,priority,photoLinks,btn){
-  showLoader('Saving update...');
-  gasCall('serverUpdateTask',S.token,taskID,{status:status,officerRemarks:remarks,priority:priority,photoLinks:photoLinks}).then(function(r){
-    hideLoader();if(btn)btn.disabled=false;closeModal('mPhotoUpload');
-    if(r&&r.success){toast('Task updated'+(photoLinks?' with attachments!':'!'),'ok');loadTasks();}else toast((r&&r.message)||'Update failed.','error');
-  });
-}
 var AI_KW={drain:{dept:'Engineering',pri:'High',syns:['drainage','blockage','clog','sewer','waterlogging']},road:{dept:'Engineering',pri:'High',syns:['pothole','pavement','highway','tarmac','repair','damage']},sanitation:{dept:'Public Health',pri:'High',syns:['hygiene','cleanliness','sewage','unhygienic']},garbage:{dept:'SWM',pri:'High',syns:['trash','waste','litter','rubbish','dumping','solid waste']},electricity:{dept:'Electrical',pri:'Medium',syns:['street light','lamp','lighting','power','electric','wire']},encroachment:{dept:'Revenue',pri:'High',syns:['illegal','occupation','unauthorised','squatter','eviction']},water:{dept:'Water Supply',pri:'High',syns:['pipe','leakage','leak','supply','tap','borewell','shortage']},building:{dept:'Town Planning',pri:'Medium',syns:['plan','approval','permit','construction','violation','demolish']},tax:{dept:'Revenue',pri:'Medium',syns:['assessment','property','revenue','collection','dues']},tree:{dept:'Engineering',pri:'Medium',syns:['branch','fallen','vegetation','trimming']},stray:{dept:'Public Health',pri:'Medium',syns:['dog','cattle','animal']},birth:{dept:'Public Health',pri:'Low',syns:['certificate','registration','death','mortality']}};
 function fuzzyMatchDept(sentence){
   var lc=sentence.toLowerCase(),bestScore=0,bestDept='General',bestPri='Medium';
@@ -7603,7 +7181,7 @@ function renderAITable(){
     +'<th style="padding:9px;font-size:9.5px;font-weight:700;text-transform:uppercase;color:var(--tx2)">Officer</th>'
     +'<th style="padding:9px;font-size:9.5px;font-weight:700;text-transform:uppercase;color:var(--tx2)">Priority</th>'
     +'<th style="padding:9px;font-size:9.5px;font-weight:700;text-transform:uppercase;color:var(--tx2)">Zone</th>'
-    +'<th style="padding:9px;font-size:9.5px;font-weight:700;text-transform:uppercase;color:var(--tx2)">Type</th>'
+    +'<th style="padding:9px;font-size:9.5px;font-weight:700;text-transform:uppercase;color:var(--tx2);display:none">Type</th>'
     +'<th style="padding:9px;font-size:9.5px;font-weight:700;text-transform:uppercase;color:var(--tx2)">Date</th>'
     +'<th style="padding:9px;font-size:9.5px;font-weight:700;text-transform:uppercase;color:var(--tx2)">Time</th>'
     +'<th style="padding:9px;font-size:9.5px;font-weight:700;text-transform:uppercase;color:var(--tx2)">Due Date</th>'
@@ -7635,7 +7213,7 @@ function renderAITable(){
       +'<td style="padding:9px;vertical-align:top;min-width:160px"><select class="f-sel" id="aiOff'+i+'" onchange="updateAITaskOfficer('+i+',this.value)" style="font-size:12px;padding:6px 9px"'+fieldAlert(t.offConf)+'>'+offOpts+'</select><div style="font-size:9px;color:var(--tx3);margin-top:1px">'+confBadge(t.offConf)+'</div></td>'
       +'<td style="padding:9px;vertical-align:top"><select class="f-sel" onchange="S.aiTasks['+i+'].priority=this.value" style="font-size:12px;padding:6px 9px"><option'+(t.priority==='High'?' selected':'')+'>High</option><option'+(t.priority==='Medium'?' selected':'')+'>Medium</option><option'+(t.priority==='Low'?' selected':'')+'>Low</option></select></td>'
       +'<td style="padding:9px;vertical-align:top;min-width:140px"><select class="f-sel" onchange="S.aiTasks['+i+'].zone=this.value" style="font-size:12px;padding:6px 9px"'+fieldAlert(t.zoneConf)+'>'+zoneOpts+'</select><div style="font-size:9px;color:var(--tx3);margin-top:1px">'+confBadge(t.zoneConf)+'</div></td>'
-      +'<td style="padding:9px;vertical-align:top"><select class="f-sel" onchange="S.aiTasks['+i+'].taskType=this.value" style="font-size:12px;padding:6px 9px">'
+      +'<td style="padding:9px;vertical-align:top;display:none"><select class="f-sel" onchange="S.aiTasks['+i+'].taskType=this.value" style="font-size:12px;padding:6px 9px">'
       +'<option'+(t.taskType==='Inspection'?' selected':'')+'>Inspection</option>'
       +'<option'+(t.taskType==='Meeting'?' selected':'')+'>Meeting</option>'
       +'<option'+(t.taskType==='Action'?' selected':'')+'>Action</option>'
@@ -7832,7 +7410,7 @@ function updateExportSummary(){
   if(S.exportCtx==='commissioner'){
     if(desc)desc.textContent='Structured review-ready official report.';
     var tasks=S.tasks;
-    var done=0,over=0;for(var i=0;i<tasks.length;i++){if(tasks[i].status==='Completed'||tasks[i].status==='Closed')done++;if(tasks[i].isOverdue)over++;}
+    var done=0,over=0;for(var i=0;i<tasks.length;i++){if(tasks[i].status==='Done'||tasks[i].status==='Verified')done++;if(tasks[i].isOverdue)over++;}
     if(sumEl)sumEl.innerHTML='<strong>'+tasks.length+'</strong> tasks \u00b7 <span style="color:var(--c-green)">'+done+' completed</span> \u00b7 <span style="color:var(--c-red)">'+over+' overdue</span>';
     return;
   }
@@ -7842,13 +7420,13 @@ function updateExportSummary(){
     gasCall('serverGetTasks',S.token,{days:0,includeCompleted:true,includeClosed:true}).then(function(r){
       if(!id('mExportAllTasks')||!id('mExportAllTasks').checked)return; // toggled off or modal closed before this resolved
       var tasks=(r&&r.success)?normalizeTaskList(r.data||[]):[];
-      var done=0,over=0;for(var i=0;i<tasks.length;i++){if(tasks[i].status==='Completed'||tasks[i].status==='Closed')done++;if(tasks[i].isOverdue)over++;}
+      var done=0,over=0;for(var i=0;i<tasks.length;i++){if(tasks[i].status==='Done'||tasks[i].status==='Verified')done++;if(tasks[i].isOverdue)over++;}
       if(sumEl)sumEl.innerHTML='<strong>'+tasks.length+'</strong> tasks (complete) \u00b7 <span style="color:var(--c-green)">'+done+' completed</span> \u00b7 <span style="color:var(--c-red)">'+over+' overdue</span>';
     });
   } else {
     if(desc)desc.textContent='Only the tasks currently shown on screen (your active filters apply).';
     var tasksShown=(S.filtered.length?S.filtered:S.tasks);
-    var done2=0,over2=0;for(var j=0;j<tasksShown.length;j++){if(tasksShown[j].status==='Completed'||tasksShown[j].status==='Closed')done2++;if(tasksShown[j].isOverdue)over2++;}
+    var done2=0,over2=0;for(var j=0;j<tasksShown.length;j++){if(tasksShown[j].status==='Done'||tasksShown[j].status==='Verified')done2++;if(tasksShown[j].isOverdue)over2++;}
     if(sumEl)sumEl.innerHTML='<strong>'+tasksShown.length+'</strong> tasks shown \u00b7 <span style="color:var(--c-green)">'+done2+' completed</span> \u00b7 <span style="color:var(--c-red)">'+over2+' overdue</span>';
   }
 }
@@ -7885,10 +7463,10 @@ function doExport(fmt){
 }
 function exportExcel(tasks){
   var now=new Date().toLocaleDateString('en-IN'),done=0,over=0,pend=0;
-  for(var i=0;i<tasks.length;i++){if(tasks[i].status==='Completed'||tasks[i].status==='Closed')done++;if(tasks[i].isOverdue)over++;if(tasks[i].status==='Pending')pend++;}
+  for(var i=0;i<tasks.length;i++){if(tasks[i].status==='Done'||tasks[i].status==='Verified')done++;if(tasks[i].isOverdue)over++;if(tasks[i].status==='Pending')pend++;}
   var h=['#','Task ID','Type','Description','Zone','Department','Officer','Priority','Due Date','Status','Completed?','Created On'];
   var rows=[['Salem City Municipal Corporation - Task Report ('+now+')'],['Total:'+tasks.length,'Completed:'+done,'Pending:'+pend,'Overdue:'+over],[],h];
-  for(var i=0;i<tasks.length;i++){var t=tasks[i];rows.push([i+1,t.taskID,t.taskType,'"'+(t.description||'').replace(/"/g,'""')+'"',t.zone,t.department,t.officerName,t.priority,t.dueDate||'Not set',t.status,(t.status==='Completed'||t.status==='Closed')?'Yes':'No',t.createdAt?t.createdAt.slice(0,10):'']);}
+  for(var i=0;i<tasks.length;i++){var t=tasks[i];rows.push([i+1,t.taskID,t.taskType,'"'+(t.description||'').replace(/"/g,'""')+'"',t.zone,t.department,t.officerName,t.priority,t.dueDate||'Not set',t.status,(t.status==='Done'||t.status==='Verified')?'Yes':'No',t.createdAt?t.createdAt.slice(0,10):'']);}
   dlFile(rows.map(function(r){return r.join(',');}).join('\n'),'SalemTMS_'+new Date().toISOString().slice(0,10)+'.csv','text/csv');
 }
 function exportPDF(tasks,context){
@@ -7904,17 +7482,17 @@ function exportPDF(tasks,context){
   var reportNo='RPT/'+now.getFullYear()+'/'+String(now.getMonth()+1).padStart(2,'0')+'/'+String(now.getDate()).padStart(2,'0')+'-'+String(now.getHours()).padStart(2,'0')+String(now.getMinutes()).padStart(2,'0');
   var preparedBy=S.user?S.user.name:'Administrator',isComm=(context==='commissioner');
   var total=tasks.length,completed=0,inProg=0,pending=0,overdue=0,notCompleted=0;
-  for(var i=0;i<tasks.length;i++){var t=tasks[i];if(t.status==='Completed'||t.status==='Closed')completed++;else if(t.status==='In Progress')inProg++;else if(t.status==='Pending')pending++;if(t.isOverdue)overdue++;if(t.status!=='Completed'&&t.status!=='Closed')notCompleted++;}
+  for(var i=0;i<tasks.length;i++){var t=tasks[i];if(t.status==='Done'||t.status==='Verified')completed++;else if(t.status==='In Progress')inProg++;else if(t.status==='Pending')pending++;if(t.isOverdue)overdue++;if(t.status!=='Done'&&t.status!=='Verified')notCompleted++;}
   var rate=total>0?Math.round(completed/total*100):0;
   var filterParts=[],fz=V('fZone'),fd=V('fDept'),fs=V('fStatus'),fp=V('fPri');
   if(fz)filterParts.push('Zone: '+fz);if(fd)filterParts.push('Dept: '+fd);if(fs)filterParts.push('Status: '+fs);if(fp)filterParts.push('Priority: '+fp);
   var filterNote=filterParts.length?filterParts.join(' | '):'All tasks (no filter applied)';
   var zoneMap={},deptMap={};
   for(var i=0;i<tasks.length;i++){
-    var z=tasks[i].zone||'Unknown';if(!zoneMap[z])zoneMap[z]={total:0,completed:0,notCompleted:0,overdue:0};zoneMap[z].total++;if(tasks[i].status==='Completed'||tasks[i].status==='Closed')zoneMap[z].completed++;else zoneMap[z].notCompleted++;if(tasks[i].isOverdue)zoneMap[z].overdue++;
-    var d=tasks[i].department||'Unknown';if(!deptMap[d])deptMap[d]={total:0,completed:0,notCompleted:0,overdue:0};deptMap[d].total++;if(tasks[i].status==='Completed'||tasks[i].status==='Closed')deptMap[d].completed++;else deptMap[d].notCompleted++;if(tasks[i].isOverdue)deptMap[d].overdue++;
+    var z=tasks[i].zone||'Unknown';if(!zoneMap[z])zoneMap[z]={total:0,completed:0,notCompleted:0,overdue:0};zoneMap[z].total++;if(tasks[i].status==='Done'||tasks[i].status==='Verified')zoneMap[z].completed++;else zoneMap[z].notCompleted++;if(tasks[i].isOverdue)zoneMap[z].overdue++;
+    var d=tasks[i].department||'Unknown';if(!deptMap[d])deptMap[d]={total:0,completed:0,notCompleted:0,overdue:0};deptMap[d].total++;if(tasks[i].status==='Done'||tasks[i].status==='Verified')deptMap[d].completed++;else deptMap[d].notCompleted++;if(tasks[i].isOverdue)deptMap[d].overdue++;
   }
-  function sStyle(s){var m={Pending:{bg:'#fff7ed',c:'#c2410c',bd:'#fed7aa'},'In Progress':{bg:'#eff6ff',c:'#1d4ed8',bd:'#bfdbfe'},Completed:{bg:'#f0fdf4',c:'#15803d',bd:'#bbf7d0'},'Review Pending':{bg:'#faf5ff',c:'#7e22ce',bd:'#e9d5ff'},Overdue:{bg:'#fff1f2',c:'#be123c',bd:'#fecdd3'},Closed:{bg:'#f8fafc',c:'#475569',bd:'#e2e8f0'}};var c=m[s]||m.Closed;return'background:'+c.bg+';color:'+c.c+';border:1px solid '+c.bd+';padding:2px 8px;border-radius:4px;font-size:9.5px;font-weight:700;white-space:nowrap;display:inline-block';}
+  function sStyle(s){var m={Pending:{bg:'#fff7ed',c:'#c2410c',bd:'#fed7aa'},'In Progress':{bg:'#eff6ff',c:'#1d4ed8',bd:'#bfdbfe'},Done:{bg:'#f0fdf4',c:'#15803d',bd:'#bbf7d0'},Completed:{bg:'#f0fdf4',c:'#15803d',bd:'#bbf7d0'},'Review Pending':{bg:'#faf5ff',c:'#7e22ce',bd:'#e9d5ff'},Overdue:{bg:'#fff1f2',c:'#be123c',bd:'#fecdd3'},Closed:{bg:'#f8fafc',c:'#475569',bd:'#e2e8f0'},Verified:{bg:'#f8fafc',c:'#475569',bd:'#e2e8f0'}};var c=m[s]||m.Closed;return'background:'+c.bg+';color:'+c.c+';border:1px solid '+c.bd+';padding:2px 8px;border-radius:4px;font-size:9.5px;font-weight:700;white-space:nowrap;display:inline-block';}
   function priColor(p){return p==='High'?'#be123c':p==='Medium'?'#b45309':'#15803d';}
   function pct(c,t){return t>0?Math.round(c/t*100):0;}
   function progBar(r){var bc=r>=70?'#22c55e':r>=40?'#f59e0b':'#ef4444';return'<div style="display:flex;align-items:center;gap:4px"><div style="width:60px;background:#e2e8f0;border-radius:999px;height:6px;overflow:hidden"><div style="height:100%;border-radius:999px;background:'+bc+';width:'+r+'%"></div></div><span style="font-size:9px;font-weight:700;color:'+bc+'">'+r+'%</span></div>';}
@@ -7938,8 +7516,8 @@ function exportPDF(tasks,context){
     var t=tasks[i];var on=t.officerName||'Unassigned';
     if(!officerMap[on])officerMap[on]={name:on,department:t.department||'',designation:t.designation||'',total:0,completed:0,closed:0,inProg:0,pending:0,review:0,overdue:0,tasks:[]};
     var om=officerMap[on];om.total++;
-    if(t.status==='Completed')om.completed++;else if(t.status==='Closed')om.closed++;
-    else if(t.status==='In Progress')om.inProg++;else if(t.status==='Review Pending')om.review++;else om.pending++;
+    if(t.status==='Done')om.completed++;else if(t.status==='Verified')om.closed++;
+    else if(t.status==='In Progress')om.inProg++;else om.pending++;
     if(t.isOverdue)om.overdue++;om.tasks.push(t);
   }
   var officerKeys=Object.keys(officerMap).sort(function(a,b){return officerMap[b].total-officerMap[a].total||a.localeCompare(b);});
@@ -7955,7 +7533,7 @@ function exportPDF(tasks,context){
     for(var ki=0;ki<kpis.length;ki++){var kp=kpis[ki];officerSection+='<div style="flex:1;padding:7px 5px;text-align:center;background:'+kp.bg+';border-right:1px solid #e2e8f0"><div style="font-size:16px;font-weight:900;color:'+kp.c+'">'+kp.v+'</div><div style="font-size:7.5px;font-weight:700;color:'+kp.c+';text-transform:uppercase;line-height:1.2">'+kp.l+'</div></div>';}
     officerSection+='</div>';
     officerSection+='<div style="padding:6px 12px;background:#f8fafc;border-bottom:1px solid #e2e8f0;display:flex;align-items:center;gap:8px"><span style="font-size:9px;font-weight:600;color:#475569;min-width:80px">Completion</span><div style="flex:1;background:#e2e8f0;border-radius:999px;height:6px;overflow:hidden"><div style="height:100%;border-radius:999px;background:'+omBar+';width:'+omRate+'%"></div></div><span style="font-size:9px;font-weight:800;color:'+omBar+';min-width:28px;text-align:right">'+omRate+'%</span></div>';
-    var omTasks=om.tasks.slice().sort(function(a,b){var order={Pending:1,'In Progress':2,'Review Pending':3,Completed:4,Closed:5};var ao=a.isOverdue?0:(order[a.status]||9),bo=b.isOverdue?0:(order[b.status]||9);return ao-bo;});
+    var omTasks=om.tasks.slice().sort(function(a,b){var order={Pending:1,'In Progress':2,Done:3,Verified:4};var ao=a.isOverdue?0:(order[a.status]||9),bo=b.isOverdue?0:(order[b.status]||9);return ao-bo;});
     officerSection+='<table style="width:100%;border-collapse:collapse"><thead><tr style="background:#f1f5f9"><th style="padding:5px 8px;text-align:left;font-size:8px;font-weight:700;color:#475569;text-transform:uppercase;border-bottom:1px solid #e2e8f0">Task ID</th><th style="padding:5px 8px;text-align:left;font-size:8px;font-weight:700;color:#475569;text-transform:uppercase;border-bottom:1px solid #e2e8f0">Description</th><th style="padding:5px 8px;text-align:left;font-size:8px;font-weight:700;color:#475569;text-transform:uppercase;border-bottom:1px solid #e2e8f0">Priority</th><th style="padding:5px 8px;text-align:left;font-size:8px;font-weight:700;color:#475569;text-transform:uppercase;border-bottom:1px solid #e2e8f0">Due</th><th style="padding:5px 8px;text-align:left;font-size:8px;font-weight:700;color:#475569;text-transform:uppercase;border-bottom:1px solid #e2e8f0">Status</th></tr></thead><tbody>';
     for(var ti2=0;ti2<omTasks.length;ti2++){var ot=omTasks[ti2];var rowBg=ot.isOverdue?'#fff1f2':(ti2%2===0?'#fff':'#f8fafc');officerSection+='<tr style="background:'+rowBg+';border-bottom:1px solid #f1f5f9"><td style="padding:4px 8px;font-family:monospace;font-size:8px;color:#1d4ed8;font-weight:700;white-space:nowrap">'+ot.taskID+'</td><td style="padding:4px 8px;font-size:8.5px;word-break:break-word;max-width:180px">'+String(ot.description||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').slice(0,100)+'</td><td style="padding:4px 8px;font-size:8.5px;font-weight:700;color:'+priColor(ot.priority)+';white-space:nowrap">'+(ot.priority||'—')+'</td><td style="padding:4px 8px;font-size:8.5px;white-space:nowrap;'+(ot.isOverdue?'color:#be123c;font-weight:700':'')+'">'+(ot.dueDate||'—')+(ot.isOverdue?' ⚠':'')+'</td><td style="padding:4px 8px"><span style="'+sStyle(ot.status)+'">'+ot.status+'</span></td></tr>';}
     officerSection+='</tbody></table></div>';
@@ -7964,7 +7542,7 @@ function exportPDF(tasks,context){
   for(var i=0;i<overdueTasks.length;i++){var t=overdueTasks[i],days=t.dueDate?Math.floor((new Date()-new Date(t.dueDate))/86400000):0;overdueRows+='<tr style="background:#fff1f2"><td style="padding:6px 9px;font-family:monospace;font-size:9px;color:#be123c;font-weight:700;vertical-align:top;white-space:nowrap">'+t.taskID+'</td><td style="padding:6px 9px;font-size:10px;word-break:break-word;white-space:normal;vertical-align:top">'+String(t.description||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')+'</td><td style="padding:6px 9px;vertical-align:top;white-space:nowrap">'+t.zone+'</td><td style="padding:6px 9px;vertical-align:top;white-space:nowrap">'+t.department+'</td><td style="padding:6px 9px;font-weight:700;vertical-align:top;white-space:nowrap">'+t.officerName+'</td><td style="padding:6px 9px;color:#be123c;font-weight:700;vertical-align:top;white-space:nowrap">'+(t.dueDate||'\u2014')+'</td><td style="padding:6px 9px;text-align:center;color:#be123c;font-weight:800;vertical-align:top;white-space:nowrap">'+days+' day'+(days!==1?'s':'')+'</td></tr>';}
   var taskRows='';
   for(var i=0;i<tasks.length;i++){
-    var t=tasks[i],isC=(t.status==='Completed'||t.status==='Closed');
+    var t=tasks[i],isC=(t.status==='Done'||t.status==='Verified');
     // A row that's taller than a full printable page CANNOT honor
     // page-break-inside:avoid — there's physically no page it could fit
     // on without splitting, so the browser is forced to break it anyway
@@ -9089,7 +8667,7 @@ function plMakeEntryCard(e, typeColors, months){
     linksWrap.style.cssText='display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px';
     e.linkedTasks.forEach(function(lt){
       var linkTag=document.createElement('div');
-      var lStatusColor=(lt.status==='Completed'||lt.status==='Closed')?'var(--c-green)':(lt.status==='Overdue'?'var(--c-red)':'var(--c-blue)');
+      var lStatusColor=(lt.status==='Done'||lt.status==='Verified')?'var(--c-green)':(lt.status==='Overdue'?'var(--c-red)':'var(--c-blue)');
       linkTag.style.cssText='display:inline-flex;align-items:center;gap:5px;background:rgba(29,78,216,.06);border:1px solid rgba(29,78,216,.2);border-radius:7px;padding:4px 10px;font-size:12px;font-weight:600;color:var(--c-blue);cursor:pointer;width:fit-content';
       linkTag.innerHTML='<span class="material-icons-round" style="font-size:14px">task_alt</span>'+htmlEsc(lt.taskID)+' <span style="color:'+lStatusColor+'">&middot; '+htmlEsc(lt.status||'')+'</span>';
       linkTag.onclick=function(ev){ev.stopPropagation();jumpToTaskFromNote(lt.taskID);};
@@ -11038,7 +10616,6 @@ function loadSettings(){
 // stores metadata and opens the link in a new tab — no iframing, no
 // merging code. Admin adds reports by providing name/category/icon/URL.
 // ════════════════════════════════════════════════════════════
-var REPORTS_CACHE=[];
 
 // ABOUT PAGE — interactive elements
 // ════════════════════════════════════════════════════════════
@@ -11135,188 +10712,10 @@ function aboutToggleChangelog(){
   if(chev)chev.style.transform=isOpen?'rotate(0deg)':'rotate(180deg)';
 }
 
-function loadReportsPage(){
-  showLoader('Loading reports...');
-  gasCall('serverGetReportLinks',S.token).then(function(r){
-    hideLoader();
-    if(r&&r.success){
-      REPORTS_CACHE=r.data||[];
-    } else {
-      REPORTS_CACHE=[];
-      var failMsg=(r&&r.message)||'';
-      if(isLikelyConnectionDrop(failMsg)){
-        toastWithRetry('Connection trouble loading Reports. Tap Retry.',loadReportsPage);
-      } else if(failMsg){
-        toast(failMsg,'error');
-      }
-    }
-    renderReportsGroups(REPORTS_CACHE);
-  });
-}
 
-function renderReportsGroups(reports){
-  var wrap=id('reportsGroupsWrap'),empty=id('reportsEmptyState');
-  if(!wrap)return;
-  while(wrap.firstChild)wrap.removeChild(wrap.firstChild);
 
-  if(!reports.length){
-    if(empty)empty.style.display='block';
-    return;
-  }
-  if(empty)empty.style.display='none';
 
-  // Group by category, preserving first-seen order
-  var groups={},order=[];
-  for(var i=0;i<reports.length;i++){
-    var cat=reports[i].category||'General';
-    if(!groups[cat]){groups[cat]=[];order.push(cat);}
-    groups[cat].push(reports[i]);
-  }
-
-  for(var gi=0;gi<order.length;gi++){
-    (function(cat){
-      var items=groups[cat];
-      var section=document.createElement('div');
-      section.className='rpt-cat-section';
-
-      var hd=document.createElement('div');
-      hd.className='rpt-cat-hd';
-      var title=document.createElement('span');
-      title.className='rpt-cat-title';
-      title.textContent=cat;
-      var count=document.createElement('span');
-      count.className='rpt-cat-count';
-      count.textContent=items.length+' report'+(items.length!==1?'s':'');
-      hd.appendChild(title);hd.appendChild(count);
-
-      var grid=document.createElement('div');
-      grid.className='rpt-grid';
-
-      for(var i=0;i<items.length;i++){
-        (function(rpt){
-          var card=document.createElement('div');
-          card.className='rpt-card';
-          card.onclick=function(){window.open(rpt.url,'_blank','noopener');};
-          card.title=rpt.description||rpt.name;
-
-          var actions=document.createElement('div');
-          actions.className='rpt-card-actions';
-          var editBtn=document.createElement('button');
-          editBtn.innerHTML='<span class="material-icons-round" style="font-size:13px">edit</span>';
-          editBtn.onclick=function(e){e.stopPropagation();showAddReportModal(rpt);};
-          var delBtn=document.createElement('button');
-          delBtn.innerHTML='<span class="material-icons-round" style="font-size:13px">delete</span>';
-          delBtn.onclick=function(e){e.stopPropagation();deleteReportLink(rpt.reportID,rpt.name);};
-          actions.appendChild(editBtn);actions.appendChild(delBtn);
-
-          var iconEl=document.createElement('span');
-          iconEl.className='rpt-card-icon';
-          iconEl.textContent=rpt.icon||'\uD83D\uDCCB';
-
-          var nameEl=document.createElement('div');
-          nameEl.className='rpt-card-name';
-          nameEl.textContent=rpt.name;
-
-          card.appendChild(actions);
-          card.appendChild(iconEl);
-          card.appendChild(nameEl);
-          if(rpt.description){
-            var descEl=document.createElement('div');
-            descEl.className='rpt-card-desc';
-            descEl.textContent=rpt.description;
-            card.appendChild(descEl);
-          }
-          grid.appendChild(card);
-        })(items[i]);
-      }
-
-      section.appendChild(hd);
-      section.appendChild(grid);
-      wrap.appendChild(section);
-    })(order[gi]);
-  }
-}
-
-function rptPopulateCategoryList(){
-  var dl=id('rptCategoryList');if(!dl)return;
-  var cats=[];
-  for(var i=0;i<REPORTS_CACHE.length;i++){
-    if(cats.indexOf(REPORTS_CACHE[i].category)===-1)cats.push(REPORTS_CACHE[i].category);
-  }
-  dl.innerHTML='';
-  for(var i=0;i<cats.length;i++){
-    var opt=document.createElement('option');opt.value=cats[i];dl.appendChild(opt);
-  }
-}
-
-function showAddReportModal(rpt){
-  rptPopulateCategoryList();
-  var titleEl=id('reportModalTitle');
-  var fields=['rpt-icon','rpt-name','rpt-category','rpt-url','rpt-desc'];
-  if(rpt){
-    if(titleEl)titleEl.innerHTML='&#9999;&#65039; Edit Report Link';
-    id('rpt-icon').value=rpt.icon||'\uD83D\uDCCB';
-    id('rpt-name').value=rpt.name||'';
-    id('rpt-category').value=rpt.category||'';
-    id('rpt-url').value=rpt.url||'';
-    id('rpt-desc').value=rpt.description||'';
-    REPORT_EDIT_ID=rpt.reportID;
-  } else {
-    if(titleEl)titleEl.innerHTML='&#128279; Add Report Link';
-    for(var i=0;i<fields.length;i++){var el=id(fields[i]);if(el)el.value='';}
-    id('rpt-icon').value='\uD83D\uDCCB';
-    REPORT_EDIT_ID=null;
-  }
-  openModal('mAddReport');
-}
 var REPORT_EDIT_ID=null;
-function rptPickIcon(emoji){
-  var el=id('rpt-icon');if(el)el.value=emoji;
-}
-function saveReportLink(){
-  if(!btnFreeze('saveReportLink','rptSaveBtn','<span class="material-icons-round mi" style="animation:spin 1s linear infinite">sync</span> Saving...'))return;
-  var icon=V('rpt-icon').trim()||'\uD83D\uDCCB';
-  var name=V('rpt-name').trim();
-  var category=V('rpt-category').trim()||'General';
-  var url=V('rpt-url').trim();
-  var desc=id('rpt-desc')?id('rpt-desc').value.trim():'';
-
-  if(!name){toast('Please enter a report name.','error');btnRelease('saveReportLink','rptSaveBtn');return;}
-  if(!url){toast('Please enter the report URL.','error');btnRelease('saveReportLink','rptSaveBtn');return;}
-  if(!/^https?:\/\//i.test(url)){toast('URL must start with http:// or https://','error');btnRelease('saveReportLink','rptSaveBtn');return;}
-
-  var btn=id('rptSaveBtn');if(btn)btn.disabled=true;
-  showLoader(REPORT_EDIT_ID?'Updating report...':'Adding report...');
-
-  var payload={name:name,category:category,icon:icon,url:url,description:desc};
-  var call=REPORT_EDIT_ID
-    ? gasCall('serverUpdateReportLink',S.token,Object.assign({reportID:REPORT_EDIT_ID},payload))
-    : gasCall('serverAddReportLink',S.token,payload);
-
-  call.then(function(r){
-    btnRelease('saveReportLink','rptSaveBtn');hideLoader();if(btn)btn.disabled=false;
-    if(r&&r.success){
-      toast(REPORT_EDIT_ID?'Report updated!':'Report added!','ok');
-      closeModal('mAddReport');
-      loadReportsPage();
-    } else {
-      toast((r&&r.message)||'Failed to save report.','error');
-    }
-  });
-}
-function deleteReportLink(reportID,name){
-  if(!confirm('Remove "'+name+'" from the Reports list? This only removes the link \u2014 the hosted report page itself is unaffected.'))return;
-  showLoader('Removing report...');
-  gasCall('serverDeleteReportLink',S.token,reportID).then(function(r){
-    hideLoader();
-    if(r&&r.success){
-      toast('Report removed.','ok');
-      loadReportsPage();
-    } else {
-      toast((r&&r.message)||'Failed to remove report.','error');
-    }
-  });
-}
 
 // ═══════════════════════════════════════════════════════════════
 // ── TAPPAL TRACKER (Admin & Commissioner only) ────────────────
@@ -11330,6 +10729,7 @@ function deleteReportLink(reportID,name){
 // ═══════════════════════════════════════════════════════════════
 var TPL={files:[],editID:null,existingAtt:[]};
 
+function loadReportsPage(){ /* v133: report links removed — page only offers the Custom Period Report */ }
 function loadTappalPage(){
   var body=id('tappalTableBody');
   if(body)body.innerHTML='<tr><td colspan="8" style="text-align:center;padding:24px;color:var(--tx3)">Loading\u2026</td></tr>';
@@ -11671,17 +11071,6 @@ function openLogoModal(){
   }
   openModal('mLogoUpload');
 }
-function initDB(){
-  if(!confirm('Initialize all Google Sheet tables? Run only once during initial setup.'))return;
-  showLoader('Initializing database...');
-  var done=false;
-  var timeout=setTimeout(function(){if(!done){hideLoader();toast('Initialization timed out. Check Apps Script execution logs.','error');}},30000);
-  gasCall('serverInitDatabase').then(function(r){
-    done=true;clearTimeout(timeout);hideLoader();
-    if(r&&r.success){toast('Database initialized successfully!','ok');setTimeout(function(){loadLookup().then(function(){renderSettings();});},1000);}
-    else toast((r&&r.message)||'Initialization failed. Check Apps Script logs.','error');
-  });
-}
 // All .modal-bg elements share the same CSS z-index (500), so when two
 // modals are open at once (e.g. "Add Remark" opened from on top of an
 // already-open "View Task"), plain source order decides which one paints
@@ -11824,8 +11213,8 @@ function saveNewDept(){
     hideLoader();closeModal('mAddDept');
     if(r&&r.success){
       toast('Department "'+name+'" added!','ok');
-      // Add to demo data if in demo mode
-      if(!IS_GAS&&DEMO){DEMO.aiMappings; // already handled by server
+      // Show the new department immediately (the lookup reload below refreshes it properly)
+      {
         if(S.lookup&&S.lookup.departments){
           var found=false;
           for(var i=0;i<S.lookup.departments.length;i++)if(S.lookup.departments[i].DeptName===name){found=true;break;}
@@ -12108,7 +11497,7 @@ function updateReportPreview(){
   var filtered=getCustomReportTasks();
   var done=0,over=0,pend=0;
   for(var i=0;i<filtered.length;i++){
-    if(filtered[i].status==='Completed'||filtered[i].status==='Closed')done++;
+    if(filtered[i].status==='Done'||filtered[i].status==='Verified')done++;
     if(filtered[i].isOverdue)over++;
     if(filtered[i].status==='Pending')pend++;
   }
@@ -12177,7 +11566,7 @@ function generateCustomReport(fmt){
 function generateCustomExcel(tasks,filterParts,label,from,to){
   var now=new Date().toLocaleDateString('en-IN');
   var done=0,pend=0,over=0;
-  for(var i=0;i<tasks.length;i++){if(tasks[i].status==='Completed'||tasks[i].status==='Closed')done++;if(tasks[i].status==='Pending')pend++;if(tasks[i].isOverdue)over++;}
+  for(var i=0;i<tasks.length;i++){if(tasks[i].status==='Done'||tasks[i].status==='Verified')done++;if(tasks[i].status==='Pending')pend++;if(tasks[i].isOverdue)over++;}
   var rows=[
     ['Salem City Municipal Corporation \u2014 '+label],
     ['Period: '+from+' to '+to+' | Generated: '+now],
@@ -12203,11 +11592,11 @@ function generateCustomPDF(tasks,filterParts,label,from,to){
   var total=tasks.length,done=0,inProg=0,pend=0,over=0,notDone=0,high=0;
   for(var i=0;i<tasks.length;i++){
     var t=tasks[i];
-    if(t.status==='Completed'||t.status==='Closed')done++;
+    if(t.status==='Done'||t.status==='Verified')done++;
     else if(t.status==='In Progress')inProg++;
     else if(t.status==='Pending')pend++;
     if(t.isOverdue)over++;
-    if(t.status!=='Completed'&&t.status!=='Closed')notDone++;
+    if(t.status!=='Done'&&t.status!=='Verified')notDone++;
     if(t.priority==='High')high++;
   }
   var rate=total>0?Math.round(done/total*100):0;
@@ -12218,7 +11607,7 @@ function generateCustomPDF(tasks,filterParts,label,from,to){
     var o=tasks[i].officerName||'Unassigned';
     if(!offMap[o])offMap[o]={total:0,done:0,pending:0,overdue:0};
     offMap[o].total++;
-    if(tasks[i].status==='Completed'||tasks[i].status==='Closed')offMap[o].done++;
+    if(tasks[i].status==='Done'||tasks[i].status==='Verified')offMap[o].done++;
     else offMap[o].pending++;
     if(tasks[i].isOverdue)offMap[o].overdue++;
   }
@@ -12229,13 +11618,13 @@ function generateCustomPDF(tasks,filterParts,label,from,to){
     var z=tasks[i].zone||'Unknown';
     if(!zoneMap[z])zoneMap[z]={total:0,done:0,pending:0,overdue:0};
     zoneMap[z].total++;
-    if(tasks[i].status==='Completed'||tasks[i].status==='Closed')zoneMap[z].done++;
+    if(tasks[i].status==='Done'||tasks[i].status==='Verified')zoneMap[z].done++;
     else zoneMap[z].pending++;
     if(tasks[i].isOverdue)zoneMap[z].overdue++;
   }
 
   function pct(c,t){return t>0?Math.round(c/t*100):0;}
-  function sStyle(s){var m={Pending:{bg:'#fff7ed',c:'#c2410c'},'In Progress':{bg:'#eff6ff',c:'#1d4ed8'},Completed:{bg:'#f0fdf4',c:'#15803d'},'Review Pending':{bg:'#faf5ff',c:'#7e22ce'},Overdue:{bg:'#fff1f2',c:'#be123c'},Closed:{bg:'#f8fafc',c:'#475569'}};var cv=m[s]||m.Closed;return'background:'+cv.bg+';color:'+cv.c+';border:1px solid '+cv.c+'44;padding:2px 8px;border-radius:4px;font-size:9.5px;font-weight:700;white-space:nowrap;display:inline-block';}
+  function sStyle(s){var m={Pending:{bg:'#fff7ed',c:'#c2410c'},'In Progress':{bg:'#eff6ff',c:'#1d4ed8'},Done:{bg:'#f0fdf4',c:'#15803d'},Completed:{bg:'#f0fdf4',c:'#15803d'},'Review Pending':{bg:'#faf5ff',c:'#7e22ce'},Overdue:{bg:'#fff1f2',c:'#be123c'},Closed:{bg:'#f8fafc',c:'#475569'},Verified:{bg:'#f8fafc',c:'#475569'}};var cv=m[s]||m.Closed;return'background:'+cv.bg+';color:'+cv.c+';border:1px solid '+cv.c+'44;padding:2px 8px;border-radius:4px;font-size:9.5px;font-weight:700;white-space:nowrap;display:inline-block';}
   function priColor(p){return p==='High'?'#be123c':p==='Medium'?'#b45309':'#15803d';}
   function progBar(r){var bc=r>=70?'#22c55e':r>=40?'#f59e0b':'#ef4444';return'<div style="display:flex;align-items:center;gap:4px"><div style="width:55px;background:#e2e8f0;border-radius:999px;height:6px;overflow:hidden"><div style="height:100%;border-radius:999px;background:'+bc+';width:'+r+'%"></div></div><span style="font-size:9px;font-weight:700;color:'+bc+'">'+r+'%</span></div>';}
 
@@ -12250,7 +11639,7 @@ function generateCustomPDF(tasks,filterParts,label,from,to){
 
   var taskRows='';
   for(var i=0;i<tasks.length;i++){
-    var t=tasks[i],isC=(t.status==='Completed'||t.status==='Closed');
+    var t=tasks[i],isC=(t.status==='Done'||t.status==='Verified');
     // Same fix as exportPDF(): a row taller than a full printable page
     // can't honor page-break-inside:avoid, since there's no page it
     // could fit on whole — truncating keeps every row within one page's height.
@@ -12337,22 +11726,6 @@ function mpPopulateView(u){
   }
 }
 
-function mpToggleEmailNotify(checkbox){
-  if(checkbox.checked){
-    var emailEl=id('mp-email');
-    var emailVal=emailEl?emailEl.value.trim():'';
-    if(!emailVal){
-      checkbox.checked=false;
-      toast('Please add an email address first to enable notifications.','error');
-      if(emailEl){
-        emailEl.focus();
-        emailEl.style.borderColor='var(--c-red)';
-        emailEl.style.boxShadow='0 0 0 2px rgba(239,68,68,.15)';
-        setTimeout(function(){emailEl.style.borderColor='';emailEl.style.boxShadow='';},2500);
-      }
-    }
-  }
-}
 function mpEnableEdit(){
   var u=S.user;if(!u)return;
   var ef=[['mp-empid',u.employeeID],['mp-mobile',u.mobile],['mp-email',u.email]];
@@ -12739,7 +12112,7 @@ function fDateShort(d){
     return new Date(d).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'});
   }catch(e){return String(d);}
 }
-function statusClass(s){var m={Pending:'pending','In Progress':'progress',Completed:'completed','Review Pending':'review',Overdue:'overdue',Closed:'closed'};return m[s]||'pending';}
+function statusClass(s){var m={Pending:'pending','In Progress':'progress',Done:'completed',Verified:'closed',Completed:'completed','Review Pending':'review',Overdue:'overdue',Closed:'closed'};return m[s]||'pending';}
 // Patch loadSettings to also refresh dept/desig lists
 (function(){
   var origLoad=loadSettings;
