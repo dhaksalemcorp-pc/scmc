@@ -25,7 +25,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<!-- v136: Chart.js removed — dashboards use plain HTML bars (faster first open) -->
 
 <!-- PWA icon — pre-render approach for GAS compatibility -->
 <script>
@@ -1427,7 +1427,7 @@ tbody tr:hover { background: var(--surface2); }
       </div>
     </div>
     <div class="login-extras">
-      <label class="remember-label"><input type="checkbox" id="rememberMe"> Remember me</label>
+      <label class="remember-label"><input type="checkbox" id="rememberMe" checked> Keep me signed in (30 days)</label>
       <a href="#" class="forgot-link" onclick="event.preventDefault();toast('Contact your Administrator to reset your password.','info')">Forgot password?</a>
     </div>
     <button class="login-btn" id="loginBtn" onclick="doLogin()">Sign In to System</button>
@@ -1533,12 +1533,17 @@ tbody tr:hover { background: var(--surface2); }
           <div class="kpi green"><div class="kpi-stripe"></div><div class="kpi-icon-wrap"><span class="material-icons-round mi">percent</span></div><div class="kpi-val" id="k-rate">&#8212;</div><div class="kpi-lbl">Completion %</div></div>
         </div>
         <div class="g2">
-          <div class="card"><div class="card-hd"><span class="card-title">Zone Performance</span></div><div class="card-bd" style="height:260px"><canvas id="chartZone"></canvas></div></div>
+          <div class="card"><div class="card-hd"><span class="card-title">Zone Performance</span><span style="font-size:11px;color:var(--tx3)"><span style="color:#10b981">■</span> Done &nbsp;<span style="color:#f59e0b">■</span> Open</span></div><div class="card-bd" id="zoneBars" style="max-height:320px;overflow-y:auto"></div></div>
           <div class="card"><div class="card-hd"><span class="card-title">Department Breakdown</span></div><div class="card-bd" id="deptBreakdown" style="max-height:320px;overflow-y:auto"></div></div>
         </div>
       </div>
       <!-- Officer-specific dashboard -->
       <div id="officerDash" class="dn">
+        <div class="card mb16" id="myDayCard">
+          <div class="card-hd"><span class="card-title">&#128203; My work today <span id="myDayCount" style="font-size:12px;color:var(--tx3);font-weight:600"></span></span>
+            <button class="btn btn-ghost btn-sm" onclick="go('tracker')"><span class="material-icons-round mi">list</span> All my tasks</button></div>
+          <div class="card-bd" id="myDayList"><div style="color:var(--tx3);font-size:13px">Loading…</div></div>
+        </div>
         <div class="kpi-grid" id="offKpiGrid">
           <div class="kpi blue" onclick="go('tracker')" style="cursor:pointer"><div class="kpi-stripe"></div><div class="kpi-icon-wrap"><span class="material-icons-round mi">assignment</span></div><div class="kpi-val" id="ok-total">&#8212;</div><div class="kpi-lbl">My Tasks</div></div>
           <div class="kpi orange" onclick="go('tracker')" style="cursor:pointer"><div class="kpi-stripe"></div><div class="kpi-icon-wrap"><span class="material-icons-round mi">pending</span></div><div class="kpi-val" id="ok-pending">&#8212;</div><div class="kpi-lbl">Pending</div></div>
@@ -1549,24 +1554,8 @@ tbody tr:hover { background: var(--surface2); }
           <div class="kpi purple" onclick="go('tracker')" style="cursor:pointer"><div class="kpi-stripe"></div><div class="kpi-icon-wrap"><span class="material-icons-round mi">priority_high</span></div><div class="kpi-val" id="ok-high">&#8212;</div><div class="kpi-lbl">Urgent</div></div>
           <div class="kpi green"><div class="kpi-stripe"></div><div class="kpi-icon-wrap"><span class="material-icons-round mi">percent</span></div><div class="kpi-val" id="ok-rate">&#8212;</div><div class="kpi-lbl">My Completion %</div></div>
         </div>
-        <div class="card mb16">
-          <div class="card-hd">
-            <span class="card-title">My Task Progress</span>
-            <button class="btn btn-primary btn-sm" onclick="go('tracker')"><span class="material-icons-round mi">open_in_new</span> View All My Tasks</button>
-          </div>
-          <div class="card-bd" style="height:200px"><canvas id="offChart"></canvas></div>
-        </div>
-        <div class="card">
-          <div class="card-hd"><span class="card-title">My Recent Tasks</span></div>
-          <div class="card-bd-0">
-            <div class="tbl-wrap">
-              <table>
-                <thead><tr><th>Task ID</th><th>Description</th><th>Urgent?</th><th>Due Date</th><th>Status</th><th>Action</th></tr></thead>
-                <tbody id="offRecentTasks"></tbody>
-              </table>
-            </div>
-          </div>
-        </div>
+        <!-- v136: "My Recent Tasks" + chart replaced by My work today (shown at the top) -->
+        <table class="dn"><tbody id="offRecentTasks"></tbody></table>
       </div>
 
       <!-- HOD Dashboard -->
@@ -2288,6 +2277,12 @@ tbody tr:hover { background: var(--surface2); }
           <div class="f-group mb0"><label class="f-label">Department</label><select class="f-sel" id="rvPrintDept"><option value="">All departments</option></select></div>
           <div class="f-group mb0" style="align-self:flex-end"><button class="btn btn-primary" onclick="rvPrint()"><span class="material-icons-round mi">print</span> Print pending list</button></div>
         </div><div style="font-size:12px;color:var(--tx3);margin-top:8px">Pending, In Progress and Done (to verify) tasks, grouped by officer, oldest first — ready for the weekly HOD meeting.</div></div></div>
+      <!-- v136: the old Reports page lives here now -->
+      <div class="card mt24"><div class="card-hd"><span class="card-title">&#128202; Period report (Excel / PDF)</span></div>
+        <div class="card-bd" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+          <button class="btn btn-primary" onclick="openCustomReport()"><span class="material-icons-round mi">tune</span> Make a report</button>
+          <span style="font-size:12px;color:var(--tx3)">Choose dates, zone, department or officer and download as Excel or PDF.</span>
+        </div></div>
     </div>
 
     <div class="page" id="page-reports">
@@ -2808,7 +2803,6 @@ tbody tr:hover { background: var(--surface2); }
         <div class="flex-c gap8 mb8">
           <button type="button" class="btn btn-ghost btn-sm" onclick="document.getElementById('photoInput').click()"><span class="material-icons-round mi">upload</span> From Device</button>
           <button type="button" class="btn btn-ghost btn-sm" onclick="document.getElementById('photoInputCam').click()"><span class="material-icons-round mi">photo_camera</span> Camera</button>
-          <button type="button" class="btn btn-ghost btn-sm" onclick="addDriveLink()"><span class="material-icons-round mi">add_link</span> Add Drive Link</button>
         </div>
         <!-- Drop zone -->
         <div id="photoDropZone" style="border:2px dashed var(--border);border-radius:10px;padding:20px;text-align:center;cursor:pointer;background:var(--surface2);transition:border-color .2s" onclick="document.getElementById('photoInput').click()" ondragover="event.preventDefault();this.style.borderColor='var(--c-blue)'" ondragleave="this.style.borderColor='var(--border)'" ondrop="handlePhotoDrop(event)">
@@ -3449,7 +3443,8 @@ function doLogin(){
   // weak connections. The app appears IMMEDIATELY (dashboard and tasks
   // render from device cache), while lookup + fresh dashboard + tasks
   // arrive via one background bootstrap call the user never waits on.
-  gasCall('serverLoginAndLoad',u,p).then(function(r){
+  var remSel=id('rememberMe'),remember=!!(remSel&&remSel.checked); // v136: 30-day session on own phone
+  gasCall('serverLoginAndLoad',u,p,remember).then(function(r){
     btn.disabled=false;btn.textContent='Sign In to System';
     if(r&&r.success){
       resetSessionState(); // never carry the previous user's data forward
@@ -3609,7 +3604,7 @@ function applyRoleNav(role){
   show('snav-taskEntry', isAdmin||isSupervision);
   show('snav-users', isAdminOnly);
   show('snav-settings', isAdminOnly);
-  show('snav-reports', isAdminOnly);
+  show('snav-reports', false); // v136: Reports merged into the Review page
   show('snav-review', isAdmin); // v134: Commissioner + Admin
   show('snav-tappal', isAdmin); // Admin AND Commissioner, per requirement — unlike Reports which is Admin-only
   show('snav-chgpw', true);
@@ -4277,6 +4272,48 @@ function applyOfficerDashData(r){
   }
   buildOfficerChart(s);
   buildOfficerRecentTasks(r.recentTasks||[]);
+  renderMyDay(r.todayTasks);
+}
+// v136 MY WORK TODAY — the officer's open tasks, most urgent first, one tap to update
+var MYDAY=[];
+function myDayLocal(){
+  // fallback when the server list isn't there: build it from the task list on the phone
+  var me=S.user?S.user.userID:'',today=new Date().toISOString().slice(0,10);
+  var open=(S.tasks||[]).filter(function(t){return t.officerID===me&&t.status!=='Done'&&t.status!=='Verified';});
+  function rk(t){return (t.dueDate&&t.dueDate<today)?0:(t.dueDate===today?1:(t.priority==='High'?2:3));}
+  open.sort(function(a,b){return rk(a)-rk(b)||String(a.dueDate||'9999').localeCompare(String(b.dueDate||'9999'));});
+  return {total:open.length,tasks:open.slice(0,15)};
+}
+function renderMyDay(data){
+  var box=id('myDayList');if(!box)return;
+  data=data||myDayLocal();
+  MYDAY=data.tasks||[];
+  var cnt=id('myDayCount');if(cnt)cnt.textContent=data.total?('('+data.total+' open)'):'';
+  if(!MYDAY.length){box.innerHTML='<div style="text-align:center;padding:22px;color:var(--tx3);font-size:13.5px">\u2705 Nothing pending \u2014 well done!</div>';return;}
+  var today=new Date().toISOString().slice(0,10),h='';
+  MYDAY.forEach(function(t){
+    var tag='',col='var(--tx2)';
+    if(t.dueDate&&t.dueDate<today){var d=Math.round((new Date(today)-new Date(t.dueDate))/86400000);tag='Overdue '+d+' day'+(d>1?'s':'');col='#b91c1c';}
+    else if(t.dueDate===today){tag='Due today';col='#b45309';}
+    else if(t.dueDate){tag='Due '+fDateShort(t.dueDate);}
+    else tag='No due date';
+    h+='<div style="border:1px solid var(--border);border-left:4px solid '+(col==='#b91c1c'?'#ef4444':col==='#b45309'?'#f59e0b':'var(--border)')+';border-radius:10px;padding:10px 12px;margin-bottom:8px;display:flex;gap:10px;align-items:center">'
+      +'<div style="flex:1;min-width:0">'
+      +'<div style="font-size:11.5px;display:flex;gap:6px;flex-wrap:wrap;align-items:center"><span style="font-weight:800;color:'+col+'">'+tag+'</span>'
+      +(String(t.priority)==='High'?'<span style="color:#b91c1c;font-weight:700">\ud83d\udd34 Urgent</span>':'')
+      +'<span class="badge badge-'+statusClass(t.status)+'">'+htmlEsc(t.status)+'</span>'
+      +(t.zone?'<span style="color:var(--tx3)">'+htmlEsc(t.zone)+'</span>':'')+'</div>'
+      +'<div style="font-size:13.5px;margin-top:4px;line-height:1.4;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical">'+htmlEsc(t.description||'')+'</div></div>'
+      +'<button class="btn btn-primary" style="flex-shrink:0;padding:10px 14px" onclick="myDayUpdate(\''+t.taskID+'\')"><span class="material-icons-round mi">photo_camera</span> Update</button>'
+      +'</div>';
+  });
+  if(data.total>MYDAY.length)h+='<div style="text-align:center"><button class="btn btn-ghost btn-sm" onclick="go(\'tracker\')">See all '+data.total+' open tasks</button></div>';
+  box.innerHTML=h;
+}
+function myDayUpdate(taskID){
+  var have=false;for(var i=0;i<S.tasks.length;i++)if(S.tasks[i].taskID===taskID){have=true;break;}
+  if(!have){for(var j=0;j<MYDAY.length;j++)if(MYDAY[j].taskID===taskID){var c=MYDAY[j];if(!c.officerID&&S.user)c.officerID=S.user.userID;if(!c.officerName&&S.user)c.officerName=S.user.name;S.tasks.push(c);break;}}
+  officerUpdate(taskID);
 }
 
 function loadTasksThenOfficerDash(){
@@ -4302,9 +4339,11 @@ function buildOfficerDashFromTasks(){
   if(overdue>0){var b=id('overdBadge');if(b){b.textContent=overdue;b.style.display='';}var d=id('bnDot');if(d)d.classList.add('on');}
   buildOfficerChart(s);
   buildOfficerRecentTasks(tasks.slice(-5).reverse());
+  renderMyDay(myDayLocal());
 }
-function buildOfficerChart(s){
-  var ctx=id('offChart');if(!ctx)return;if(S.charts.offChart)S.charts.offChart.destroy();
+function buildOfficerChart(s){ /* v136: chart removed — "My work today" list instead */ }
+function _oldOfficerChart(s){
+  var ctx=id('offChart');if(!ctx||typeof Chart==='undefined')return;if(S.charts.offChart)S.charts.offChart.destroy();
   S.charts.offChart=new Chart(ctx,{type:'doughnut',data:{labels:['Pending','In Progress','Done','Overdue'],datasets:[{data:[s.pending,s.inProgress,s.completed,s.overdue],backgroundColor:['#f59e0b','#0ea5e9','#10b981','#ef4444'],borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,cutout:'60%',plugins:{legend:{position:'right',labels:{padding:16,font:{size:12,family:'Inter'}}}}}});
 }
 function buildOfficerRecentTasks(tasks){
@@ -4325,29 +4364,18 @@ function buildOfficerRecentTasks(tasks){
   tbody.innerHTML=html;
 }
 function buildZoneChart(zs){
-  var ctx=id('chartZone');if(!ctx)return;if(S.charts.zone)S.charts.zone.destroy();
-  // Sort zones in canonical order
-  var zones=Object.keys(zs);
-  zones.sort(function(a,b){return zoneRank(a)-zoneRank(b);});
-  var doneData=[],pendData=[];
-  for(var i=0;i<zones.length;i++){
-    doneData.push(zs[zones[i]].completed||0);
-    pendData.push(zs[zones[i]].pending||0);
-  }
-  // Shorten labels for display
-  var labels=zones.map(function(z){
-    return z.replace('Suramangalam Zone-1','Suram.Z1')
-             .replace('Hasthampatti Zone-2','Hasth.Z2')
-             .replace('Kondalampatti Zone-4','Kond.Z4')
-             .replace('Ammapet Zone-3','Ammap.Z3')
-             .replace('Main Office','Main Office');
+  // v136: simple HTML bars instead of a chart library
+  var box=id('zoneBars');if(!box)return;
+  var zones=Object.keys(zs||{});zones.sort(function(a,b){return zoneRank(a)-zoneRank(b);});
+  if(!zones.length){box.innerHTML='<div style="color:var(--tx3);font-size:13px">No data</div>';return;}
+  var max=1;zones.forEach(function(z){var t=(zs[z].completed||0)+(zs[z].pending||0);if(t>max)max=t;});
+  var h='';
+  zones.forEach(function(z){
+    var d=zs[z].completed||0,p=zs[z].pending||0;
+    h+='<div style="margin-bottom:9px"><div style="display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:3px"><b>'+htmlEsc(z)+'</b><span style="color:var(--tx2)"><span style="color:#059669;font-weight:700">'+d+'</span> done · <span style="color:#b45309;font-weight:700">'+p+'</span> open</span></div>'
+      +'<div style="display:flex;height:10px;border-radius:99px;overflow:hidden;background:var(--surface2)"><div style="width:'+(d/max*100)+'%;background:#10b981"></div><div style="width:'+(p/max*100)+'%;background:#f59e0b"></div></div></div>';
   });
-  S.charts.zone=new Chart(ctx,{type:'bar',data:{labels:labels,datasets:[
-    {label:'Done',data:doneData,backgroundColor:'#10b981',borderRadius:4},
-    {label:'Pending',data:pendData,backgroundColor:'#f59e0b',borderRadius:4}
-  ]},options:{responsive:true,maintainAspectRatio:false,
-    scales:{x:{stacked:true,grid:{display:false},ticks:{font:{size:10}}},y:{stacked:true,beginAtZero:true,ticks:{font:{size:10}}}},
-    plugins:{legend:{position:'bottom',labels:{font:{size:11},padding:10}}}}});
+  box.innerHTML=h;
 }
 function deptDrillTo(dept,status){
   // Persist drill intent — trkApplyResponse re-applies after loadTasks returns
