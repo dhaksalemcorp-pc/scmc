@@ -2794,7 +2794,16 @@ tbody tr:hover { background: var(--surface2); }
         </div>
       </div>
       <div class="f-group">
-        <label class="f-label">Attach Photos <span style="font-size:10px;color:var(--tx3)">(Optional — max 5, 10MB each)</span></label>
+        <label class="f-label">Attach Photos <span style="font-size:10px;color:var(--tx3)">(max 5, 10MB each)</span></label>
+        <!-- v135: officer marks each photo as BEFORE work or AFTER work -->
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px;font-size:12.5px">
+          <span style="color:var(--tx2);font-weight:600">New photos are:</span>
+          <div style="display:inline-flex;border:1.5px solid var(--border);border-radius:999px;overflow:hidden">
+            <button type="button" id="puKindBefore" onclick="puSetKind('Before')" style="border:none;padding:5px 14px;font-weight:700;cursor:pointer;font-size:12px">📷 Before work</button>
+            <button type="button" id="puKindAfter" onclick="puSetKind('After')" style="border:none;padding:5px 14px;font-weight:700;cursor:pointer;font-size:12px">✅ After work</button>
+          </div>
+          <span style="color:var(--tx3);font-size:11px">Tap the label on a photo to change it. <b>Done</b> needs an After photo.</span>
+        </div>
         <!-- Source selection -->
         <div class="flex-c gap8 mb8">
           <button type="button" class="btn btn-ghost btn-sm" onclick="document.getElementById('photoInput').click()"><span class="material-icons-round mi">upload</span> From Device</button>
@@ -4690,18 +4699,18 @@ function trkRenderNoteBar(){
   var compCount=(typeof meta.completedCount==='number')?meta.completedCount:0;
   if(compCount>0||TRK_COMP_ON){
     if(TRK_COMP_ON){
-      parts.push('<a onclick="trkToggleCompletedView()" style="cursor:pointer;color:#fff;background:#059669;padding:2px 10px;border-radius:999px;font-weight:700;text-decoration:none">\u2714 Viewing completed ('+compCount+') \u2014 tap to go back</a>');
+      parts.push('<a onclick="trkToggleCompletedView()" style="cursor:pointer;color:#fff;background:#059669;padding:2px 10px;border-radius:999px;font-weight:700;text-decoration:none">\u2714 Viewing Done ('+compCount+') \u2014 tap to go back</a>');
     } else {
-      parts.push('<a onclick="trkToggleCompletedView()" style="cursor:pointer;color:#059669;background:rgba(5,150,105,.12);padding:2px 10px;border-radius:999px;font-weight:700;text-decoration:none">\u2714 '+compCount+' completed \u2014 view</a>');
+      parts.push('<a onclick="trkToggleCompletedView()" style="cursor:pointer;color:#059669;background:rgba(5,150,105,.12);padding:2px 10px;border-radius:999px;font-weight:700;text-decoration:none">\u2714 '+compCount+' Done \u2014 waiting to verify</a>');
     }
   }
   // Closed: the final archived state — hidden unless explicitly shown
   var clCount=(typeof meta.closedCount==='number')?meta.closedCount:0;
   if(clCount>0||S.showClosed){
     if(S.showClosed){
-      parts.push('Closed shown. <a onclick="trkToggleClosed(false)" style="cursor:pointer;color:var(--c-blue);font-weight:600">Hide closed</a>');
+      parts.push('Verified shown \u2014 <a onclick="trkToggleClosed(false)" style="cursor:pointer;color:var(--c-blue);font-weight:600">Hide</a>');
     } else {
-      parts.push('Closed hidden ('+clCount+'). <a onclick="trkToggleClosed(true)" style="cursor:pointer;color:var(--c-blue);font-weight:600">Show</a>');
+      parts.push(clCount+' Verified hidden \u2014 <a onclick="trkToggleClosed(true)" style="cursor:pointer;color:var(--c-blue);font-weight:600">Show</a>');
     }
   }
   if(meta.totalCount&&meta.totalCount>S.tasks.length&&S.taskWindow>0&&(S.showCompleted||S.showClosed)){
@@ -4845,6 +4854,76 @@ function rvFillFilters(){
   var o=id('rvOfficer');if(o){var c=o.value;o.innerHTML='<option value="">All officers</option>'+Object.keys(offs).sort().map(function(n){return '<option>'+htmlEsc(n)+'</option>';}).join('');o.value=c;}
 }
 function rvRenderAll(){rvRenderWorkload();rvRenderBacklog(true);}
+
+// ─── v135 WHATSAPP (Admin & Commissioner only) ─────────────────
+// Opens WhatsApp with a ready-made message to the officer's mobile.
+// Nothing is sent automatically — you see the message in WhatsApp and
+// press Send yourself. Free: uses WhatsApp's own wa.me link.
+var WA={contacts:null,loading:null};
+function waAllowed(){return !!(S.user&&(S.user.role==='Admin'||S.user.role==='Commissioner'));}
+function waLoadContacts(){
+  if(WA.contacts)return Promise.resolve(WA.contacts);
+  if(WA.loading)return WA.loading;
+  WA.loading=gasCall('serverGetOfficerContacts',S.token).then(function(r){
+    WA.loading=null;
+    if(r&&r.success){WA.contacts=r.data||{};return WA.contacts;}
+    return {};
+  });
+  return WA.loading;
+}
+function waAppLink(){return location.origin+location.pathname;}
+function waDue(t){
+  if(!t.dueDate)return 'Not set';
+  var s=(typeof fDateShort==='function')?fDateShort(t.dueDate):t.dueDate;
+  if(t.isOverdue){var d=Math.floor((Date.now()-new Date(t.dueDate).getTime())/86400000);if(d>0)s+=' (overdue by '+d+' day'+(d>1?'s':'')+')';}
+  return s;
+}
+function waTaskText(t){
+  var desc=String(t.description||'').trim();
+  return '*Salem Corporation – Task reminder*\n'
+    +'Task: '+t.taskID+'\n'
+    +(String(t.priority)==='High'?'🔴 *URGENT*\n':'')
+    +'Work: '+desc+'\n'
+    +(t.zone?'Zone: '+t.zone+'\n':'')
+    +'Due: '+waDue(t)+'\n'
+    +'Status: '+(t.status||'Pending')+'\n\n'
+    +'Please update the status with photos in TMS:\n'+waAppLink();
+}
+function waOfficerText(name,list){
+  var lines=['*Salem Corporation – Pending tasks*','Officer: '+name+' ('+list.length+' open)',''];
+  var max=Math.min(list.length,15);
+  for(var i=0;i<max;i++){
+    var t=list[i],d=String(t.description||'').replace(/\s+/g,' ').trim();
+    if(d.length>90)d=d.slice(0,88)+'…';
+    lines.push((i+1)+'. '+(String(t.priority)==='High'?'🔴 ':'')+d+' — due '+waDue(t)+' ['+t.taskID+']');
+  }
+  if(list.length>max)lines.push('…and '+(list.length-max)+' more.');
+  lines.push('','Please update each task with photos in TMS:',waAppLink());
+  return lines.join('\n');
+}
+// open the window FIRST (inside the tap) so the browser doesn't block it
+function waOpen(officerID,officerName,text){
+  if(!waAllowed()){toast('Only Admin and Commissioner can send WhatsApp messages.','error');return;}
+  var w=null;try{w=window.open('about:blank','_blank');}catch(e){}
+  waLoadContacts().then(function(c){
+    var mob=(c||{})[officerID]||'';
+    var url='https://wa.me/'+(mob?'91'+mob:'')+'?text='+encodeURIComponent(text);
+    if(!mob)toast('No mobile number saved for '+(officerName||'this officer')+' — choose the contact in WhatsApp. (Add it in User Management.)','info');
+    if(w&&!w.closed){try{w.location.href=url;}catch(e){location.href=url;}}else location.href=url;
+  });
+}
+function waFindTask(taskID){
+  for(var i=0;i<S.tasks.length;i++)if(S.tasks[i].taskID===taskID)return S.tasks[i];
+  if(typeof RV!=='undefined'&&RV.tasks)for(var j=0;j<RV.tasks.length;j++)if(RV.tasks[j].taskID===taskID)return RV.tasks[j];
+  return null;
+}
+function waSendTask(taskID){var t=waFindTask(taskID);if(!t)return;waOpen(t.officerID,t.officerName,waTaskText(t));}
+function waSendOfficer(name){
+  var list=((typeof RV!=='undefined'&&RV.tasks)||S.tasks).filter(function(t){return (t.officerName||'Unassigned')===name&&t.status!=='Done'&&t.status!=='Verified';});
+  if(!list.length){toast(name+' has no open tasks.','info');return;}
+  list.sort(function(a,b){return (b.isOverdue?1:0)-(a.isOverdue?1:0)||(String(b.priority)==='High')-(String(a.priority)==='High')||String(a.dueDate||'9').localeCompare(String(b.dueDate||'9'));});
+  waOpen(list[0].officerID,name,waOfficerText(name,list));
+}
 function rvRenderWorkload(){
   var box=id('rvWorkload');if(!box)return;
   var map={};
@@ -4863,7 +4942,7 @@ function rvRenderWorkload(){
     var pct=max?Math.round(x.open/max*100):0,heavy=x.open>RV_WORKLOAD_LIMIT;
     h+='<div style="cursor:pointer" onclick="rvPickOfficer(this.dataset.n)" data-n="'+htmlEsc(x.name)+'" title="Show this officer\'s tasks in the clean-up list">'
       +'<div style="display:flex;justify-content:space-between;gap:8px;font-size:12.5px"><span><b>'+htmlEsc(x.name)+'</b> <span style="color:var(--tx3);font-size:11px">'+htmlEsc(x.dept)+'</span>'+(heavy?' <span style="color:#b91c1c;font-weight:700;font-size:11px">⚠ too many</span>':'')+'</span>'
-      +'<span style="white-space:nowrap;color:var(--tx2)"><b>'+x.open+'</b> open'+(x.overdue?' · <span style="color:#b91c1c">'+x.overdue+' overdue</span>':'')+(x.notSeen?' · <span style="color:#b45309">'+x.notSeen+' not seen</span>':'')+(x.done?' · <span style="color:#15803d">'+x.done+' to verify</span>':'')+'</span></div>'
+      +'<span style="white-space:nowrap;color:var(--tx2)"><b>'+x.open+'</b> open'+(x.overdue?' · <span style="color:#b91c1c">'+x.overdue+' overdue</span>':'')+(x.notSeen?' · <span style="color:#b45309">'+x.notSeen+' not seen</span>':'')+(x.done?' · <span style="color:#15803d">'+x.done+' to verify</span>':'')+(x.open&&x.name!=='Unassigned'?' <button class="btn btn-sm" title="Send pending list on WhatsApp" style="background:#25D366;color:#fff;padding:1px 8px;margin-left:6px;font-size:11px" data-n="'+htmlEsc(x.name)+'" onclick="event.stopPropagation();waSendOfficer(this.dataset.n)">WhatsApp</button>':'')+'</span></div>'
       +'<div style="height:9px;background:var(--surface2);border-radius:99px;overflow:hidden;margin-top:3px"><div style="height:100%;width:'+pct+'%;background:'+(heavy?'#ef4444':'#3b82f6')+';border-radius:99px"></div></div></div>';
   });
   box.innerHTML=h+'</div>';
@@ -4899,6 +4978,7 @@ function rvCard(t){
     +'<button class="btn btn-sm" style="background:#059669;color:#fff" onclick="rvAskVerify(\''+t.taskID+'\')"><span class="material-icons-round mi">verified</span> Verify</button>'
     +'<button class="btn btn-ghost btn-sm" onclick="rvAskReassign(\''+t.taskID+'\')"><span class="material-icons-round mi">swap_horiz</span> Reassign</button>'
     +'<button class="btn btn-ghost btn-sm" onclick="rvOpen(\''+t.taskID+'\')"><span class="material-icons-round mi">open_in_new</span> Open</button>'
+    +'<button class="btn btn-sm" style="background:#25D366;color:#fff" onclick="waSendTask(\''+t.taskID+'\')"><span class="material-icons-round mi">chat</span> WhatsApp</button>'
     +'</div><div class="rv-extra"></div>';
   return d;
 }
@@ -5021,9 +5101,10 @@ function compressForQueue(file){
 function queuePhotoUpdateOffline(taskID,status,remarks,priority,files){
   var btn=id('pu-saveBtn');if(btn)btn.disabled=true;
   Promise.all(files.map(compressForQueue)).then(function(list){
-    var photos=list.filter(function(x){return !!x;});
+    var photos=[],kinds=[];
+    list.forEach(function(x,ix){if(x){photos.push(x);kinds.push(photoKindOf(files[ix]));}});
     if(!photos.length){if(btn)btn.disabled=false;toast('These photos could not be read on this phone — please choose them again.','error');return;}
-    var item={qid:'P'+Date.now()+Math.floor(Math.random()*1000),taskID:taskID,status:status,remarks:remarks,priority:priority,photos:photos,user:(S.user&&S.user.username)||'',at:new Date().toISOString()};
+    var item={qid:'P'+Date.now()+Math.floor(Math.random()*1000),taskID:taskID,status:status,remarks:remarks,priority:priority,photos:photos,kinds:kinds,hasAfter:kinds.indexOf('After')!==-1,user:(S.user&&S.user.username)||'',at:new Date().toISOString()};
     return pqTx('readwrite',function(st){return st.put(item);}).then(function(){
       if(btn)btn.disabled=false;
       closeModal('mPhotoUpload');
@@ -5040,7 +5121,7 @@ function photoQueueFlush(){
     window.PHOTO_Q_COUNT=items.length;renderOutboxBadge();
     if(!items.length)return;
     _pqBusy=true;var it=items[0];
-    gasCall('serverAddTaskPhotosBatch',S.token,{taskID:it.taskID,photos:it.photos}).then(function(r){
+    gasCall('serverAddTaskPhotosBatch',S.token,{taskID:it.taskID,photos:it.photos,kinds:it.kinds||[]}).then(function(r){
       var msg=(r&&r.message)||'';
       if(!r||!r.success){
         _pqBusy=false;
@@ -5049,7 +5130,7 @@ function photoQueueFlush(){
         return pqTx('readwrite',function(st){return st.delete(it.qid);}).then(pqCount);
       }
       // photos are in — now the status (photo rule satisfied)
-      gasCall('serverUpdateTask',S.token,it.taskID,{status:it.status,officerRemarks:it.remarks,priority:it.priority,photosAttached:true}).then(function(r2){
+      gasCall('serverUpdateTask',S.token,it.taskID,{status:it.status,officerRemarks:it.remarks,priority:it.priority,photosAttached:it.hasAfter!==false}).then(function(r2){
         _pqBusy=false;
         var m2=(r2&&r2.message)||'';
         if(r2&&!r2.success&&(isLikelyConnectionDrop(m2)||m2.indexOf('busy')!==-1||m2==='Unauthorized')){
@@ -5070,7 +5151,7 @@ photoQueueFlush=function(){
   pqAll().then(function(items){
     if(items.length&&items[0].photos&&!items[0].photos.length){
       var it=items[0];_pqBusy=true;
-      gasCall('serverUpdateTask',S.token,it.taskID,{status:it.status,officerRemarks:it.remarks,priority:it.priority,photosAttached:true}).then(function(r2){
+      gasCall('serverUpdateTask',S.token,it.taskID,{status:it.status,officerRemarks:it.remarks,priority:it.priority,photosAttached:it.hasAfter!==false}).then(function(r2){
         _pqBusy=false;var m2=(r2&&r2.message)||'';
         if(r2&&!r2.success&&(isLikelyConnectionDrop(m2)||m2.indexOf('busy')!==-1||m2==='Unauthorized'))return;
         if(r2&&!r2.success)toast('Status for '+it.taskID+' was NOT saved: '+m2,'error');
@@ -5898,7 +5979,8 @@ function viewTask(taskID){
   id('mTaskTitle').textContent=taskID;id('mTaskBody').innerHTML=taskDetailHTML(t);
   var tvClose=(isAdmin&&t&&t.status==='Done')?'<button class="btn" id="tvCloseBtn" style="background:#059669;color:#fff;margin-right:4px" data-tid="'+taskID+'" onclick="tvCloseTask(this.dataset.tid)"><span class="material-icons-round mi">verified</span> Mark Verified</button>':'';
   var tvRemark=isAdmin?'<button class="btn btn-ghost" style="border-color:#B45309;color:#B45309;margin-right:4px" onclick="showAddRemarkModal(\''+taskID+'\')"><span class="material-icons-round mi">rate_review</span> Add Remark</button>':'';
-  id('mTaskFt').innerHTML=isAdmin?tvClose+tvRemark+'<button class="btn btn-ghost" onclick="closeModal(\'mTask\')">Close</button><button class="btn btn-primary" onclick="closeModal(\'mTask\');editTask(\''+taskID+'\')">Edit All Fields</button>':'<button class="btn btn-ghost" onclick="closeModal(\'mTask\')">Close</button><button class="btn btn-primary" onclick="closeModal(\'mTask\');officerUpdate(\''+taskID+'\')">Update Progress</button>';
+  var tvWa=(isAdmin&&t.officerID&&t.status!=='Verified')?'<button class="btn" style="background:#25D366;color:#fff;margin-right:4px" onclick="waSendTask(\''+taskID+'\')"><span class="material-icons-round mi">chat</span> WhatsApp</button>':'';
+  id('mTaskFt').innerHTML=isAdmin?tvWa+tvClose+tvRemark+'<button class="btn btn-ghost" onclick="closeModal(\'mTask\')">Close</button><button class="btn btn-primary" onclick="closeModal(\'mTask\');editTask(\''+taskID+'\')">Edit All Fields</button>':'<button class="btn btn-ghost" onclick="closeModal(\'mTask\')">Close</button><button class="btn btn-primary" onclick="closeModal(\'mTask\');officerUpdate(\''+taskID+'\')">Update Progress</button>';
   openModal('mTask');
 
   // Load full task detail on-demand (heavy fields: officerRemarks,
@@ -6026,9 +6108,10 @@ function taskDetailHTML(t){
     +'<div style="font-size:10px;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px">Description</div>'
     +'<div style="background:var(--surface2);padding:11px;border-radius:8px;font-size:13px;line-height:1.6">'+(t.description||'\u2014')+'</div>'
     +'</div>';
-  // v134: BEFORE (inspection note photos) vs AFTER (officer's photos) side by side
-  var beforeP=(t._beforePhotos||[]).filter(function(p){return p&&p.photoData;});
-  var afterP=(t.newPhotos||[]).filter(function(p){return p&&p.photoData;});
+  // v135: BEFORE work vs AFTER work — both taken by the officer
+  var allP=(t.newPhotos||[]).filter(function(p){return p&&p.photoData;});
+  var beforeP=allP.filter(function(p){return p.kind==='Before';});
+  var afterP=allP.filter(function(p){return p.kind!=='Before';});
   if(beforeP.length||afterP.length){
     var strip=function(list,label,col){
       var h='<div style="flex:1;min-width:0"><div style="font-size:10px;font-weight:700;color:'+col+';text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px">'+label+' ('+list.length+')</div>'
@@ -6041,7 +6124,7 @@ function taskDetailHTML(t){
       return h+'</div></div>';
     };
     detailsHtml+='<div style="display:flex;gap:12px;margin-bottom:12px;background:var(--surface2);border-radius:10px;padding:10px">'
-      +strip(beforeP,'Before \u2014 inspection','#B45309')+strip(afterP,'After \u2014 officer','var(--c-green)')+'</div>';
+      +strip(beforeP,'Before work','#B45309')+strip(afterP,'After work','var(--c-green)')+'</div>';
   }
   // v133: remarks, officer updates and status changes are shown together
   // in the Timeline tab. Here we only show the latest note as a preview.
@@ -6547,7 +6630,7 @@ function adminUpdateOpen(t,taskID){
   var pprev=id('photoPreview');if(pprev)pprev.innerHTML='';
   var pi=id('photoInput');if(pi)pi.value='';
   var dlr=id('driveLinkRow');if(dlr)dlr.classList.add('dn');
-  S.selPhotos=[];S.driveLinks=[];
+  S.selPhotos=[];S.driveLinks=[];puDefaultKind(t);
   id('mPhotoTitle').textContent='Update Task \u2014 '+taskID+' (Admin)';
   openModal('mPhotoUpload');
 }
@@ -6768,7 +6851,7 @@ function officerUpdateOpen(t,taskID,isHOD){
   var pprev=id('photoPreview');if(pprev)pprev.innerHTML='';
   var pi=id('photoInput');if(pi)pi.value='';
   var dlr=id('driveLinkRow');if(dlr)dlr.classList.add('dn');
-  S.selPhotos=[];S.driveLinks=[];S.puDocs=[];
+  S.selPhotos=[];S.driveLinks=[];S.puDocs=[];puDefaultKind(t);
   var dprev=id('puDocPreview');if(dprev)dprev.innerHTML='';
   loadPuExistingPhotos(taskID);
   loadPuExistingDocs(taskID);
@@ -6818,6 +6901,10 @@ function renderPuExistingPhotos(photos,taskID){
       img.onerror=function(){photoImgLoadFailed(img);};
       img.onclick=function(){window.open(p.photoData,'_blank','noopener');};
       wrap.appendChild(img);
+      var tag=document.createElement('span'); // v135
+      tag.textContent=(p.kind==='Before')?'BEFORE':'AFTER';
+      tag.style.cssText='position:absolute;left:0;right:0;bottom:0;text-align:center;font-size:10px;font-weight:800;color:#fff;padding:2px 0;background:'+(p.kind==='Before'?'rgba(180,83,9,.9)':'rgba(5,150,105,.9)');
+      wrap.appendChild(tag);
     } else {
       wrap.innerHTML='<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center"><span class="material-icons-round" style="font-size:22px;color:var(--c-red)">broken_image</span></div>';
     }
@@ -6930,9 +7017,22 @@ function renderPuNewDocPreviews(){
 // HOD: reassign a task to a subordinate in their department
 function handlePhotoSelect(files){addPhotos(Array.prototype.slice.call(files));}
 function handlePhotoDrop(e){e.preventDefault();var dz=id('photoDropZone');if(dz)dz.style.borderColor='var(--border)';var files=[];for(var i=0;i<e.dataTransfer.files.length;i++){var f=e.dataTransfer.files[i];if(f.type.indexOf('image/')===0||f.type==='application/pdf')files.push(f);}addPhotos(files);}
+// v135: Before / After photo tagging
+function puSetKind(k){
+  S.puPhotoKind=(k==='Before')?'Before':'After';
+  var b=id('puKindBefore'),a=id('puKindAfter');
+  if(b){b.style.background=S.puPhotoKind==='Before'?'#B45309':'transparent';b.style.color=S.puPhotoKind==='Before'?'#fff':'var(--tx2)';}
+  if(a){a.style.background=S.puPhotoKind==='After'?'#059669':'transparent';a.style.color=S.puPhotoKind==='After'?'#fff':'var(--tx2)';}
+}
+function puDefaultKind(t){
+  // first photos on a task that isn't finished are usually "before work"
+  puSetKind((t&&!(t.photoCount>0)&&t.status!=='Done'&&t.status!=='Verified')?'Before':'After');
+}
+function togglePhotoKind(i){var f=S.selPhotos[i];if(!f)return;f._kind=(f._kind==='Before')?'After':'Before';renderPhotoPreview();}
+function photoKindOf(f){return (f&&f._kind==='Before')?'Before':'After';}
 function addPhotos(files){
   var rem=5-S.selPhotos.length-S.driveLinks.length,skipped=0;
-  for(var i=0;i<files.length&&i<rem;i++){if(files[i].size>10*1024*1024){skipped++;continue;}S.selPhotos.push(files[i]);}
+  for(var i=0;i<files.length&&i<rem;i++){if(files[i].size>10*1024*1024){skipped++;continue;}try{files[i]._kind=S.puPhotoKind||'After';}catch(e){}S.selPhotos.push(files[i]);}
   if(skipped)toast(skipped+' file(s) skipped - over 10MB.','info');renderPhotoPreview();
 }
 function addDriveLink(){var dlr=id('driveLinkRow');if(dlr){dlr.classList.remove('dn');dlr.style.display='flex';var inp=id('driveLinkInput');if(inp)inp.focus();}}
@@ -6948,7 +7048,7 @@ function removeDriveLink(i){S.driveLinks.splice(i,1);renderPhotoPreview();}
 function renderPhotoPreview(){
   var pp=id('photoPreview');if(!pp)return;
   var html='';
-  for(var i=0;i<S.selPhotos.length;i++){var url=URL.createObjectURL(S.selPhotos[i]);html+='<div style="position:relative;width:80px;height:80px;border-radius:8px;overflow:hidden;border:1px solid var(--border);flex-shrink:0"><img src="'+url+'" style="width:100%;height:100%;object-fit:cover"><button onclick="removePhoto('+i+')" style="position:absolute;top:3px;right:3px;background:rgba(0,0,0,.6);border:none;border-radius:50%;width:20px;height:20px;color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0"><span class="material-icons-round" style="font-size:13px">close</span></button></div>';}
+  for(var i=0;i<S.selPhotos.length;i++){var url=URL.createObjectURL(S.selPhotos[i]);html+='<div style="position:relative;width:80px;height:80px;border-radius:8px;overflow:hidden;border:1px solid var(--border);flex-shrink:0"><img src="'+url+'" style="width:100%;height:100%;object-fit:cover">'+(function(k){return '<span onclick="togglePhotoKind('+i+')" title="Tap to change Before / After" style="position:absolute;left:0;right:0;bottom:0;text-align:center;font-size:10px;font-weight:800;color:#fff;padding:2px 0;cursor:pointer;background:'+(k==='Before'?'rgba(180,83,9,.9)':'rgba(5,150,105,.9)')+'">'+(k==='Before'?'BEFORE':'AFTER')+' \u21c4</span>';})(photoKindOf(S.selPhotos[i]))+'<button onclick="removePhoto('+i+')" style="position:absolute;top:3px;right:3px;background:rgba(0,0,0,.6);border:none;border-radius:50%;width:20px;height:20px;color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0"><span class="material-icons-round" style="font-size:13px">close</span></button></div>';}
   for(var i=0;i<S.driveLinks.length;i++){html+='<div style="position:relative;width:80px;height:80px;border-radius:8px;border:1px solid var(--border);flex-shrink:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;background:var(--surface2)"><span class="material-icons-round mi" style="font-size:24px;color:var(--c-teal)">link</span><div style="font-size:9px;color:var(--tx3);text-align:center">Drive Link</div><button onclick="removeDriveLink('+i+')" style="position:absolute;top:3px;right:3px;background:rgba(0,0,0,.5);border:none;border-radius:50%;width:18px;height:18px;color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0"><span class="material-icons-round" style="font-size:12px">close</span></button></div>';}
   pp.innerHTML=html;
 }
@@ -6964,11 +7064,13 @@ function submitPhotoUpdate(){
   // field roles — Commissioner/Admin are not blocked). An existing photo
   // on the task counts.
   var isAdminLikePU=(S.user&&(S.user.role==='Admin'||S.user.role==='Commissioner'));
-  if(status==='Done'&&!isAdminLikePU&&!pickedPhotos.length){
+  var pickedAfter=pickedPhotos.some(function(f){return photoKindOf(f)==='After';});
+  if(status==='Done'&&!isAdminLikePU&&!pickedAfter){
     var tPU=null;for(var pi2=0;pi2<S.tasks.length;pi2++){if(S.tasks[pi2].taskID===taskID){tPU=S.tasks[pi2];break;}}
-    var hasPhotoAlready=!!(tPU&&((tPU.photoCount||0)>0||tPU.hasPhotos||(tPU._detail&&tPU._detail.photos&&tPU._detail.photos.length)));
-    if(!hasPhotoAlready){
-      toast('Please add at least one photo as proof before marking this task Done.','error');
+    var dPh=tPU&&tPU._detail&&tPU._detail.photos;
+    var hasAfterAlready=!!(tPU&&(dPh?(dPh.some(function(p){return p.kind!=='Before';})||String(tPU.photoLinks||'').length>10):((tPU.photoCount||0)>0||tPU.hasPhotos)));
+    if(!hasAfterAlready){
+      toast('Please add an AFTER photo (work finished) before marking this task Done.','error');
       return;
     }
   }
@@ -7063,7 +7165,7 @@ function submitPhotoUpdate(){
     if(!localTask.newPhotos)localTask.newPhotos=[];
   }
   var localPhotoEntries=pickedPhotos.map(function(f){
-    return { photoID:'temp_'+Math.random().toString(36).slice(2), photoData:URL.createObjectURL(f), pending:true };
+    return { photoID:'temp_'+Math.random().toString(36).slice(2), photoData:URL.createObjectURL(f), pending:true, kind:photoKindOf(f) };
   });
   if(localTask){
     localTask.newPhotos=localTask.newPhotos.concat(localPhotoEntries);
@@ -7131,7 +7233,7 @@ function submitPhotoUpdate(){
 
   // STEP 2 — save status/remarks/priority to the server
   // (photosAttached tells the server photos are being uploaded right after)
-  gasCall('serverUpdateTask',S.token,taskID,{status:status,officerRemarks:remarks,priority:priority,photosAttached:pickedPhotos.length>0}).then(function(r){
+  gasCall('serverUpdateTask',S.token,taskID,{status:status,officerRemarks:remarks,priority:priority,photosAttached:pickedAfter}).then(function(r){
     if(!r||!r.success){
       setUploadingUI(false);
       var failMsg=(r&&r.message)||'Update failed to save.';
@@ -7321,7 +7423,8 @@ function submitPhotoUpdate(){
         function sendNextChunk(){
           if(chunkIdx>=chunks.length){ finishAll(); return; }
           var chunk=chunks[chunkIdx];
-          gasCall('serverAddTaskPhotosBatch',S.token,{taskID:taskID,photos:chunk.b64}).then(function(pr){
+          var chunkKinds=chunk.entries.map(function(e){return e.kind||'After';});
+          gasCall('serverAddTaskPhotosBatch',S.token,{taskID:taskID,photos:chunk.b64,kinds:chunkKinds}).then(function(pr){
             if(pr&&pr.success){
               for(var ei=0;ei<chunk.entries.length;ei++){
                 chunk.entries[ei].pending=false;
@@ -7336,7 +7439,7 @@ function submitPhotoUpdate(){
               // Queue this chunk's photos for automatic background retry —
               // the compressed data is already in memory, no reason to make
               // the officer manually retry once connectivity comes back.
-              queueOfflinePhotoUpload(taskID, chunk.b64);
+              queueOfflinePhotoUpload(taskID, chunk.b64, chunkKinds);
             }
             chunkIdx++;
             sendNextChunk();
@@ -11465,9 +11568,9 @@ function saveOfflinePhotoQueue(q){
   try{ LS.set(OFFLINE_QUEUE_KEY, JSON.stringify(q)); }catch(e){ /* storage full — best effort only */ }
   renderOfflineQueueIndicator();
 }
-function queueOfflinePhotoUpload(taskID, photosB64){
+function queueOfflinePhotoUpload(taskID, photosB64, kinds){
   var q=getOfflinePhotoQueue();
-  q.push({id:'oq_'+Date.now()+'_'+Math.floor(Math.random()*10000), taskID:taskID, photos:photosB64, queuedAt:Date.now(), attempts:0});
+  q.push({id:'oq_'+Date.now()+'_'+Math.floor(Math.random()*10000), taskID:taskID, photos:photosB64, kinds:kinds||[], queuedAt:Date.now(), attempts:0});
   saveOfflinePhotoQueue(q);
 }
 // Attempts to send every queued item. Called on reconnect and on app
@@ -11491,7 +11594,7 @@ function flushOfflinePhotoQueue(){
     }
     var item=q[idx];
     if(!S.token||!navigator.onLine){ _offlineFlushInProgress=false; return; } // not logged in or genuinely offline — stop, try again next trigger
-    gasCall('serverAddTaskPhotosBatch',S.token,{taskID:item.taskID,photos:item.photos}).then(function(pr){
+    gasCall('serverAddTaskPhotosBatch',S.token,{taskID:item.taskID,photos:item.photos,kinds:item.kinds||[]}).then(function(pr){
       if(pr&&pr.success){ item._done=true; succeeded++; }
       else{
         item.attempts=(item.attempts||0)+1;
