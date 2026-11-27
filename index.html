@@ -1375,6 +1375,110 @@ tbody tr:hover { background: var(--surface2); }
   .card-hd { padding: 12px 14px; }
 }
 
+
+/* ════ v137 PHONE LAYOUT ═══════════════════════════════════════
+   Most officers use the app on a phone, so below 768px:
+   • task list = one card per task (no sideways scrolling)
+   • pop-ups slide up from the bottom, buttons wrap into a 2-column grid
+   • inputs are 16px so iPhone doesn't zoom in when typing
+   • bigger tap targets everywhere                                  */
+.btn-lbl{display:none}
+@media (max-width: 767px) {
+  /* task list cards */
+  .task-table-wrap{border:none;background:transparent;overflow:visible;border-radius:0}
+  .task-row-headrow{display:none !important}
+  .task-row-line{background:var(--surface);border:1px solid var(--border);border-radius:12px;margin-bottom:10px;overflow:hidden;box-shadow:0 1px 2px rgba(0,0,0,.04)}
+  .task-row-line.overdue{border-left:4px solid var(--c-red)}
+  .task-row-line.overdue .task-row:first-child{box-shadow:none}
+  .task-row-line .task-row-grid{min-width:0;display:grid;grid-template-columns:1fr auto auto;
+    grid-template-areas:"st pri due" "desc desc desc" "off off zone" "id files act";gap:6px 8px;padding:11px 12px 10px;align-items:center}
+  .task-row-line .task-row{padding:0;border:none;white-space:normal;overflow:visible;background:none !important;min-width:0}
+  .task-row-line .c-1{grid-area:id;font-size:11px;opacity:.75}
+  .task-row-line .c-2{grid-area:desc;font-size:14.5px;line-height:1.45;padding:2px 0 !important;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+  .task-row-line .c-3{grid-area:zone;font-size:11.5px;color:var(--tx3);text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:46vw}
+  .task-row-line .c-4{grid-area:off;font-size:12px;font-weight:700;color:var(--tx2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .task-row-line .c-4:before{content:"\1F464  ";font-weight:400}
+  .task-row-line .c-5{grid-area:pri}
+  .task-row-line .c-6{grid-area:st}
+  .task-row-line .c-6 > span{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+  .task-row-line .c-6 > span > span:last-child:not(.badge){display:inline !important;margin:0 !important}
+  .task-row-line .c-7{grid-area:due;font-size:12px;white-space:nowrap}
+  .task-row-line .c-8{grid-area:files;justify-self:end}
+  .task-row-line .c-9{grid-area:act;justify-self:end}
+  .task-row-line .c-5 .badge-medium{display:none} /* "Normal" adds nothing on a phone; Urgent still shows */
+  .task-row-actions{gap:6px}
+  .task-row-actions .btn-icon{width:38px;height:38px;min-width:38px;border-radius:10px}
+  .task-row-actions .btn-icon .mi{font-size:19px}
+  .task-row-actions .btn-icon.has-lbl{width:auto;padding:0 14px;gap:5px}
+  .task-row-actions .btn-icon.has-lbl .btn-lbl{display:inline;font-weight:700;font-size:13px}
+
+  /* pop-ups: bottom sheet */
+  .modal-bg{padding:0;align-items:flex-end}
+  .modal-box{max-width:100% !important;width:100%;border-radius:18px 18px 0 0;border-bottom:none;max-height:94vh;max-height:94dvh;animation:sheetUp .22s ease}
+  .modal-hd{padding:14px 16px 12px}
+  .modal-close{padding:8px;margin:-6px -6px -6px 0}
+  .modal-close .material-icons-round{font-size:26px}
+  .modal-body{padding:14px 16px}
+  .modal-ft{flex-wrap:wrap;gap:8px;padding:10px 12px calc(10px + env(safe-area-inset-bottom));box-shadow:0 -4px 12px rgba(0,0,0,.06)}
+  .modal-ft > .btn{flex:1 1 calc(50% - 4px);justify-content:center;min-height:46px;margin:0 !important;font-size:14px}
+  .modal-ft > .ft-close{display:none}
+
+  /* no iPhone auto-zoom; easier tapping */
+  .f-ctrl,.f-sel,input[type=text],input[type=search],input[type=url],input[type=tel],input[type=password],select,textarea{font-size:16px !important}
+  .btn{min-height:40px}
+  .btn-sm{min-height:36px}
+  .filt-btn,.qf-chip{min-height:36px}
+
+  /* dashboard numbers: 3 compact boxes per row */
+  .kpi-grid{grid-template-columns:repeat(3,1fr) !important;gap:8px}
+  .kpi{padding:10px 10px 10px 12px}
+  .kpi-icon-wrap{display:none}
+  .kpi-val{font-size:20px}
+  .kpi-lbl{font-size:10.5px;line-height:1.25}
+
+  /* review page workload rows */
+  .rv-wl-head{flex-direction:column;align-items:flex-start !important;gap:2px !important}
+  .rv-wl-head > span:last-child{white-space:normal !important}
+
+  /* page headers: buttons wrap neatly */
+  .ph{flex-wrap:wrap;gap:10px}
+  .ph-actions{flex-wrap:wrap;gap:8px}
+
+  /* v137b: remaining screens */
+  .filt-3col{grid-template-columns:1fr !important}
+  .body-ft > .btn{flex:1 1 0;justify-content:center;min-height:46px}
+  /* Tappal list -> cards */
+  #page-tappal table, #page-users table{min-width:0 !important}
+  #page-tappal .tbl-wrap, #page-users .tbl-wrap{overflow-x:visible}
+  #page-tappal table thead{display:none}
+  #page-tappal table, #page-tappal tbody{display:block;width:100%}
+  #page-tappal tbody tr{display:grid;grid-template-columns:1fr auto;grid-template-areas:"d t" "p p" "s s" "z v" "f a";gap:3px 10px;padding:10px 12px;margin:0 0 10px;border:1px solid var(--border) !important;border-radius:12px;background:var(--surface)}
+  #page-tappal tbody td{padding:0 !important;max-width:none !important;border:none !important}
+  #page-tappal tbody td:nth-child(1){grid-area:d;font-weight:700;font-size:12px !important}
+  #page-tappal tbody td:nth-child(2){grid-area:t;font-size:11px !important;color:var(--tx3);text-align:right}
+  #page-tappal tbody td:nth-child(3){grid-area:p;font-weight:700;font-size:13.5px !important}
+  #page-tappal tbody td:nth-child(4){grid-area:s;font-size:13.5px !important;line-height:1.45}
+  #page-tappal tbody td:nth-child(5){grid-area:z;font-size:11.5px !important;color:var(--tx3)}
+  #page-tappal tbody td:nth-child(6){grid-area:v;font-size:11.5px !important;color:var(--tx3);text-align:right}
+  #page-tappal tbody td:nth-child(6):before{content:"Div "}
+  #page-tappal tbody td:nth-child(7){grid-area:f}
+  #page-tappal tbody td:nth-child(8){grid-area:a;align-self:end}
+  #page-tappal tbody td[colspan]{grid-column:1 / -1}
+  /* User Management list -> cards */
+  #page-users table thead{display:none}
+  #page-users table, #page-users tbody{display:block;width:100%}
+  #page-users tbody tr{display:grid;grid-template-columns:1fr auto;grid-template-areas:"n st" "dg dg" "dp z" "e a";gap:4px 10px;padding:10px 12px;border-bottom:1px solid var(--border)}
+  #page-users tbody td{padding:0 !important;border:none !important;white-space:normal !important}
+  #page-users tbody td:nth-child(1){grid-area:e;font-size:11px !important;align-self:center}
+  #page-users tbody td:nth-child(2){grid-area:n}
+  #page-users tbody td:nth-child(3){grid-area:dg;font-size:12px;color:var(--tx2)}
+  #page-users tbody td:nth-child(4){grid-area:dp;font-size:11.5px;color:var(--tx3)}
+  #page-users tbody td:nth-child(5){grid-area:z;font-size:11.5px;color:var(--tx3);text-align:right}
+  #page-users tbody td:nth-child(6){grid-area:st;align-self:start}
+  #page-users tbody td:nth-child(7){grid-area:a;justify-self:end}
+}
+@keyframes sheetUp{from{transform:translateY(40px);opacity:.4}to{transform:none;opacity:1}}
+
 /* ── SMALL PHONES: <400px ───────────────────────────────── */
 @media (max-width: 399px) {
   :root { --gap: 12px; }
@@ -1818,7 +1922,7 @@ tbody tr:hover { background: var(--surface2); }
           </div>
           <div style="padding:14px 16px;display:flex;flex-direction:column;gap:14px">
             <!-- Row 1: Dropdowns -->
-            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
+            <div class="filt-3col" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
               <div>
                 <div class="filt-label">Zone</div>
                 <select class="f-sel filt-sel" id="fZone" onchange="_debouncedFilterTasks()"></select>
@@ -4969,7 +5073,7 @@ function rvRenderWorkload(){
   list.forEach(function(x){
     var pct=max?Math.round(x.open/max*100):0,heavy=x.open>RV_WORKLOAD_LIMIT;
     h+='<div style="cursor:pointer" onclick="rvPickOfficer(this.dataset.n)" data-n="'+htmlEsc(x.name)+'" title="Show this officer\'s tasks in the clean-up list">'
-      +'<div style="display:flex;justify-content:space-between;gap:8px;font-size:12.5px"><span><b>'+htmlEsc(x.name)+'</b> <span style="color:var(--tx3);font-size:11px">'+htmlEsc(x.dept)+'</span>'+(heavy?' <span style="color:#b91c1c;font-weight:700;font-size:11px">⚠ too many</span>':'')+'</span>'
+      +'<div class="rv-wl-head" style="display:flex;justify-content:space-between;gap:8px;font-size:12.5px"><span><b>'+htmlEsc(x.name)+'</b> <span style="color:var(--tx3);font-size:11px">'+htmlEsc(x.dept)+'</span>'+(heavy?' <span style="color:#b91c1c;font-weight:700;font-size:11px">⚠ too many</span>':'')+'</span>'
       +'<span style="white-space:nowrap;color:var(--tx2)"><b>'+x.open+'</b> open'+(x.overdue?' · <span style="color:#b91c1c">'+x.overdue+' overdue</span>':'')+(x.notSeen?' · <span style="color:#b45309">'+x.notSeen+' not seen</span>':'')+(x.done?' · <span style="color:#15803d">'+x.done+' to verify</span>':'')+(x.open&&x.name!=='Unassigned'?' <button class="btn btn-sm" title="Send pending list on WhatsApp" style="background:#25D366;color:#fff;padding:1px 8px;margin-left:6px;font-size:11px" data-n="'+htmlEsc(x.name)+'" onclick="event.stopPropagation();waSendOfficer(this.dataset.n)">WhatsApp</button>':'')+'</span></div>'
       +'<div style="height:9px;background:var(--surface2);border-radius:99px;overflow:hidden;margin-top:3px"><div style="height:100%;width:'+pct+'%;background:'+(heavy?'#ef4444':'#3b82f6')+';border-radius:99px"></div></div></div>';
   });
@@ -5509,7 +5613,7 @@ function sortBy(col){
 // makeTaskRow() below, so columns always line up exactly.
 function taskRowHeader(isComm){
   var h=document.createElement('div');
-  h.className='task-row-grid';
+  h.className='task-row-grid task-row-headrow';
   var cols=['Task ID','Description','Zone','Officer','Urgent?','Status','Due Date','Files','Actions'];
   cols.forEach(function(c){
     var d=document.createElement('div');
@@ -5532,10 +5636,11 @@ function makeTaskRow(t, isAdmin, isHOD, showReassign){
   var g=document.createElement('div');
   g.className='task-row-grid';
   g.onclick=function(){ viewTask(t.taskID); };
+  var cellNo=0;
 
   function cell(content,extraClass,title){
     var d=document.createElement('div');
-    d.className='task-row'+(extraClass?' '+extraClass:'');
+    d.className='task-row c-'+(++cellNo)+(extraClass?' '+extraClass:''); // v137: c-1..c-9 for the phone card layout
     if(title)d.title=title;
     if(content instanceof Node)d.appendChild(content);
     else d.textContent=content||'\u2014';
@@ -5597,9 +5702,9 @@ function makeTaskRow(t, isAdmin, isHOD, showReassign){
   actWrap.className='task-row-actions';
   function abtn(icon,cls,fn,label){
     var b=document.createElement('button');
-    b.className='btn btn-sm btn-icon '+cls;
+    b.className='btn btn-sm btn-icon '+cls+(cls==='btn-primary'?' has-lbl':'');
     b.title=label||'';
-    b.innerHTML='<span class="material-icons-round mi">'+icon+'</span>';
+    b.innerHTML='<span class="material-icons-round mi">'+icon+'</span>'+(cls==='btn-primary'?'<span class="btn-lbl">'+(label||'')+'</span>':'');
     b.onclick=function(e){e.stopPropagation();fn();};
     return b;
   }
@@ -5955,7 +6060,7 @@ function showAddRemarkModal(taskID){
   id('mGenericBody').innerHTML=
     '<p style="font-size:12.5px;color:var(--tx3);margin-bottom:10px">This remark will be visible to <strong>'+htmlEsc((t&&t.officerName)||'the assigned officer')+'</strong>, and if the task is <strong>Done</strong> it will be <strong>sent back to In Progress</strong> so it\'s clear action is needed.</p>'
     +'<textarea id="taskRemarkInput" placeholder="What does the officer need to do or fix?" style="width:100%;min-height:100px;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;background:var(--surface);color:var(--tx1);resize:vertical;font-family:inherit;box-sizing:border-box"></textarea>'
-    +'<div style="display:flex;justify-content:flex-end;gap:8px;margin-top:14px">'
+    +'<div class="body-ft" style="display:flex;justify-content:flex-end;gap:8px;margin-top:14px">'
     +'<button class="btn btn-ghost" onclick="closeModal(\'mGeneric\')">Cancel</button>'
     +'<button class="btn btn-primary" id="submitRemarkBtn" data-tid="'+taskID+'" onclick="submitTaskRemark(this.dataset.tid)"><span class="material-icons-round mi">send</span> Add Remark</button>'
     +'</div>';
@@ -6008,7 +6113,7 @@ function viewTask(taskID){
   var tvClose=(isAdmin&&t&&t.status==='Done')?'<button class="btn" id="tvCloseBtn" style="background:#059669;color:#fff;margin-right:4px" data-tid="'+taskID+'" onclick="tvCloseTask(this.dataset.tid)"><span class="material-icons-round mi">verified</span> Mark Verified</button>':'';
   var tvRemark=isAdmin?'<button class="btn btn-ghost" style="border-color:#B45309;color:#B45309;margin-right:4px" onclick="showAddRemarkModal(\''+taskID+'\')"><span class="material-icons-round mi">rate_review</span> Add Remark</button>':'';
   var tvWa=(isAdmin&&t.officerID&&t.status!=='Verified')?'<button class="btn" style="background:#25D366;color:#fff;margin-right:4px" onclick="waSendTask(\''+taskID+'\')"><span class="material-icons-round mi">chat</span> WhatsApp</button>':'';
-  id('mTaskFt').innerHTML=isAdmin?tvWa+tvClose+tvRemark+'<button class="btn btn-ghost" onclick="closeModal(\'mTask\')">Close</button><button class="btn btn-primary" onclick="closeModal(\'mTask\');editTask(\''+taskID+'\')">Edit All Fields</button>':'<button class="btn btn-ghost" onclick="closeModal(\'mTask\')">Close</button><button class="btn btn-primary" onclick="closeModal(\'mTask\');officerUpdate(\''+taskID+'\')">Update Progress</button>';
+  id('mTaskFt').innerHTML=isAdmin?tvWa+tvClose+tvRemark+'<button class="btn btn-ghost ft-close" onclick="closeModal(\'mTask\')">Close</button><button class="btn btn-primary" onclick="closeModal(\'mTask\');editTask(\''+taskID+'\')">Edit All Fields</button>':'<button class="btn btn-ghost ft-close" onclick="closeModal(\'mTask\')">Close</button><button class="btn btn-primary" onclick="closeModal(\'mTask\');officerUpdate(\''+taskID+'\')">Update Progress</button>';
   openModal('mTask');
 
   // Load full task detail on-demand (heavy fields: officerRemarks,
