@@ -16,6 +16,9 @@
 <meta name="apple-mobile-web-app-title" content="Salem TMS">
 <meta name="application-name" content="Salem TMS">
 <meta name="theme-color" content="#0b1f45">
+<!-- v134: real install files (Android needs a manifest FILE, not a generated one) -->
+<link rel="manifest" id="staticManifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" id="staticTouchIcon" href="icon-192.png">
 <meta name="description" content="Salem City Municipal Corporation — Task Management System">
 <title>Salem Corporation TMS</title>
 
@@ -103,7 +106,7 @@
     // Remove all existing icon/manifest links
     var sel='link[rel="apple-touch-icon"],link[rel="apple-touch-icon-precomposed"],link[rel="icon"],link[rel="shortcut icon"],link[rel="manifest"]';
     var old=document.querySelectorAll(sel);
-    for(var i=0;i<old.length;i++) old[i].parentNode.removeChild(old[i]);
+    for(var i=0;i<old.length;i++){ if(old[i].id==='staticManifest'||old[i].id==='staticTouchIcon')continue; old[i].parentNode.removeChild(old[i]); }
 
     // Apple touch icon — used by iOS Safari for home screen
     var sizes=['57x57','60x60','72x72','76x76','114x114','120x120','144x144','152x152','180x180','192x192','512x512'];
@@ -120,6 +123,8 @@
     // Favicon
     var f=document.createElement('link');f.rel='icon';f.type='image/png';f.href=dataUrl;document.head.appendChild(f);
 
+    // v134: if the real manifest file is present, use it (installable on Android)
+    if(document.getElementById('staticManifest')){window._pwaIconUrl=dataUrl;return;}
     // Manifest — use Blob URL (Chrome requires non-data: URI for PWA manifest)
     var manifest={
       name:'Salem City Municipal Corporation TMS',
@@ -1466,8 +1471,10 @@ tbody tr:hover { background: var(--surface2); }
       <div class="sb-item" data-page="settings" id="snav-settings" onclick="go('settings')" title="Settings"><span class="material-icons-round sb-i">settings</span><span class="sb-label">Settings</span></div>
       <div class="sb-item" id="snav-chgpw" onclick="showMyProfile()" title="My Profile"><span class="material-icons-round sb-i">manage_accounts</span><span class="sb-label">My Profile</span></div>
       <div class="sb-item" id="snav-photolog" data-page="photolog" onclick="go('photolog')" title="Notes"><span class="material-icons-round sb-i">photo_library</span><span class="sb-label">Notes</span></div>
+      <div class="sb-item" id="snav-review" data-page="review" onclick="go('review')" style="display:none" title="Review"><span class="material-icons-round sb-i">fact_check</span><span class="sb-label">Review</span></div>
       <div class="sb-item" id="snav-reports" data-page="reports" onclick="go('reports')" style="display:none" title="Reports"><span class="material-icons-round sb-i">summarize</span><span class="sb-label">Reports</span></div>
       <div class="sb-item" id="snav-tappal" data-page="tappal" onclick="go('tappal')" style="display:none" title="Tappal Tracker"><span class="material-icons-round sb-i">markunread_mailbox</span><span class="sb-label">Tappal Tracker</span></div>
+      <div class="sb-item" id="snav-install" onclick="installApp()" style="display:none" title="Install app"><span class="material-icons-round sb-i">install_mobile</span><span class="sb-label">Install app</span></div>
       <div class="sb-item" data-page="about" onclick="go('about')" title="About"><span class="material-icons-round sb-i">info</span><span class="sb-label">About</span></div>
     </div>
     <div class="sb-footer">
@@ -1519,10 +1526,10 @@ tbody tr:hover { background: var(--surface2); }
           <div class="kpi blue" onclick="drillDown('all')" style="cursor:pointer"><div class="kpi-stripe"></div><div class="kpi-icon-wrap"><span class="material-icons-round mi">assignment</span></div><div class="kpi-val" id="k-total">&#8212;</div><div class="kpi-lbl">Total Tasks</div></div>
           <div class="kpi orange" onclick="drillDown('pending')" style="cursor:pointer"><div class="kpi-stripe"></div><div class="kpi-icon-wrap"><span class="material-icons-round mi">pending</span></div><div class="kpi-val" id="k-pending">&#8212;</div><div class="kpi-lbl">Pending</div></div>
           <div class="kpi teal" onclick="drillDown('inprogress')" style="cursor:pointer"><div class="kpi-stripe"></div><div class="kpi-icon-wrap"><span class="material-icons-round mi">sync</span></div><div class="kpi-val" id="k-progress">&#8212;</div><div class="kpi-lbl">In Progress</div></div>
-          <div class="kpi green" onclick="drillDown('completed')" style="cursor:pointer"><div class="kpi-stripe"></div><div class="kpi-icon-wrap"><span class="material-icons-round mi">check_circle</span></div><div class="kpi-val" id="k-done">&#8212;</div><div class="kpi-lbl">Completed/Closed</div></div>
+          <div class="kpi green" onclick="drillDown('completed')" style="cursor:pointer"><div class="kpi-stripe"></div><div class="kpi-icon-wrap"><span class="material-icons-round mi">check_circle</span></div><div class="kpi-val" id="k-done">&#8212;</div><div class="kpi-lbl">Done / Verified</div></div>
           <div class="kpi red" onclick="drillDown('overdue')" style="cursor:pointer"><div class="kpi-stripe"></div><div class="kpi-icon-wrap"><span class="material-icons-round mi">warning</span></div><div class="kpi-val" id="k-overdue">&#8212;</div><div class="kpi-lbl">Overdue</div></div>
           <div class="kpi gold" onclick="drillDown('duetoday')" style="cursor:pointer"><div class="kpi-stripe"></div><div class="kpi-icon-wrap"><span class="material-icons-round mi">today</span></div><div class="kpi-val" id="k-today">&#8212;</div><div class="kpi-lbl">Due Today</div></div>
-          <div class="kpi purple" onclick="drillDown('high')" style="cursor:pointer"><div class="kpi-stripe"></div><div class="kpi-icon-wrap"><span class="material-icons-round mi">priority_high</span></div><div class="kpi-val" id="k-high">&#8212;</div><div class="kpi-lbl">High Priority</div></div>
+          <div class="kpi purple" onclick="drillDown('high')" style="cursor:pointer"><div class="kpi-stripe"></div><div class="kpi-icon-wrap"><span class="material-icons-round mi">priority_high</span></div><div class="kpi-val" id="k-high">&#8212;</div><div class="kpi-lbl">Urgent</div></div>
           <div class="kpi green"><div class="kpi-stripe"></div><div class="kpi-icon-wrap"><span class="material-icons-round mi">percent</span></div><div class="kpi-val" id="k-rate">&#8212;</div><div class="kpi-lbl">Completion %</div></div>
         </div>
         <div class="g2">
@@ -1539,7 +1546,7 @@ tbody tr:hover { background: var(--surface2); }
           <div class="kpi green" onclick="go('tracker')" style="cursor:pointer"><div class="kpi-stripe"></div><div class="kpi-icon-wrap"><span class="material-icons-round mi">check_circle</span></div><div class="kpi-val" id="ok-done">&#8212;</div><div class="kpi-lbl">Completed</div></div>
           <div class="kpi red" onclick="go('tracker')" style="cursor:pointer"><div class="kpi-stripe"></div><div class="kpi-icon-wrap"><span class="material-icons-round mi">warning</span></div><div class="kpi-val" id="ok-overdue">&#8212;</div><div class="kpi-lbl">Overdue</div></div>
           <div class="kpi gold" onclick="go('tracker')" style="cursor:pointer"><div class="kpi-stripe"></div><div class="kpi-icon-wrap"><span class="material-icons-round mi">today</span></div><div class="kpi-val" id="ok-today">&#8212;</div><div class="kpi-lbl">Due Today</div></div>
-          <div class="kpi purple" onclick="go('tracker')" style="cursor:pointer"><div class="kpi-stripe"></div><div class="kpi-icon-wrap"><span class="material-icons-round mi">priority_high</span></div><div class="kpi-val" id="ok-high">&#8212;</div><div class="kpi-lbl">High Priority</div></div>
+          <div class="kpi purple" onclick="go('tracker')" style="cursor:pointer"><div class="kpi-stripe"></div><div class="kpi-icon-wrap"><span class="material-icons-round mi">priority_high</span></div><div class="kpi-val" id="ok-high">&#8212;</div><div class="kpi-lbl">Urgent</div></div>
           <div class="kpi green"><div class="kpi-stripe"></div><div class="kpi-icon-wrap"><span class="material-icons-round mi">percent</span></div><div class="kpi-val" id="ok-rate">&#8212;</div><div class="kpi-lbl">My Completion %</div></div>
         </div>
         <div class="card mb16">
@@ -1554,7 +1561,7 @@ tbody tr:hover { background: var(--surface2); }
           <div class="card-bd-0">
             <div class="tbl-wrap">
               <table>
-                <thead><tr><th>Task ID</th><th>Description</th><th>Priority</th><th>Due Date</th><th>Status</th><th>Action</th></tr></thead>
+                <thead><tr><th>Task ID</th><th>Description</th><th>Urgent?</th><th>Due Date</th><th>Status</th><th>Action</th></tr></thead>
                 <tbody id="offRecentTasks"></tbody>
               </table>
             </div>
@@ -1699,8 +1706,12 @@ tbody tr:hover { background: var(--surface2); }
             </div>
             <div class="f-row">
               <div class="f-group">
-                <label class="f-label">Priority <span class="req">*</span></label>
-                <select class="f-sel" id="t-priority"><option value="">Select</option><option>High</option><option>Medium</option><option>Low</option></select>
+                <label class="f-label">Urgent?</label>
+                <select class="f-sel" id="t-priority" style="display:none"><option value="Medium" selected>Medium</option><option value="High">High</option></select>
+                <label style="display:flex;align-items:center;gap:10px;cursor:pointer;padding:9px 12px;border:1.5px solid var(--border);border-radius:10px;background:var(--surface2)">
+                  <input type="checkbox" id="t-urgent" onchange="document.getElementById('t-priority').value=this.checked?'High':'Medium'" style="width:18px;height:18px">
+                  <span><b>Urgent</b> <span style="font-size:11.5px;color:var(--tx3)">— due in 3 days (otherwise 7 days)</span></span>
+                </label>
               </div>
             </div>
             <!-- Hidden designation field - auto-filled from officer selection -->
@@ -1848,12 +1859,11 @@ tbody tr:hover { background: var(--surface2); }
             <!-- Row 3: Priority + Source -->
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
               <div>
-                <div class="filt-label">Priority</div>
+                <div class="filt-label">Urgent?</div>
                 <div style="display:flex;gap:5px;flex-wrap:wrap" id="priorityChips">
                   <button onclick="toggleChip(this,'fPri')" data-val="" class="filt-btn active">All</button>
-                  <button onclick="toggleChip(this,'fPri')" data-val="High" class="filt-btn filt-btn-high">● High</button>
-                  <button onclick="toggleChip(this,'fPri')" data-val="Medium" class="filt-btn filt-btn-med">● Medium</button>
-                  <button onclick="toggleChip(this,'fPri')" data-val="Low" class="filt-btn filt-btn-low">● Low</button>
+                  <button onclick="toggleChip(this,'fPri')" data-val="High" class="filt-btn filt-btn-high">🔴 Urgent</button>
+                  <button onclick="toggleChip(this,'fPri')" data-val="Medium" class="filt-btn filt-btn-med">Normal</button>
                 </div>
                 <input type="hidden" id="fPri" value="">
               </div>
@@ -1916,7 +1926,7 @@ tbody tr:hover { background: var(--surface2); }
         <button class="filt-btn" data-qf="primary" id="qfPrimaryChip" onclick="quickFilter('primary')"><span class="material-icons-round mi" id="qfPrimaryIcon" style="font-size:14px;vertical-align:-2px">person</span> <span id="qfPrimaryLabel">My Tasks</span></button>
         <button class="filt-btn" data-qf="pending" onclick="quickFilter('pending')"><span class="material-icons-round mi" style="font-size:14px;vertical-align:-2px">hourglass_empty</span> Pending</button>
         <button class="filt-btn" data-qf="inprogress" onclick="quickFilter('inprogress')"><span class="material-icons-round mi" style="font-size:14px;vertical-align:-2px">autorenew</span> In Progress</button>
-        <button class="filt-btn filt-btn-high" data-qf="highpri" onclick="quickFilter('highpri')"><span class="material-icons-round mi" style="font-size:14px;vertical-align:-2px">priority_high</span> High Priority</button>
+        <button class="filt-btn filt-btn-high" data-qf="highpri" onclick="quickFilter('highpri')"><span class="material-icons-round mi" style="font-size:14px;vertical-align:-2px">priority_high</span> Urgent</button>
         <button class="filt-btn" data-qf="completed" onclick="quickFilter('completed')"><span class="material-icons-round mi" style="font-size:14px;vertical-align:-2px">check_circle</span> Done (to verify)</button>
         <button class="filt-btn filt-btn-danger" data-qf="overdue" onclick="quickFilter('overdue')"><span class="material-icons-round mi" style="font-size:14px;vertical-align:-2px">warning</span> Overdue</button>
       </div>
@@ -2237,8 +2247,8 @@ tbody tr:hover { background: var(--surface2); }
               <div class="f-group mb0">
                 <label class="f-label">Sort Order</label>
                 <div style="display:flex;gap:12px;margin-top:4px">
-                  <label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-size:13px"><input type="radio" name="plsortR" value="desc" checked onchange="id('pld-sort').value=this.value"> Newest &#8594; Oldest</label>
-                  <label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-size:13px"><input type="radio" name="plsortR" value="asc" onchange="id('pld-sort').value=this.value"> Oldest &#8594; Newest</label>
+                  <label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-size:13px"><input type="radio" name="plsortR" value="desc" checked onchange="document.getElementById('pld-sort').value=this.value"> Newest &#8594; Oldest</label>
+                  <label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-size:13px"><input type="radio" name="plsortR" value="asc" onchange="document.getElementById('pld-sort').value=this.value"> Oldest &#8594; Newest</label>
                 </div>
                 <select style="display:none" id="pld-sort"><option value="asc">asc</option><option value="desc" selected>desc</option></select>
               </div>
@@ -2254,6 +2264,32 @@ tbody tr:hover { background: var(--surface2); }
     </div>
 
     <!-- DYNAMIC REPORT GENERATOR PAGE -->
+    <!-- v134 REVIEW PAGE (Commissioner/Admin) -->
+    <div class="page" id="page-review">
+      <div class="ph">
+        <div class="ph-left"><h1>&#9989; Review</h1><p>Who has how much work, clear the old backlog, and print the meeting list</p></div>
+        <div class="ph-actions"><button class="btn btn-ghost" onclick="loadReviewPage(true)"><span class="material-icons-round mi">refresh</span> Refresh</button></div>
+      </div>
+      <div class="card"><div class="card-hd"><span class="card-title">&#128101; Workload by officer</span><span id="rvWorkloadNote" style="font-size:11.5px;color:var(--tx3)"></span></div>
+        <div class="card-bd" id="rvWorkload"><div style="color:var(--tx3);font-size:13px">Loading…</div></div></div>
+      <div class="card mt24"><div class="card-hd"><span class="card-title">&#129529; Backlog clean-up</span><span id="rvBacklogCount" style="font-size:11.5px;color:var(--tx3)"></span></div>
+        <div class="card-bd">
+          <div class="f-row" style="margin-bottom:10px">
+            <div class="f-group mb0"><label class="f-label">Older than</label><select class="f-sel" id="rvAge" onchange="rvRenderBacklog(true)"><option value="30">30 days</option><option value="60">60 days</option><option value="90">90 days</option><option value="0">Any age</option></select></div>
+            <div class="f-group mb0"><label class="f-label">Department</label><select class="f-sel" id="rvDept" onchange="rvRenderBacklog(true)"><option value="">All departments</option></select></div>
+            <div class="f-group mb0"><label class="f-label">Officer</label><select class="f-sel" id="rvOfficer" onchange="rvRenderBacklog(true)"><option value="">All officers</option></select></div>
+          </div>
+          <div style="font-size:12px;color:var(--tx3);margin-bottom:10px"><b>Keep</b> = still needed: it gets a due date 7 days from today and leaves this list (it comes back only if that date is missed). <b>Verify</b> = already done or no longer needed (give a short reason). <b>Reassign</b> = give it to another officer. Changes are saved in the background — keep going.</div>
+          <div id="rvBacklog"></div>
+          <div style="text-align:center;margin-top:10px"><button class="btn btn-ghost" id="rvMoreBtn" onclick="rvRenderBacklog(false)" style="display:none">Show next 20</button></div>
+        </div></div>
+      <div class="card mt24"><div class="card-hd"><span class="card-title">&#128424; Review-meeting printout</span></div>
+        <div class="card-bd"><div class="f-row">
+          <div class="f-group mb0"><label class="f-label">Department</label><select class="f-sel" id="rvPrintDept"><option value="">All departments</option></select></div>
+          <div class="f-group mb0" style="align-self:flex-end"><button class="btn btn-primary" onclick="rvPrint()"><span class="material-icons-round mi">print</span> Print pending list</button></div>
+        </div><div style="font-size:12px;color:var(--tx3);margin-top:8px">Pending, In Progress and Done (to verify) tasks, grouped by officer, oldest first — ready for the weekly HOD meeting.</div></div></div>
+    </div>
+
     <div class="page" id="page-reports">
       <div class="ph">
         <div class="ph-left"><h1>&#128202; Reports</h1><p>Generate a task report for any period</p></div>
@@ -2504,7 +2540,7 @@ tbody tr:hover { background: var(--surface2); }
                 <div style="position:relative">
                   <div style="position:absolute;left:-21px;top:2px;width:10px;height:10px;border-radius:50%;background:#7c3aed"></div>
                   <div style="font-size:13px;font-weight:600;color:var(--tx1)">One-Tap Quick Filters</div>
-                  <div style="font-size:11.5px;color:var(--tx3);margin-top:2px">Jump straight to My Tasks, Pending, In Progress, High Priority, Done (to verify), or Overdue &mdash; no more setting filters manually every time.</div>
+                  <div style="font-size:11.5px;color:var(--tx3);margin-top:2px">Jump straight to My Tasks, Pending, In Progress, Urgent, Done (to verify), or Overdue &mdash; no more setting filters manually every time.</div>
                 </div>
                 <div style="position:relative">
                   <div style="position:absolute;left:-21px;top:2px;width:10px;height:10px;border-radius:50%;background:#d97706"></div>
@@ -2746,8 +2782,8 @@ tbody tr:hover { background: var(--surface2); }
         <div class="f-group"><label class="f-label">Status</label>
           <select class="f-sel" id="pu-status"><option value="In Progress">In Progress</option><option value="Done">Done</option></select><div style="font-size:11px;color:var(--tx3);margin-top:4px">📷 A photo is required to mark a task <b>Done</b>.</div>
         </div>
-        <div class="f-group"><label class="f-label">Priority</label>
-          <select class="f-sel" id="pu-priority"><option>High</option><option>Medium</option><option>Low</option></select>
+        <div class="f-group"><label class="f-label">Urgent?</label>
+          <select class="f-sel" id="pu-priority"><option value="Medium">Normal</option><option value="High">🔴 Urgent</option></select>
         </div>
       </div>
       <div class="f-group"><label class="f-label">Progress Remarks</label><textarea class="f-ctrl" id="pu-remarks" rows="3" placeholder="Describe progress, actions taken, or observations..."></textarea></div>
@@ -2911,10 +2947,10 @@ tbody tr:hover { background: var(--surface2); }
           </select>
         </div>
         <div class="f-group mb0">
-          <label class="f-label">Priority</label>
+          <label class="f-label">Urgent?</label>
           <select class="f-sel" id="cr-priority">
-            <option value="">All Priority</option>
-            <option>High</option><option>Medium</option><option>Low</option>
+            <option value="">All</option>
+            <option value="High">Urgent only</option><option value="Medium">Normal only</option>
           </select>
         </div>
       </div>
@@ -3327,6 +3363,8 @@ function gasCallInner(fn,args){
   });
 }
 function id(x){return document.getElementById(x);}
+// v134: priority is shown as a simple Urgent / Normal (stored values stay High / Medium)
+function prLabel(p){return String(p)==='High'?'Urgent':'Normal';}
 // Generic debounce — delays running fn until `wait` ms after the last
 // call. Used for search inputs so typing doesn't re-filter and re-render
 // a large task/note list on every single keystroke, only once the person
@@ -3375,7 +3413,7 @@ window.addEventListener('load',function(){
       var savedUser=null;
       try{savedUser=JSON.parse(usrRaw);}catch(pe){savedUser=null;}
       if(savedUser&&savedUser.userID){
-        S.token=tok;S.user=savedUser;setTimeout(function(){try{outboxFlush();}catch(e){}},1500);
+        S.token=tok;S.user=savedUser;setTimeout(function(){try{outboxFlush();pqCount();photoQueueFlush();}catch(e){}},1500);
         resetSessionState();
         BOOT_TRIES=0;
         startBootstrap();
@@ -3406,7 +3444,7 @@ function doLogin(){
     btn.disabled=false;btn.textContent='Sign In to System';
     if(r&&r.success){
       resetSessionState(); // never carry the previous user's data forward
-      S.token=r.token;S.user=r.user;setTimeout(function(){try{outboxFlush();}catch(e){}},1500);
+      S.token=r.token;S.user=r.user;setTimeout(function(){try{outboxFlush();pqCount();photoQueueFlush();}catch(e){}},1500);
       // Consume the bundled lookup data — this is what actually delivers
       // the single-round-trip login: without this, S.lookup stayed empty
       // and showApp()'s own fallback check always fired a SEPARATE
@@ -3563,6 +3601,7 @@ function applyRoleNav(role){
   show('snav-users', isAdminOnly);
   show('snav-settings', isAdminOnly);
   show('snav-reports', isAdminOnly);
+  show('snav-review', isAdmin); // v134: Commissioner + Admin
   show('snav-tappal', isAdmin); // Admin AND Commissioner, per requirement — unlike Reports which is Admin-only
   show('snav-chgpw', true);
   show('snav-photolog', true); // All roles can view Notes/Photo Log
@@ -3583,7 +3622,7 @@ function applyRoleNav(role){
     // and full Notes create/delete access (enforced server-side).
     S.allowedPages=['dashboard','taskEntry','tracker','photolog','about'];
   } else if(isAdminOnly){
-    S.allowedPages=['dashboard','taskEntry','tracker','users','settings','reports','photolog','tappal','about'];
+    S.allowedPages=['dashboard','taskEntry','tracker','users','settings','reports','review','photolog','tappal','about'];
   } else {
     // Commissioner: full visibility into tasks and analytics, but
     // User Management, Settings, and Reports remain Admin-only.
@@ -3602,7 +3641,7 @@ function applyRoleNav(role){
     if(ad)ad.classList.remove('dn');if(od)od.classList.add('dn');if(hd)hd.classList.add('dn');if(spd)spd.classList.add('dn');
   }
 }
-var PAGE_META={dashboard:['Dashboard','Overview & Analytics'],taskEntry:['Task Entry','Create and assign tasks'],tracker:['Task Tracker','Monitor all tasks'],users:['User Management','Manage accounts'],settings:['Settings','System configuration'],photolog:['Notes','Inspection & Meeting Records'],reports:['Reports','Dynamic Report Generator'],tappal:['Tappal Tracker','Special tappals received at the office'],about:['About','Application information']};
+var PAGE_META={review:['Review','Workload \u00b7 Backlog clean-up \u00b7 Meeting printout'],dashboard:['Dashboard','Overview & Analytics'],taskEntry:['Task Entry','Create and assign tasks'],tracker:['Task Tracker','Monitor all tasks'],users:['User Management','Manage accounts'],settings:['Settings','System configuration'],photolog:['Notes','Inspection & Meeting Records'],reports:['Reports','Dynamic Report Generator'],tappal:['Tappal Tracker','Special tappals received at the office'],about:['About','Application information']};
 function go(page){
   if(S.allowedPages&&S.allowedPages.length&&S.allowedPages.indexOf(page)===-1){toast('Access restricted.','error');return;}
   S.page=page;
@@ -3635,6 +3674,7 @@ function go(page){
   else if(page==='settings')loadSettings();
   else if(page==='photolog')loadPhotoLog();
   else if(page==='reports')loadReportsPage();
+  else if(page==='review')loadReviewPage();
   else if(page==='tappal')loadTappalPage();
   else if(page==='about')loadAboutPage();
 }
@@ -4267,7 +4307,7 @@ function buildOfficerRecentTasks(tasks){
     html+='<tr>'
       +'<td><span class="mono" style="color:var(--c-blue);font-size:11px">'+t.taskID+'</span></td>'
       +'<td style="max-width:200px;font-size:12.5px" class="ellipsis">'+t.description+'</td>'
-      +'<td><span class="badge badge-'+(t.priority||'medium').toLowerCase()+'">'+t.priority+'</span></td>'
+      +'<td><span class="badge badge-'+(t.priority||'medium').toLowerCase()+'">'+prLabel(t.priority)+'</span></td>'
       +'<td class="'+(t.isOverdue?'text-red':'')+'">'+fDateShort(t.dueDate)+'</td>'
       +'<td><span class="badge badge-'+statusClass(t.status)+'">'+t.status+'</span></td>'
       +'<td><button class="btn btn-primary btn-sm btn-icon" onclick="officerUpdate(\''+t.taskID+'\')" title="Update"><span class="material-icons-round mi">update</span></button></td>'
@@ -4758,7 +4798,7 @@ function outboxFlush(){
   });
 }
 function renderOutboxBadge(){
-  var n=outboxMine(outboxLoad()).length;
+  var n=outboxMine(outboxLoad()).length+(window.PHOTO_Q_COUNT||0);
   var b=document.getElementById('outboxBadge');
   if(!b){
     if(!n)return;
@@ -4775,6 +4815,272 @@ function renderOutboxBadge(){
 }
 window.addEventListener('online',function(){outboxFlush();});
 setInterval(function(){outboxFlush();},30000);
+
+// ════════════════════════════════════════════════════════════
+// v134 REVIEW PAGE — workload, backlog clean-up, meeting printout
+// ════════════════════════════════════════════════════════════
+var RV={tasks:[],shown:0,loadedAt:0};
+var RV_WORKLOAD_LIMIT=30;   // warn when an officer has more open tasks than this
+var RV_PAGE=20;
+function rvDaysOld(t){var d=new Date(String(t.dateAssigned||t.createdAt||'').slice(0,10));if(isNaN(d.getTime()))return 0;return Math.max(0,Math.floor((Date.now()-d.getTime())/86400000));}
+function rvDatePlus(days){var d=new Date(Date.now()+days*86400000);return d.getFullYear()+'-'+zeroPad(d.getMonth()+1,2)+'-'+zeroPad(d.getDate(),2);}
+function loadReviewPage(force){
+  if(!force&&RV.tasks.length&&(Date.now()-RV.loadedAt)<120000){rvRenderAll();return;}
+  var w=id('rvWorkload');if(w)w.innerHTML='<div style="color:var(--tx3);font-size:13px">Loading all open tasks…</div>';
+  gasCall('serverGetTasks',S.token,{days:0,fullDescription:true}).then(function(r){
+    if(!r||!r.success){if(w)w.innerHTML='<div style="color:var(--c-red);font-size:13px">'+htmlEsc((r&&r.message)||'Could not load tasks.')+'</div>';return;}
+    RV.tasks=(r.data||[]).map(function(t){t.status=normStatusClient(t.status);return t;}).filter(function(t){return t.status!=='Verified';});
+    RV.loadedAt=Date.now();
+    rvFillFilters();rvRenderAll();
+  });
+}
+function rvFillFilters(){
+  var depts={},offs={};
+  RV.tasks.forEach(function(t){if(t.department)depts[t.department]=1;if(t.officerName)offs[t.officerName]=1;});
+  [['rvDept','All departments'],['rvPrintDept','All departments']].forEach(function(pair){
+    var el=id(pair[0]);if(!el)return;var cur=el.value;
+    el.innerHTML='<option value="">'+pair[1]+'</option>'+Object.keys(depts).sort().map(function(d){return '<option>'+htmlEsc(d)+'</option>';}).join('');
+    el.value=cur;
+  });
+  var o=id('rvOfficer');if(o){var c=o.value;o.innerHTML='<option value="">All officers</option>'+Object.keys(offs).sort().map(function(n){return '<option>'+htmlEsc(n)+'</option>';}).join('');o.value=c;}
+}
+function rvRenderAll(){rvRenderWorkload();rvRenderBacklog(true);}
+function rvRenderWorkload(){
+  var box=id('rvWorkload');if(!box)return;
+  var map={};
+  RV.tasks.forEach(function(t){
+    var k=t.officerName||'Unassigned';
+    if(!map[k])map[k]={name:k,dept:t.department||'',open:0,done:0,overdue:0,notSeen:0};
+    var m=map[k];
+    if(t.status==='Done')m.done++;else{m.open++;if(t.isOverdue)m.overdue++;if(!t.seenAt&&t.status==='Pending')m.notSeen++;}
+  });
+  var list=Object.keys(map).map(function(k){return map[k];}).sort(function(a,b){return b.open-a.open;});
+  var max=list.length?Math.max.apply(null,list.map(function(x){return x.open;})):1;
+  var over=list.filter(function(x){return x.open>RV_WORKLOAD_LIMIT;}).length;
+  var note=id('rvWorkloadNote');if(note)note.textContent=list.length+' officers · '+(over?over+' over '+RV_WORKLOAD_LIMIT+' open tasks':'nobody over '+RV_WORKLOAD_LIMIT);
+  var h='<div style="display:flex;flex-direction:column;gap:7px">';
+  list.forEach(function(x){
+    var pct=max?Math.round(x.open/max*100):0,heavy=x.open>RV_WORKLOAD_LIMIT;
+    h+='<div style="cursor:pointer" onclick="rvPickOfficer(this.dataset.n)" data-n="'+htmlEsc(x.name)+'" title="Show this officer\'s tasks in the clean-up list">'
+      +'<div style="display:flex;justify-content:space-between;gap:8px;font-size:12.5px"><span><b>'+htmlEsc(x.name)+'</b> <span style="color:var(--tx3);font-size:11px">'+htmlEsc(x.dept)+'</span>'+(heavy?' <span style="color:#b91c1c;font-weight:700;font-size:11px">⚠ too many</span>':'')+'</span>'
+      +'<span style="white-space:nowrap;color:var(--tx2)"><b>'+x.open+'</b> open'+(x.overdue?' · <span style="color:#b91c1c">'+x.overdue+' overdue</span>':'')+(x.notSeen?' · <span style="color:#b45309">'+x.notSeen+' not seen</span>':'')+(x.done?' · <span style="color:#15803d">'+x.done+' to verify</span>':'')+'</span></div>'
+      +'<div style="height:9px;background:var(--surface2);border-radius:99px;overflow:hidden;margin-top:3px"><div style="height:100%;width:'+pct+'%;background:'+(heavy?'#ef4444':'#3b82f6')+';border-radius:99px"></div></div></div>';
+  });
+  box.innerHTML=h+'</div>';
+}
+function rvPickOfficer(name){var o=id('rvOfficer');if(o){o.value=name;}rvRenderBacklog(true);var b=id('rvBacklog');if(b&&b.scrollIntoView)b.scrollIntoView({behavior:'smooth',block:'start'});}
+function rvFiltered(){
+  var age=parseInt(V('rvAge')||'30',10),dept=V('rvDept'),off=V('rvOfficer');
+  // Backlog = old tasks with NO live due date (never dated, or the date has passed).
+  // A kept task has a future due date, so it leaves this list until it becomes overdue.
+  return RV.tasks.filter(function(t){return (!dept||t.department===dept)&&(!off||t.officerName===off)&&(!age||rvDaysOld(t)>=age)&&(!t.dueDate||t.isOverdue);})
+    .sort(function(a,b){return rvDaysOld(b)-rvDaysOld(a);});
+}
+function rvRenderBacklog(reset){
+  var box=id('rvBacklog');if(!box)return;
+  var list=rvFiltered();
+  if(reset){RV.shown=0;box.innerHTML='';}
+  var cnt=id('rvBacklogCount');if(cnt)cnt.textContent=list.length+' task'+(list.length!==1?'s':'')+' match';
+  if(!list.length){box.innerHTML='<div style="text-align:center;color:var(--tx3);padding:24px;font-size:13px">✅ Nothing left here — well done.</div>';var mb0=id('rvMoreBtn');if(mb0)mb0.style.display='none';return;}
+  var slice=list.slice(RV.shown,RV.shown+RV_PAGE);RV.shown+=slice.length;
+  slice.forEach(function(t){box.appendChild(rvCard(t));});
+  var mb=id('rvMoreBtn');if(mb)mb.style.display=RV.shown<list.length?'':'none';
+}
+function rvCard(t){
+  var d=document.createElement('div');d.id='rv-'+t.taskID;
+  d.style.cssText='border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin-bottom:8px;background:var(--surface)';
+  var age=rvDaysOld(t);
+  d.innerHTML='<div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;font-size:12px">'
+    +'<span><span class="mono" style="color:var(--c-blue);font-weight:700">'+htmlEsc(t.taskID)+'</span> · <b>'+htmlEsc(t.officerName||'Unassigned')+'</b> · '+htmlEsc(t.department||'')+(t.zone?' · '+htmlEsc(t.zone):'')+'</span>'
+    +'<span><span class="badge badge-'+statusClass(t.status)+'">'+htmlEsc(t.status)+'</span> <span style="font-weight:700;color:'+(age>90?'#b91c1c':age>30?'#b45309':'var(--tx2)')+'">'+age+' days old</span>'+(!t.seenAt&&t.status==='Pending'?' <span style="color:#b45309;font-size:11px;font-weight:700">· not seen</span>':'')+'</span></div>'
+    +'<div style="font-size:13px;margin:6px 0 8px;line-height:1.45;white-space:pre-wrap">'+htmlEsc(t.description||'(no description)')+'</div>'
+    +'<div class="rv-actions" style="display:flex;gap:6px;flex-wrap:wrap">'
+    +'<button class="btn btn-ghost btn-sm" onclick="rvKeep(\''+t.taskID+'\')"><span class="material-icons-round mi">event_repeat</span> Keep (+7 days)</button>'
+    +'<button class="btn btn-sm" style="background:#059669;color:#fff" onclick="rvAskVerify(\''+t.taskID+'\')"><span class="material-icons-round mi">verified</span> Verify</button>'
+    +'<button class="btn btn-ghost btn-sm" onclick="rvAskReassign(\''+t.taskID+'\')"><span class="material-icons-round mi">swap_horiz</span> Reassign</button>'
+    +'<button class="btn btn-ghost btn-sm" onclick="rvOpen(\''+t.taskID+'\')"><span class="material-icons-round mi">open_in_new</span> Open</button>'
+    +'</div><div class="rv-extra"></div>';
+  return d;
+}
+function rvOpen(taskID){
+  var t=rvFind(taskID);if(!t)return;
+  var have=false;for(var i=0;i<S.tasks.length;i++)if(S.tasks[i].taskID===taskID){have=true;break;}
+  if(!have)S.tasks.push(t); // task view looks tasks up in S.tasks
+  viewTask(taskID);
+}
+function rvFind(taskID){for(var i=0;i<RV.tasks.length;i++)if(RV.tasks[i].taskID===taskID)return RV.tasks[i];return null;}
+function rvDone(taskID,msg,keepInList){
+  var el=id('rv-'+taskID);
+  if(el){el.style.transition='opacity .25s';el.style.opacity='0';setTimeout(function(){if(el.parentNode)el.parentNode.removeChild(el);},260);}
+  if(!keepInList)RV.tasks=RV.tasks.filter(function(t){return t.taskID!==taskID;});
+  toast(msg,'ok');
+  setTimeout(function(){rvRenderWorkload();var cnt=id('rvBacklogCount');if(cnt)cnt.textContent=rvFiltered().length+' tasks match';},300);
+}
+function rvKeep(taskID){
+  var t=rvFind(taskID);if(!t)return;
+  var due=rvDatePlus(7);
+  queueTaskUpdate(taskID,{dueDate:due});
+  t.dueDate=due;t._rvKept=true;
+  rvDone(taskID,'Kept — new due date '+fDateShort(due),false);
+}
+function rvAskVerify(taskID){
+  var el=id('rv-'+taskID);if(!el)return;var ex=el.querySelector('.rv-extra');
+  ex.innerHTML='<div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap"><input class="f-ctrl" id="rvReason-'+taskID+'" placeholder="Short reason, e.g. work already completed / not required" style="flex:1;min-width:200px">'
+    +'<button class="btn btn-sm" style="background:#059669;color:#fff" onclick="rvVerify(\''+taskID+'\')">Confirm Verify</button></div>';
+  var inp=id('rvReason-'+taskID);if(inp)inp.focus();
+}
+function rvVerify(taskID){
+  var reason=String(V('rvReason-'+taskID)||'').trim();
+  if(reason.length<3){toast('Please type a short reason.','error');return;}
+  queueTaskUpdate(taskID,{status:'Verified',officerRemarks:'Backlog review: '+reason});
+  rvDone(taskID,'Verified ✓',false);
+}
+function rvAskReassign(taskID){
+  var t=rvFind(taskID);var el=id('rv-'+taskID);if(!t||!el)return;var ex=el.querySelector('.rv-extra');
+  var offs=((S.lookup&&S.lookup.officers)||[]).filter(function(o){return String(o.userID)!==String(t.officerID);});
+  offs.sort(function(a,b){var sa=a.department===t.department?0:1,sb=b.department===t.department?0:1;return sa-sb||String(a.name).localeCompare(String(b.name));});
+  var load={};RV.tasks.forEach(function(x){if(x.status!=='Done')load[x.officerName]=(load[x.officerName]||0)+1;});
+  ex.innerHTML='<div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap"><select class="f-sel" id="rvTo-'+taskID+'" style="flex:1;min-width:220px">'
+    +offs.map(function(o){return '<option value="'+htmlEsc(o.userID)+'">'+htmlEsc(o.name)+' — '+htmlEsc(o.department||'')+' ('+(load[o.name]||0)+' open)</option>';}).join('')
+    +'</select><button class="btn btn-primary btn-sm" onclick="rvReassign(\''+taskID+'\')">Confirm Reassign</button></div>';
+}
+function rvReassign(taskID){
+  var t=rvFind(taskID);var to=V('rvTo-'+taskID);if(!t||!to)return;
+  var o=null;((S.lookup&&S.lookup.officers)||[]).forEach(function(x){if(String(x.userID)===String(to))o=x;});
+  if(!o){toast('Pick an officer.','error');return;}
+  var due=rvDatePlus(7);
+  queueTaskUpdate(taskID,{officerID:o.userID,officerName:o.name,department:o.department||t.department,designation:o.designation||t.designation,dueDate:due});
+  t.officerID=o.userID;t.officerName=o.name;t.department=o.department||t.department;t.dueDate=due;t.seenAt='';
+  rvDone(taskID,'Reassigned to '+o.name,false);
+}
+function rvPrint(){
+  var dept=V('rvPrintDept');
+  var list=RV.tasks.filter(function(t){return !dept||t.department===dept;});
+  if(!list.length){toast('No pending tasks for this selection.','info');return;}
+  var groups={};list.forEach(function(t){var k=t.officerName||'Unassigned';(groups[k]=groups[k]||[]).push(t);});
+  var names=Object.keys(groups).sort(function(a,b){return groups[b].length-groups[a].length;});
+  var today=new Date().toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'});
+  var overdue=list.filter(function(t){return t.isOverdue;}).length,toVerify=list.filter(function(t){return t.status==='Done';}).length;
+  var h='<!DOCTYPE html><html><head><meta charset="utf-8"><title>Pending tasks — '+htmlEsc(dept||'All departments')+'</title><style>'
+    +'body{font-family:Arial,Helvetica,sans-serif;font-size:11px;color:#111;margin:18px}h1{font-size:16px;margin:0 0 2px}h2{font-size:12.5px;margin:16px 0 4px;background:#eef2ff;padding:5px 8px;border-radius:4px}'
+    +'.sub{color:#555;margin-bottom:8px}table{width:100%;border-collapse:collapse}th,td{border:1px solid #ccc;padding:4px 5px;vertical-align:top;text-align:left}th{background:#f3f4f6;font-size:10px}'
+    +'.od{color:#b91c1c;font-weight:bold}.num{text-align:center;white-space:nowrap}@media print{h2{page-break-after:avoid}tr{page-break-inside:avoid}}</style></head><body>'
+    +'<h1>Salem City Municipal Corporation — Pending tasks for review</h1>'
+    +'<div class="sub">'+htmlEsc(dept||'All departments')+' · '+today+' · '+list.length+' tasks · '+overdue+' overdue · '+toVerify+' done (to verify)</div>';
+  names.forEach(function(n){
+    var ts=groups[n].sort(function(a,b){return rvDaysOld(b)-rvDaysOld(a);});
+    h+='<h2>'+htmlEsc(n)+' — '+ts.length+' task'+(ts.length!==1?'s':'')+'</h2><table><thead><tr><th>#</th><th>Task ID</th><th>Description</th><th>Zone</th><th class="num">Assigned</th><th class="num">Age</th><th class="num">Due</th><th>Status</th><th>Last update</th></tr></thead><tbody>';
+    ts.forEach(function(t,i){
+      h+='<tr><td class="num">'+(i+1)+'</td><td>'+htmlEsc(t.taskID)+'</td><td>'+htmlEsc(t.description||'')+'</td><td>'+htmlEsc(t.zone||'')+'</td>'
+        +'<td class="num">'+htmlEsc(fDateShort(t.dateAssigned))+'</td><td class="num">'+rvDaysOld(t)+' d</td>'
+        +'<td class="num'+(t.isOverdue?' od':'')+'">'+(t.dueDate?htmlEsc(fDateShort(t.dueDate)):'—')+'</td><td>'+htmlEsc(t.status)+(!t.seenAt&&t.status==='Pending'?' (not seen)':'')+'</td>'
+        +'<td>'+(t.updatedAt?htmlEsc(fDateShort(t.updatedAt)):'—')+'</td></tr>';
+    });
+    h+='</tbody></table>';
+  });
+  h+='<script>window.onload=function(){setTimeout(function(){window.print();},300);};<\/script></body></html>';
+  var w=window.open('','_blank');
+  if(!w){toast('Please allow pop-ups to print.','error');return;}
+  w.document.open();w.document.write(h);w.document.close();
+}
+
+// ─── v134: INSTALL AS PHONE APP ────────────────────────────────
+var _installEvt=null;
+function isStandaloneApp(){try{return window.matchMedia('(display-mode: standalone)').matches||window.navigator.standalone===true;}catch(e){return false;}}
+window.addEventListener('beforeinstallprompt',function(e){e.preventDefault();_installEvt=e;var b=document.getElementById('snav-install');if(b)b.style.display='';});
+window.addEventListener('appinstalled',function(){_installEvt=null;var b=document.getElementById('snav-install');if(b)b.style.display='none';toast('Installed ✓ — open "Salem TMS" from your home screen.','ok');});
+(function(){ // iPhone/iPad never fire beforeinstallprompt — show the menu item with instructions
+  var ios=/iphone|ipad|ipod/i.test(navigator.userAgent||'');
+  if(ios&&!isStandaloneApp()){document.addEventListener('DOMContentLoaded',function(){var b=document.getElementById('snav-install');if(b)b.style.display='';});}
+})();
+function installApp(){
+  if(_installEvt){_installEvt.prompt();_installEvt.userChoice.then(function(){_installEvt=null;});return;}
+  if(/iphone|ipad|ipod/i.test(navigator.userAgent||''))toast('On iPhone: tap the Share button (square with arrow) → "Add to Home Screen".','info');
+  else toast('Open the browser menu (⋮) → "Install app" or "Add to Home screen".','info');
+}
+
+// ════════════════════════════════════════════════════════════
+// v134 OFFLINE PHOTO QUEUE
+// ════════════════════════════════════════════════════════════
+// Photos are too big for the small outbox, so they wait in the phone's
+// IndexedDB storage (a bigger "drawer" in the browser). When signal is
+// back: photos are uploaded first, then the status — so the "Done needs
+// a photo" rule is always satisfied.
+var PQ_DB=null;window.PHOTO_Q_COUNT=0;var _pqBusy=false;
+function pqOpen(){return new Promise(function(res,rej){if(PQ_DB)return res(PQ_DB);try{var rq=indexedDB.open('tms_offline',1);rq.onupgradeneeded=function(){rq.result.createObjectStore('photoq',{keyPath:'qid'});};rq.onsuccess=function(){PQ_DB=rq.result;res(PQ_DB);};rq.onerror=function(){rej(rq.error);};}catch(e){rej(e);}});}
+function pqTx(mode,fn){return pqOpen().then(function(db){return new Promise(function(res,rej){var tx=db.transaction('photoq',mode);var st=tx.objectStore('photoq');var out=fn(st);tx.oncomplete=function(){res(out&&out.result!==undefined?out.result:out);};tx.onerror=function(){rej(tx.error);};});});}
+function pqAll(){return pqTx('readonly',function(st){return st.getAll();}).then(function(a){return (a||[]).filter(function(x){return x.user===((S.user&&S.user.username)||'');});});}
+function pqCount(){return pqAll().then(function(a){window.PHOTO_Q_COUNT=a.length;renderOutboxBadge();return a.length;}).catch(function(){});}
+function compressForQueue(file){
+  return new Promise(function(res){
+    var r=new FileReader();
+    r.onload=function(e){var img=new Image();img.onload=function(){try{var max=1280,sc=Math.min(max/img.width,max/img.height,1);var c=document.createElement('canvas');c.width=Math.round(img.width*sc);c.height=Math.round(img.height*sc);c.getContext('2d').drawImage(img,0,0,c.width,c.height);res(c.toDataURL('image/jpeg',0.8));}catch(x){res(null);}};img.onerror=function(){res(null);};img.src=e.target.result;};
+    r.onerror=function(){res(null);};r.readAsDataURL(file);
+  });
+}
+function queuePhotoUpdateOffline(taskID,status,remarks,priority,files){
+  var btn=id('pu-saveBtn');if(btn)btn.disabled=true;
+  Promise.all(files.map(compressForQueue)).then(function(list){
+    var photos=list.filter(function(x){return !!x;});
+    if(!photos.length){if(btn)btn.disabled=false;toast('These photos could not be read on this phone — please choose them again.','error');return;}
+    var item={qid:'P'+Date.now()+Math.floor(Math.random()*1000),taskID:taskID,status:status,remarks:remarks,priority:priority,photos:photos,user:(S.user&&S.user.username)||'',at:new Date().toISOString()};
+    return pqTx('readwrite',function(st){return st.put(item);}).then(function(){
+      if(btn)btn.disabled=false;
+      closeModal('mPhotoUpload');
+      for(var i=0;i<S.tasks.length;i++){if(S.tasks[i].taskID===taskID){var t=S.tasks[i];t.status=status;t.officerRemarks=remarks;t.photoCount=(t.photoCount||0)+photos.length;t._pendingSync=true;}}
+      if(typeof renderCards==='function'&&S.filtered)renderCards(S.filtered);
+      toast('Saved on your phone ✓ — '+photos.length+' photo'+(photos.length>1?'s':'')+' will upload automatically when signal returns.','ok');
+      pqCount();
+    });
+  }).catch(function(e){if(btn)btn.disabled=false;toast('Could not save on this phone: '+(e&&e.message||e),'error');});
+}
+function photoQueueFlush(){
+  if(_pqBusy||!S.token||navigator.onLine===false)return;
+  pqAll().then(function(items){
+    window.PHOTO_Q_COUNT=items.length;renderOutboxBadge();
+    if(!items.length)return;
+    _pqBusy=true;var it=items[0];
+    gasCall('serverAddTaskPhotosBatch',S.token,{taskID:it.taskID,photos:it.photos}).then(function(r){
+      var msg=(r&&r.message)||'';
+      if(!r||!r.success){
+        _pqBusy=false;
+        if(isLikelyConnectionDrop(msg)||msg.indexOf('busy')!==-1||msg==='Unauthorized'||!r)return; // try again later
+        toast('Offline photos for '+it.taskID+' could not be saved: '+msg,'error');
+        return pqTx('readwrite',function(st){return st.delete(it.qid);}).then(pqCount);
+      }
+      // photos are in — now the status (photo rule satisfied)
+      gasCall('serverUpdateTask',S.token,it.taskID,{status:it.status,officerRemarks:it.remarks,priority:it.priority,photosAttached:true}).then(function(r2){
+        _pqBusy=false;
+        var m2=(r2&&r2.message)||'';
+        if(r2&&!r2.success&&(isLikelyConnectionDrop(m2)||m2.indexOf('busy')!==-1||m2==='Unauthorized')){
+          // photos already uploaded: keep only the status part for the next try
+          it.photos=[];return pqTx('readwrite',function(st){return st.put(it);});
+        }
+        if(r2&&!r2.success)toast('Status for '+it.taskID+' was NOT saved: '+m2,'error');
+        else toast('Offline update for '+it.taskID+' sent ✓','ok');
+        return pqTx('readwrite',function(st){return st.delete(it.qid);}).then(function(){pqCount();photoQueueFlush();});
+      });
+    });
+  }).catch(function(){_pqBusy=false;});
+}
+// photos-already-sent items (photos:[]) skip straight to the status step
+var _pqOrigFlush=photoQueueFlush;
+photoQueueFlush=function(){
+  if(_pqBusy||!S.token||navigator.onLine===false)return;
+  pqAll().then(function(items){
+    if(items.length&&items[0].photos&&!items[0].photos.length){
+      var it=items[0];_pqBusy=true;
+      gasCall('serverUpdateTask',S.token,it.taskID,{status:it.status,officerRemarks:it.remarks,priority:it.priority,photosAttached:true}).then(function(r2){
+        _pqBusy=false;var m2=(r2&&r2.message)||'';
+        if(r2&&!r2.success&&(isLikelyConnectionDrop(m2)||m2.indexOf('busy')!==-1||m2==='Unauthorized'))return;
+        if(r2&&!r2.success)toast('Status for '+it.taskID+' was NOT saved: '+m2,'error');
+        pqTx('readwrite',function(st){return st.delete(it.qid);}).then(function(){pqCount();photoQueueFlush();});
+      });
+    } else _pqOrigFlush();
+  }).catch(function(){});
+};
+window.addEventListener('online',function(){setTimeout(photoQueueFlush,1500);});
+setInterval(function(){photoQueueFlush();},45000);
 var advFilterOpen=false;
 function toggleAdvFilter(){
   advFilterOpen=!advFilterOpen;
@@ -5095,7 +5401,7 @@ function sortBy(col){
 function taskRowHeader(isComm){
   var h=document.createElement('div');
   h.className='task-row-grid';
-  var cols=['Task ID','Description','Zone','Officer','Priority','Status','Due Date','Files','Actions'];
+  var cols=['Task ID','Description','Zone','Officer','Urgent?','Status','Due Date','Files','Actions'];
   cols.forEach(function(c){
     var d=document.createElement('div');
     d.className='task-row-header';
@@ -5147,13 +5453,19 @@ function makeTaskRow(t, isAdmin, isHOD, showReassign){
 
   var priBadge=document.createElement('span');
   priBadge.className='badge badge-'+pri;
-  priBadge.textContent=t.priority||'Medium';
+  priBadge.textContent=prLabel(t.priority);
   g.appendChild(cell(priBadge));
 
   var statusBadge=document.createElement('span');
   statusBadge.className='badge badge-'+statusClass(t.status||'Pending');
   statusBadge.textContent=t.status||'Pending';
-  g.appendChild(cell(statusBadge));
+  var stWrap=document.createElement('span');stWrap.appendChild(statusBadge);
+  // v134: "Not seen" = the assigned officer has never opened this task
+  if(!t.seenAt&&(t.status==='Pending'||!t.status)){
+    var ns=document.createElement('span');ns.textContent='\ud83d\udc41 Not seen';ns.title='The assigned officer has not opened this task yet';
+    ns.style.cssText='display:block;font-size:10px;color:#b45309;font-weight:700;margin-top:2px';stWrap.appendChild(ns);
+  }
+  g.appendChild(cell(stWrap));
 
   var dueWrap=document.createElement('span');
   if(t.isOverdue){dueWrap.style.cssText='color:var(--c-red);font-weight:700';dueWrap.textContent=(t.dueDate?fDateShort(t.dueDate):'Not set')+' \u26a0';}
@@ -5372,7 +5684,7 @@ function buildHODRows(tasks, canReassign){
         +'<td class="nowrap">'+htmlEsc(t.zone||'')+'</td>'
         +'<td class="nowrap">'+htmlEsc(t.department||'')+'</td>'
         +'<td class="nowrap">'+htmlEsc(t.officerName||'')+'</td>'
-        +'<td><span class="badge badge-'+((t.priority||'medium').toLowerCase())+'">'+htmlEsc(t.priority||'Medium')+'</span></td>'
+        +'<td><span class="badge badge-'+((t.priority||'medium').toLowerCase())+'">'+htmlEsc(prLabel(t.priority))+'</span></td>'
         +'<td class="nowrap">'+fDateShort(t.dateAssigned)+'</td>'
         +'<td class="nowrap'+(t.isOverdue?' text-red':'')+'">'+fDateShort(t.dueDate)+'</td>'
         +'<td><span class="badge badge-'+statusClass(t.status||'Pending')+'">'+(t.status||'Pending')+'</span></td>'
@@ -5446,7 +5758,8 @@ function saveTask(){
   });
 }
 function clearTaskForm(){
-  var ids=['t-zone','t-priority','t-desig','t-attach']; // v133: t-type stays 'Inspection'
+  var ids=['t-zone','t-desig','t-attach']; // v133: t-type stays 'Inspection'
+  var tpr=id('t-priority');if(tpr)tpr.value='Medium';var tur=id('t-urgent');if(tur)tur.checked=false; // v134 Urgent switch
   for(var i=0;i<ids.length;i++){var e=id(ids[i]);if(e)e.value='';}
   var td=id('t-desc');if(td)td.value='';
   var ti=id('t-time');if(ti)ti.value='';
@@ -5483,6 +5796,8 @@ function ensureTaskDetail(t,cb){
       t.photoLinks=r.task.photoLinks;
       if(r.task.history)t._history=r.task.history;
       if(r.task.timeline)t._timeline=r.task.timeline;
+      if(r.task.seenAt!==undefined)t.seenAt=r.task.seenAt;
+      t._beforePhotos=r.task.beforePhotos||[];
     }
     cb();
   });
@@ -5606,6 +5921,8 @@ function viewTask(taskID){
         t.photoLinks=r.task.photoLinks;
         if(r.task.history)t._history=r.task.history;
         if(r.task.timeline)t._timeline=r.task.timeline;
+        if(r.task.seenAt!==undefined)t.seenAt=r.task.seenAt;
+        t._beforePhotos=r.task.beforePhotos||[];
         // Photos and attachments arrive in this SAME response now —
         // consume them directly instead of firing more calls for it.
         t.newPhotos=r.task.photos||[];
@@ -5687,7 +6004,7 @@ function taskDetailHTML(t){
     ['Department',t.department||'\u2014'],
     ['Designation',t.designation||'\u2014'],
     ['Assigned Officer',t.officerName||'\u2014'],
-    ['Priority','<span class="badge badge-'+(t.priority||'').toLowerCase()+'">'+(t.priority||'\u2014')+'</span>'],
+    ['Urgent?','<span class="badge badge-'+(t.priority||'').toLowerCase()+'">'+prLabel(t.priority)+'</span>'],
     ['Date Assigned',fDateShort(t.dateAssigned)],
     ['Due Date',t.dueDate?fDateShort(t.dueDate):'Not set'],
     ['Status',t.status?'<span class="badge badge-'+statusClass(t.status)+'">'+t.status+'</span>':'\u2014'],
@@ -5695,7 +6012,8 @@ function taskDetailHTML(t){
     ['Created By',t.createdBy||'\u2014'],
     ['Last Updated',t.updatedAt?fDateShort(t.updatedAt)+' by '+(t.updatedBy||'?'):'\u2014']
   ];
-  if(t.completedAt)rows.push(['Completed At',fDateShort(t.completedAt)]);
+  if(t.completedAt)rows.push(['Done At',fDateShort(t.completedAt)]);
+  rows.push(['Seen by officer',t.seenAt?('\u2713 '+fDateShort(t.seenAt)):'<span style="color:#b45309;font-weight:700">Not yet</span>']); // v134
 
   // ── DETAILS TAB ──────────────────────────────────────────────
   var detailsHtml='<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px 16px;margin-bottom:14px">';
@@ -5708,6 +6026,23 @@ function taskDetailHTML(t){
     +'<div style="font-size:10px;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px">Description</div>'
     +'<div style="background:var(--surface2);padding:11px;border-radius:8px;font-size:13px;line-height:1.6">'+(t.description||'\u2014')+'</div>'
     +'</div>';
+  // v134: BEFORE (inspection note photos) vs AFTER (officer's photos) side by side
+  var beforeP=(t._beforePhotos||[]).filter(function(p){return p&&p.photoData;});
+  var afterP=(t.newPhotos||[]).filter(function(p){return p&&p.photoData;});
+  if(beforeP.length||afterP.length){
+    var strip=function(list,label,col){
+      var h='<div style="flex:1;min-width:0"><div style="font-size:10px;font-weight:700;color:'+col+';text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px">'+label+' ('+list.length+')</div>'
+        +'<div style="display:flex;gap:6px;overflow-x:auto;padding-bottom:4px">';
+      if(!list.length)h+='<div style="font-size:12px;color:var(--tx3);padding:18px 4px">No photo</div>';
+      for(var bi=0;bi<list.length&&bi<6;bi++){
+        h+='<div style="width:92px;height:92px;flex-shrink:0;border-radius:8px;overflow:hidden;border:1.5px solid var(--border);background:var(--surface2)">'
+          +'<img src="'+htmlEsc(list[bi].photoData)+'" style="width:100%;height:100%;object-fit:cover;cursor:pointer" onclick="window.open(this.src,\'_blank\',\'noopener\')" onerror="photoImgLoadFailed(this)" alt=""></div>';
+      }
+      return h+'</div></div>';
+    };
+    detailsHtml+='<div style="display:flex;gap:12px;margin-bottom:12px;background:var(--surface2);border-radius:10px;padding:10px">'
+      +strip(beforeP,'Before \u2014 inspection','#B45309')+strip(afterP,'After \u2014 officer','var(--c-green)')+'</div>';
+  }
   // v133: remarks, officer updates and status changes are shown together
   // in the Timeline tab. Here we only show the latest note as a preview.
   var tlAll=t._timeline||[];
@@ -5863,7 +6198,7 @@ function editTaskBuildForm(t,taskID){
     +'<div class="f-row"><div class="f-group"><label class="f-label">Department</label><select class="f-sel" id="e-dept">'+deptOpts+'</select></div>'
     +'<div class="f-group"><label class="f-label">Designation</label><select class="f-sel" id="e-desig">'+desigOpts+'</select></div></div>'
     +'<div class="f-group"><label class="f-label">Assigned Officer</label><select class="f-sel" id="e-officer">'+offOpts+'</select></div>'
-    +'<div class="f-row"><div class="f-group"><label class="f-label">Priority</label><select class="f-sel" id="e-priority"><option>High</option><option>Medium</option><option>Low</option></select></div>'
+    +'<div class="f-row"><div class="f-group"><label class="f-label">Urgent?</label><select class="f-sel" id="e-priority"><option value="Medium">Normal</option><option value="High">🔴 Urgent</option></select></div>'
     +'<div class="f-group"><label class="f-label">Status</label><select class="f-sel" id="e-status"><option value="Pending">Pending</option><option value="In Progress">In Progress</option><option value="Done">Done</option><option value="Verified">Verified</option></select></div></div>'
     +'<div class="f-row"><div class="f-group"><label class="f-label">Date Assigned</label><input type="date" class="f-ctrl" id="e-date" value="'+(t.dateAssigned||'')+'"></div>'
     +'<div class="f-group"><label class="f-label">Due Date <span style="font-size:10px;color:var(--tx3)">(Optional)</span></label><input type="date" class="f-ctrl" id="e-due" value="'+(t.dueDate||'')+'"></div></div>'
@@ -6203,6 +6538,7 @@ function adminUpdate(taskID){
 }
 function adminUpdateOpen(t,taskID){
   setPuStatusOptions(true,t.status||'Pending');
+  var ppg=id('pu-priority');if(ppg&&ppg.parentElement)ppg.parentElement.style.display=''; // v134
   var pu=id('pu-taskid');if(pu)pu.value=taskID;
   var pd=id('pu-desc');if(pd)pd.textContent=t.description.substring(0,150)+(t.description.length>150?'\u2026':'');
   var ps=id('pu-status');if(ps)ps.value=t.status||'Pending';
@@ -6423,6 +6759,7 @@ function setPuStatusOptions(forAdmin,current){
 }
 function officerUpdateOpen(t,taskID,isHOD){
   setPuStatusOptions(false,t.status==='Pending'?'In Progress':t.status);
+  var ppg=id('pu-priority');if(ppg&&ppg.parentElement)ppg.parentElement.style.display='none'; // v134
   var pu=id('pu-taskid');if(pu)pu.value=taskID;
   var pd=id('pu-desc');if(pd)pd.textContent=t.description.substring(0,150)+(t.description.length>150?'\u2026':'');
   var ps=id('pu-status');if(ps)ps.value=(t.status==='Done'?'Done':'In Progress');
@@ -6676,6 +7013,13 @@ function submitPhotoUpdate(){
     return;
   }
 
+  // v134 OFFLINE: no signal at all -> keep status + photos on the phone and
+  // send them automatically when the signal comes back.
+  if(navigator.onLine===false&&pickedPhotos.length){
+    if(pickedDocs.length)toast('PDF documents need signal — attach them again later. Saving status and photos on the phone.','info');
+    queuePhotoUpdateOffline(taskID,status,remarks,priority,pickedPhotos);
+    return;
+  }
   // STEP 1 — there ARE photos/documents to upload. This is exactly the
   // situation that was causing duplicate uploads: the modal used to close
   // immediately and the person had no visible confirmation anything was
@@ -6791,7 +7135,10 @@ function submitPhotoUpdate(){
     if(!r||!r.success){
       setUploadingUI(false);
       var failMsg=(r&&r.message)||'Update failed to save.';
-      if(isLikelyConnectionDrop(failMsg)){
+      if(isLikelyConnectionDrop(failMsg)&&pickedPhotos.length){
+        // v134: weak signal — save on the phone and send automatically later
+        queuePhotoUpdateOffline(taskID,status,remarks,priority,pickedPhotos);
+      } else if(isLikelyConnectionDrop(failMsg)){
         toastWithRetry('Connection lost while saving. Tap Retry to try again \u2014 nothing has been uploaded twice.',function(){
           submitPhotoUpdate();
         });
@@ -7211,7 +7558,7 @@ function renderAITable(){
       +'<td style="padding:9px;min-width:190px;vertical-align:top"><textarea class="f-ctrl" rows="2" onchange="S.aiTasks['+i+'].description=this.value" style="font-size:12px;padding:6px 9px;min-height:46px">'+t.description+'</textarea></td>'
       +'<td style="padding:9px;vertical-align:top;min-width:130px"><select class="f-sel" onchange="onAiDeptChange('+i+',this.value)" style="font-size:12px;padding:6px 9px"'+fieldAlert(t.deptConf)+'>'+deptOpts+'</select><div style="font-size:9px;color:var(--tx3);margin-top:1px">'+confBadge(t.deptConf)+'</div></td>'
       +'<td style="padding:9px;vertical-align:top;min-width:160px"><select class="f-sel" id="aiOff'+i+'" onchange="updateAITaskOfficer('+i+',this.value)" style="font-size:12px;padding:6px 9px"'+fieldAlert(t.offConf)+'>'+offOpts+'</select><div style="font-size:9px;color:var(--tx3);margin-top:1px">'+confBadge(t.offConf)+'</div></td>'
-      +'<td style="padding:9px;vertical-align:top"><select class="f-sel" onchange="S.aiTasks['+i+'].priority=this.value" style="font-size:12px;padding:6px 9px"><option'+(t.priority==='High'?' selected':'')+'>High</option><option'+(t.priority==='Medium'?' selected':'')+'>Medium</option><option'+(t.priority==='Low'?' selected':'')+'>Low</option></select></td>'
+      +'<td style="padding:9px;vertical-align:top"><select class="f-sel" onchange="S.aiTasks['+i+'].priority=this.value" style="font-size:12px;padding:6px 9px"><option value="Medium"'+(t.priority!=='High'?' selected':'')+'>Normal</option><option value="High"'+(t.priority==='High'?' selected':'')+'>🔴 Urgent</option></select></td>'
       +'<td style="padding:9px;vertical-align:top;min-width:140px"><select class="f-sel" onchange="S.aiTasks['+i+'].zone=this.value" style="font-size:12px;padding:6px 9px"'+fieldAlert(t.zoneConf)+'>'+zoneOpts+'</select><div style="font-size:9px;color:var(--tx3);margin-top:1px">'+confBadge(t.zoneConf)+'</div></td>'
       +'<td style="padding:9px;vertical-align:top;display:none"><select class="f-sel" onchange="S.aiTasks['+i+'].taskType=this.value" style="font-size:12px;padding:6px 9px">'
       +'<option'+(t.taskType==='Inspection'?' selected':'')+'>Inspection</option>'
@@ -7564,7 +7911,7 @@ function exportPDF(tasks,context){
       +'<td style="padding:6px 9px;font-size:9.5px;vertical-align:top;white-space:nowrap">'+t.zone+'</td>'
       +'<td style="padding:6px 9px;font-size:9.5px;vertical-align:top;white-space:nowrap">'+t.department+'</td>'
       +'<td style="padding:6px 9px;font-size:9.5px;font-weight:600;vertical-align:top;white-space:nowrap">'+t.officerName+'</td>'
-      +'<td style="padding:6px 9px;font-weight:700;color:'+priColor(t.priority)+';font-size:9.5px;vertical-align:top;white-space:nowrap">'+t.priority+'</td>'
+      +'<td style="padding:6px 9px;font-weight:700;color:'+priColor(t.priority)+';font-size:9.5px;vertical-align:top;white-space:nowrap">'+prLabel(t.priority)+'</td>'
       +'<td style="padding:6px 9px;font-size:9px;vertical-align:top;white-space:nowrap;'+(t.isOverdue?'color:#be123c;font-weight:700':'')+'">'+( t.dueDate||'Not set')+(t.isOverdue?' \u26a0':'')+'</td>'
       +'<td style="padding:6px 9px;vertical-align:top;white-space:nowrap"><span style="'+sStyle(t.status)+'">'+t.status+'</span></td>'
       +'<td style="padding:6px 9px;text-align:center;font-weight:700;color:'+(isC?'#15803d':'#b45309')+';font-size:14px;vertical-align:top">'+(isC?'\u2713':'\u2013')+'</td>'
