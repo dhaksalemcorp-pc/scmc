@@ -3688,7 +3688,7 @@ window.addEventListener('load',function(){
       var savedUser=null;
       try{savedUser=JSON.parse(usrRaw);}catch(pe){savedUser=null;}
       if(savedUser&&savedUser.userID){
-        S.token=tok;S.user=savedUser;
+        S.token=tok;S.user=savedUser;setTimeout(function(){try{outboxFlush();}catch(e){}},1500);
         resetSessionState();
         BOOT_TRIES=0;
         startBootstrap();
@@ -3719,7 +3719,7 @@ function doLogin(){
     btn.disabled=false;btn.textContent='Sign In to System';
     if(r&&r.success){
       resetSessionState(); // never carry the previous user's data forward
-      S.token=r.token;S.user=r.user;
+      S.token=r.token;S.user=r.user;setTimeout(function(){try{outboxFlush();}catch(e){}},1500);
       // Consume the bundled lookup data — this is what actually delivers
       // the single-round-trip login: without this, S.lookup stayed empty
       // and showApp()'s own fallback check always fired a SEPARATE
@@ -5004,8 +5004,88 @@ function normalizeTaskList(data){
       sourceNoteID:String(t.sourceNoteID||''),
       isOverdue:(due&&new Date(due)<new Date()&&t.status!=='Completed'&&t.status!=='Closed')?true:false});
   }
+  outboxOverlay(out);
   return out;
 }
+
+// ════════════════════════════════════════════════════════════
+// v130 OUTBOX — "instant save" for status updates
+// ════════════════════════════════════════════════════════════
+// Every Apps Script call takes 1.5-3 s no matter what, so waiting for the
+// server before closing the form made every update FEEL slow. Now a
+// status/remarks update is saved on the phone first (like an outgoing
+// SMS waiting in the outbox), the screen updates immediately, and the
+// outbox sends it to the server in the background. If the signal drops,
+// it keeps the update and retries automatically — nothing is lost, even
+// if the app is closed and reopened.
+var OUTBOX_KEY='tms_outbox_v1';
+var _outboxBusy=false,_outboxTimer=null;
+function outboxLoad(){try{var a=JSON.parse(localStorage.getItem(OUTBOX_KEY)||'[]');return Array.isArray(a)?a:[];}catch(e){return[];}}
+function outboxSave(a){try{localStorage.setItem(OUTBOX_KEY,JSON.stringify(a));}catch(e){}renderOutboxBadge();}
+function outboxMine(a){var u=(S.user&&S.user.username)||'';return a.filter(function(x){return x.user===u;});}
+// Re-applies not-yet-synced updates on top of freshly loaded server data,
+// so a background refresh never makes a just-saved status "jump back".
+function outboxOverlay(list){
+  var pend=outboxMine(outboxLoad());if(!pend.length||!list||!list.length)return;
+  var byId={};for(var i=0;i<list.length;i++)byId[list[i].taskID]=list[i];
+  pend.forEach(function(p){var t=byId[p.taskID];if(!t)return;var u=p.updates||{};
+    if(u.status)t.status=u.status;if(u.officerRemarks!==undefined)t.officerRemarks=u.officerRemarks;if(u.priority)t.priority=u.priority;
+    t._pendingSync=true;});
+}
+function queueTaskUpdate(taskID,updates){
+  var a=outboxLoad();
+  a.push({qid:'Q'+Date.now()+Math.floor(Math.random()*1000),taskID:taskID,updates:updates,user:(S.user&&S.user.username)||'',at:new Date().toISOString(),tries:0});
+  outboxSave(a);
+  outboxFlush();
+}
+function outboxScheduleRetry(ms){if(_outboxTimer)clearTimeout(_outboxTimer);_outboxTimer=setTimeout(function(){_outboxTimer=null;outboxFlush();},ms);}
+function outboxFlush(){
+  if(_outboxBusy||!S.token)return;
+  var mine=outboxMine(outboxLoad());if(!mine.length){renderOutboxBadge();return;}
+  _outboxBusy=true;renderOutboxBadge();
+  var item=mine[0];
+  gasCall('serverUpdateTask',S.token,item.taskID,item.updates).then(function(r){
+    _outboxBusy=false;
+    var msg=(r&&r.message)||'';
+    if(r&&r.success){
+      outboxSave(outboxLoad().filter(function(x){return x.qid!==item.qid;}));
+      for(var i=0;i<S.tasks.length;i++){if(S.tasks[i].taskID===item.taskID)S.tasks[i]._pendingSync=false;}
+      try{if(typeof swrSave==='function')swrSave('tasks',S.tasks);}catch(e){}
+      outboxFlush(); // send the next one, if any
+      return;
+    }
+    var temporary=isLikelyConnectionDrop(msg)||msg.indexOf('busy')!==-1||msg==='Unauthorized'||!r;
+    if(temporary){
+      // Keep it; try again soon (after re-login for 'Unauthorized').
+      var a=outboxLoad();a.forEach(function(x){if(x.qid===item.qid)x.tries=(x.tries||0)+1;});outboxSave(a);
+      outboxScheduleRetry(Math.min(60000,5000*Math.pow(2,Math.min(item.tries||0,4))));
+    } else {
+      // The server truly refused it (e.g. task deleted, invalid value) —
+      // retrying won't help. Remove it and tell the person clearly.
+      outboxSave(outboxLoad().filter(function(x){return x.qid!==item.qid;}));
+      toast('Update for task '+item.taskID+' was NOT saved: '+msg,'error');
+      outboxFlush();
+    }
+  });
+}
+function renderOutboxBadge(){
+  var n=outboxMine(outboxLoad()).length;
+  var b=document.getElementById('outboxBadge');
+  if(!b){
+    if(!n)return;
+    b=document.createElement('div');b.id='outboxBadge';
+    b.style.cssText='position:fixed;left:12px;bottom:12px;z-index:9999;background:#1a237e;color:#fff;border-radius:18px;padding:7px 13px;font-size:12px;box-shadow:0 2px 8px rgba(0,0,0,.25);cursor:pointer;display:flex;align-items:center;gap:6px';
+    b.onclick=function(){outboxFlush();};
+    b.title='Tap to sync now';
+    document.body.appendChild(b);
+  }
+  if(!n){b.style.display='none';return;}
+  b.style.display='flex';
+  b.innerHTML='<span class="material-icons-round" style="font-size:16px">'+(navigator.onLine===false?'cloud_off':'cloud_upload')+'</span>'
+    +n+' update'+(n>1?'s':'')+(navigator.onLine===false?' waiting for signal':' syncing…');
+}
+window.addEventListener('online',function(){outboxFlush();});
+setInterval(function(){outboxFlush();},30000);
 var advFilterOpen=false;
 function toggleAdvFilter(){
   advFilterOpen=!advFilterOpen;
@@ -6966,6 +7046,18 @@ function submitPhotoUpdate(){
   // If there's nothing to upload, the old instant-close behaviour is fine —
   // there's no upload to wait for, so no risk of someone re-clicking.
   if(!hasAttachments){
+    // v130 INSTANT SAVE: update the screen now, send in the background via
+    // the outbox (auto-retries on weak signal). No more waiting 2-4 s.
+    if(typeof queueTaskUpdate==='function'){
+      queueTaskUpdate(taskID,{status:status,officerRemarks:remarks,priority:priority});
+      closeModal('mPhotoUpload');
+      var tq=null;for(var qi=0;qi<S.tasks.length;qi++){if(S.tasks[qi].taskID===taskID){tq=S.tasks[qi];break;}}
+      if(tq){tq.status=status;tq.officerRemarks=remarks;tq.priority=priority;tq._pendingSync=true;}
+      try{if(typeof swrSave==='function')swrSave('tasks',S.tasks);}catch(e){}
+      if(typeof renderCards==='function'&&S.filtered)renderCards(S.filtered);
+      toast('Task updated ✓','ok');
+      return;
+    }
     var btn=id('pu-saveBtn');if(btn)btn.disabled=true;
     gasCall('serverUpdateTask',S.token,taskID,{status:status,officerRemarks:remarks,priority:priority}).then(function(r){
       if(btn)btn.disabled=false;
@@ -9725,6 +9817,18 @@ function loadPhotoIntoImg(imgEl, url, onLoad, onError){
     if(onError)onError();
     return;
   }
+  // v130: try loading straight from Google's image server first — fast,
+  // parallel, and costs no Apps Script call. Only if that fails (e.g. an
+  // old photo that isn't shared publicly) fall back to the slower
+  // fetch-through-Apps-Script path below.
+  if(!imgEl.getAttribute('data-proxy-tried')){
+    var direct='https://lh3.googleusercontent.com/d/'+fileId+'=w1600';
+    imgEl.style.opacity='0.4';
+    imgEl.onload=function(){imgEl.onload=null;imgEl.onerror=null;imgEl.style.opacity='1';if(onLoad)onLoad();};
+    imgEl.onerror=function(){imgEl.onload=null;imgEl.onerror=null;imgEl.setAttribute('data-proxy-tried','1');loadPhotoIntoImg(imgEl,url,onLoad,onError);};
+    imgEl.src=direct;
+    return;
+  }
   imgEl.style.opacity='0.4';
   gasCall('serverFetchDriveImage',S.token,fileId).then(function(r){
     imgEl.style.opacity='1';
@@ -9762,6 +9866,15 @@ var _photoCache={};
 function photoImgLoadFailed(imgEl){
   var wrap=imgEl&&imgEl.parentElement;
   if(!wrap)return;
+  // v130: a Drive-stored photo that failed to load directly gets ONE more
+  // try through the Apps Script fetch path before showing "unavailable".
+  var src=imgEl.getAttribute('src')||'';
+  if(src.indexOf('http')===0&&getDriveFileId(src)&&!imgEl.getAttribute('data-proxy-tried')){
+    imgEl.setAttribute('data-proxy-tried','1');
+    imgEl.removeAttribute('onerror');imgEl.onerror=null;
+    loadPhotoIntoImg(imgEl,src,null,function(){imgEl.setAttribute('data-proxy-tried','2');photoImgLoadFailed(imgEl);});
+    return;
+  }
   wrap.innerHTML='';
   wrap.style.borderColor='var(--c-red)';
   wrap.style.display='flex';
