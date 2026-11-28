@@ -1869,11 +1869,12 @@ tbody tr:hover { background: var(--surface2); }
     <div class="lg-slide" data-src="login-2.webp"></div>
     <div class="lg-slide" data-src="login-3.webp"></div>
     <div class="lg-slide" data-src="login-4.webp"></div>
+    <div class="lg-slide" data-src="login-5.webp"></div>
   </div>
   <div class="lg-shade"></div>
   <div class="lg-brand"><b>Salem City Municipal Corporation</b><span>&#2970;&#3015;&#2994;&#2990;&#3021; &#2990;&#3006;&#2984;&#2965;&#2992;&#3006;&#2975;&#3021;&#2970;&#3007; &middot; Task Management System</span></div>
-  <div class="lg-cap" id="lgCap"><span class="material-icons-round">place</span><span id="lgCapTxt">Corporation Main Office, Salem</span></div>
-  <div class="lg-dots" id="lgDots"><i class="on" onclick="lgGo(0)"></i><i onclick="lgGo(1)"></i><i onclick="lgGo(2)"></i><i onclick="lgGo(3)"></i></div>
+  <div class="lg-cap" id="lgCap"><span class="material-icons-round">place</span><span id="lgCapTxt">Salem City Municipal Corporation &middot; Main Office</span></div>
+  <div class="lg-dots" id="lgDots"><i class="on" onclick="lgGo(0)"></i><i onclick="lgGo(1)"></i><i onclick="lgGo(2)"></i><i onclick="lgGo(3)"></i><i onclick="lgGo(4)"></i></div>
   <div class="login-card">
     <div class="login-emblem" id="loginEmblem">
       <img id="loginLogo" src="" alt="" style="width:100%;height:100%;border-radius:50%;object-fit:cover;display:none">
@@ -12193,7 +12194,7 @@ var ABOUT_INITED=false;
 
 // v142: login background — office photo first; the two heritage photos load
 // only after the page is ready, then fade every 6 s. Stops once signed in.
-var LG={i:0,t:null,busy:false,caps:['Corporation Main Office, Salem','Salem City Municipal Corporation &middot; Aerial view','Historic cannon &middot; Corporation campus','Heritage steam road roller &middot; Corporation campus']};
+var LG={i:0,t:null,busy:false,caps:['Salem City Municipal Corporation &middot; Main Office','Historic cannon (King George III era) &middot; Corporation campus','Main Office entrance &amp; heritage steam road roller','Aerial view of the Corporation office','Corporation office &amp; Salem city from above']};
 // v142: photos SLIDE in from the side every 5 s. Swipe on the photo or tap a dot to move yourself.
 function lgSlides(){return document.querySelectorAll('#lgSlides .lg-slide');}
 function lgGo(n,back){
