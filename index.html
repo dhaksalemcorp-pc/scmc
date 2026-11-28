@@ -1377,6 +1377,95 @@ tbody tr:hover { background: var(--surface2); }
 
 
 
+
+/* ════ v138 TAPPAL FOLLOW-UP ═════════════════════════════════ */
+.tpl-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px}
+.tpl-kpi{background:var(--surface);border:1px solid var(--border);border-left:4px solid #f59e0b;border-radius:12px;padding:12px 14px;cursor:pointer;transition:transform .15s}
+.tpl-kpi:hover{transform:translateY(-1px)}
+.tpl-kpi b{display:block;font-size:24px;font-weight:800;color:var(--tx1);line-height:1.1}
+.tpl-kpi small{font-size:11.5px;color:var(--tx3);font-weight:600}
+.tpl-kpi.red{border-left-color:#ef4444}.tpl-kpi.red b{color:#dc2626}
+.tpl-kpi.green{border-left-color:#10b981}.tpl-kpi.grey{border-left-color:#94a3b8}
+.tpl-tabs{display:flex;gap:6px;margin-bottom:12px;border-bottom:1px solid var(--border)}
+.tpl-tab{display:inline-flex;align-items:center;gap:6px;background:none;border:none;border-bottom:3px solid transparent;padding:9px 12px;font-size:13.5px;font-weight:700;color:var(--tx3);cursor:pointer;font-family:inherit;margin-bottom:-1px}
+.tpl-tab .material-icons-round{font-size:18px}
+.tpl-tab.active{color:var(--c-blue);border-bottom-color:var(--c-blue)}
+.tpl-chips{display:flex;gap:6px;flex-wrap:wrap}
+.tpl-group{margin-bottom:16px}
+.tpl-ghd{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:8px 2px 8px}
+.tpl-ghd b{font-size:14px;color:var(--tx1)}.tpl-ghd > div:first-child span{font-size:11.5px;color:var(--tx3)}
+.tpl-gcount{font-size:12px;color:var(--tx2);font-weight:600}
+.tpl-gacts{margin-left:auto;display:flex;gap:6px}
+.tpl-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:10px}
+.tpl-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:12px 14px;cursor:pointer;display:flex;flex-direction:column;gap:6px;transition:border-color .15s,box-shadow .15s}
+.tpl-card:hover{border-color:var(--c-blue);box-shadow:var(--sh2)}
+.tpl-card.od{border-left:4px solid #ef4444}
+.tpl-top{display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-size:11.5px}
+.tpl-st{display:inline-flex;align-items:center;padding:2px 9px;border-radius:999px;font-size:11px;font-weight:700;white-space:nowrap}
+.tpl-st.amber{background:rgba(245,158,11,.14);color:#b45309}.tpl-st.blue{background:rgba(14,165,233,.14);color:#0369a1}
+.tpl-st.green{background:rgba(16,185,129,.15);color:#047857}.tpl-st.grey{background:rgba(148,163,184,.18);color:#475569}
+.tpl-st.slate{background:rgba(100,116,139,.15);color:#334155}
+[data-theme=dark] .tpl-st.grey,[data-theme=dark] .tpl-st.slate{color:#cbd5e1}
+.tpl-urg{color:#dc2626;font-weight:700}
+.tpl-ns{color:#b45309;font-weight:700}
+.tpl-due{color:var(--tx2);font-weight:600}.tpl-due.od{color:#dc2626}
+.tpl-meta{margin-left:auto;color:var(--tx3);white-space:nowrap}
+.tpl-subj{font-size:14.5px;font-weight:600;color:var(--tx1);line-height:1.4}
+.tpl-from,.tpl-off,.tpl-markup,.tpl-reply{display:flex;align-items:flex-start;gap:6px;font-size:12.5px;color:var(--tx2);line-height:1.45}
+.tpl-from .material-icons-round,.tpl-off .material-icons-round,.tpl-markup .material-icons-round,.tpl-reply .material-icons-round{font-size:16px;color:var(--tx3);margin-top:1px}
+.tpl-type{font-size:10.5px;font-weight:700;color:var(--tx3);background:var(--surface2);border-radius:5px;padding:1px 6px;margin-left:2px}
+.tpl-markup{background:rgba(245,158,11,.09);border-radius:8px;padding:5px 8px;color:var(--tx1)}
+.tpl-markup .material-icons-round{color:#d97706}
+.tpl-reply{background:rgba(16,185,129,.08);border-radius:8px;padding:5px 8px}
+.tpl-reply .material-icons-round{color:#059669}
+.tpl-bot{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:2px}
+.tpl-acts{margin-left:auto;display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.tpl-link{display:inline-flex;align-items:center;gap:3px;font-size:12px;font-weight:600;color:var(--c-blue);text-decoration:none}
+.tpl-link .material-icons-round{font-size:15px}
+.tpl-noscan{font-size:11.5px;color:var(--tx3)}
+.btn.tpl-wa{background:#25D366;color:#fff}
+.tpl-follow-box{border:1.5px solid rgba(37,99,235,.25);background:rgba(37,99,235,.04);border-radius:12px;padding:12px 12px 10px;margin-bottom:14px}
+.tpl-follow-hd{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:800;color:var(--c-blue);margin-bottom:10px}
+.tpl-follow-hd .material-icons-round{font-size:18px}
+.tpl-hist{margin-top:8px;border:1px solid rgba(245,158,11,.35);background:rgba(245,158,11,.07);border-radius:10px;padding:8px 10px}
+.tpl-hist-hd{display:flex;align-items:center;gap:5px;font-size:12px;font-weight:700;color:#b45309;margin-bottom:4px}
+.tpl-hist-hd .material-icons-round{font-size:16px}
+.tpl-hist-i{font-size:12px;color:var(--tx2);padding:3px 0;display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.tpl-hist-i > span:first-child{color:var(--tx3);white-space:nowrap}
+.tplm{display:flex;flex-direction:column;gap:8px}
+.tplm-subj{font-size:17px;font-weight:700;color:var(--tx1);line-height:1.4}
+.tplm-off{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;font-size:12.5px;color:var(--tx2);background:var(--surface2);border-radius:10px;padding:8px 10px}
+.tplm-off .material-icons-round{font-size:16px;vertical-align:-3px;margin-right:4px;color:var(--tx3)}
+.tplm-reply{border:1px solid rgba(16,185,129,.3);background:rgba(16,185,129,.06);border-radius:10px;padding:9px 11px;font-size:13px;color:var(--tx1)}
+.tplm-lbl{font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:#047857;margin-bottom:3px}
+.tplm-scan iframe{width:100%;height:340px;border:1px solid var(--border);border-radius:10px;background:var(--surface2)}
+.tplm-scan-links{display:flex;gap:10px;flex-wrap:wrap;margin-top:4px}
+#tplMeetFt{flex-wrap:wrap}
+.tpl-intask{border:1.5px solid rgba(245,158,11,.35);background:rgba(245,158,11,.06);border-radius:12px;padding:10px 12px;margin-bottom:12px}
+.tpl-intask-hd{display:flex;align-items:center;gap:6px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:#b45309}
+.tpl-intask-hd .material-icons-round{font-size:16px}
+.tpl-dash{background:linear-gradient(135deg,#0b1f45,#1d4ed8);color:#fff;border-radius:14px;padding:12px 14px;margin-bottom:12px;cursor:pointer;box-shadow:0 6px 18px rgba(29,78,216,.22)}
+.tpl-dash-hd{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:800;margin-bottom:8px}
+.tpl-dash-hd .material-icons-round{font-size:18px}
+.tpl-dash-row{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.tpl-dash-row div{background:rgba(255,255,255,.1);border-radius:10px;padding:8px 10px}
+.tpl-dash-row b{display:block;font-size:22px;font-weight:800;line-height:1.1}
+.tpl-dash-row small{font-size:11px;opacity:.8;font-weight:600}
+.tpl-dash-row .red b{color:#fca5a5}.tpl-dash-row .green b{color:#86efac}
+@media (max-width:767px){
+  .tpl-kpis{grid-template-columns:repeat(2,1fr);gap:8px}
+  .tpl-kpi b{font-size:21px}
+  .tpl-grid{grid-template-columns:1fr}
+  .tpl-meta{margin-left:0;width:100%}
+  .tpl-acts{margin-left:0;width:100%;justify-content:flex-start}
+  .tpl-acts .btn{flex:1 1 auto}
+  .tpl-acts .btn-icon{flex:0 0 auto}
+  .tplm-scan iframe{height:260px}
+  #tplMeetFt > .btn{flex:1 1 calc(50% - 4px)}
+  .tpl-dash-row{grid-template-columns:repeat(2,1fr)}
+  .tpl-gacts{margin-left:0}
+}
+
 /* ════ v137 ABOUT PAGE ═══════════════════════════════════════ */
 .ab-wrap{max-width:860px;margin:0 auto;display:flex;flex-direction:column;gap:16px;padding-bottom:10px}
 .ab-hero{position:relative;overflow:hidden;border-radius:22px;padding:34px 24px 26px;text-align:center;color:#fff;
@@ -1706,6 +1795,16 @@ tbody tr:hover { background: var(--surface2); }
           <select class="f-sel" id="dashDeptFilter" onchange="loadDashboard()" style="font-size:13px;padding:6px 10px;width:auto;min-width:180px">
             <option value="">All Departments</option>
           </select>
+        </div>
+        <!-- v138: tappal follow-up at a glance (Admin / Commissioner) -->
+        <div class="tpl-dash" id="dashTappalCard" style="display:none" onclick="go('tappal')">
+          <div class="tpl-dash-hd"><span class="material-icons-round">markunread_mailbox</span> Tappal follow-up <span class="material-icons-round" style="margin-left:auto;font-size:18px;opacity:.6">chevron_right</span></div>
+          <div class="tpl-dash-row">
+            <div><b id="dtp-rcv">&#8212;</b><small>Received this week</small></div>
+            <div><b id="dtp-pend">&#8212;</b><small>With officers</small></div>
+            <div class="red"><b id="dtp-od">&#8212;</b><small>Overdue</small></div>
+            <div class="green"><b id="dtp-cl">&#8212;</b><small>To close</small></div>
+          </div>
         </div>
         <div class="kpi-grid" id="kpiGrid">
           <div class="kpi blue" onclick="drillDown('all')" style="cursor:pointer"><div class="kpi-stripe"></div><div class="kpi-icon-wrap"><span class="material-icons-round mi">assignment</span></div><div class="kpi-val" id="k-total">&#8212;</div><div class="kpi-lbl">Total Tasks</div></div>
@@ -2484,39 +2583,50 @@ tbody tr:hover { background: var(--surface2); }
     <!-- TAPPAL TRACKER PAGE (Admin & Commissioner only) -->
     <div class="page" id="page-tappal">
       <div class="ph">
-        <div class="ph-left"><h1>&#128239; Tappal Tracker</h1><p>Special tappals received at the office &mdash; record-keeping</p></div>
+        <div class="ph-left"><h1>&#128238; Tappal Follow-up</h1><p>Tappals the Commissioner marked &mdash; who has it, what was done, what is pending</p></div>
         <div class="ph-actions">
-          <button class="btn btn-primary btn-sm" onclick="showTappalModal()"><span class="material-icons-round mi">add</span> <span class="nowrap">New Tappal</span></button>
+          <button class="btn btn-ghost btn-sm" onclick="tplMeetOpen()"><span class="material-icons-round mi">co_present</span> Meeting mode</button>
+          <button class="btn btn-ghost btn-sm" onclick="tplPrintMenu()"><span class="material-icons-round mi">print</span> Print</button>
+          <button class="btn btn-primary btn-sm" onclick="showTappalModal()"><span class="material-icons-round mi">add</span> New Tappal</button>
         </div>
       </div>
-      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px;align-items:center">
-        <div class="search-wrap" style="width:300px;max-width:100%">
+      <div class="tpl-kpis" id="tplKpis">
+        <div class="tpl-kpi" onclick="tplSetFilter('open')"><b id="tplK-open">&#8212;</b><small>With officers</small></div>
+        <div class="tpl-kpi red" onclick="tplSetFilter('overdue')"><b id="tplK-overdue">&#8212;</b><small>Overdue</small></div>
+        <div class="tpl-kpi green" onclick="tplSetFilter('toclose')"><b id="tplK-toclose">&#8212;</b><small>Action taken &mdash; to close</small></div>
+        <div class="tpl-kpi grey" onclick="tplSetFilter('notsent')"><b id="tplK-notsent">&#8212;</b><small>Not sent yet</small></div>
+      </div>
+      <div class="tpl-tabs">
+        <button class="tpl-tab active" id="tplTab-follow" onclick="tplSetTab('follow')"><span class="material-icons-round">assignment_ind</span> Follow-up</button>
+        <button class="tpl-tab" id="tplTab-register" onclick="tplSetTab('register')"><span class="material-icons-round">menu_book</span> Register</button>
+      </div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px;align-items:center">
+        <div class="search-wrap" style="flex:1;min-width:220px;max-width:420px">
           <span class="material-icons-round mi-prefix">search</span>
-          <input type="text" class="f-ctrl" id="tappalSearch" placeholder="Search date, type, petitioner, subject, zone, division, remarks..." oninput="filterTappal()" style="font-size:13px">
+          <input type="text" class="f-ctrl" id="tappalSearch" placeholder="Search inward no, petitioner, subject, officer&hellip;" oninput="filterTappal()" style="font-size:13px">
+        </div>
+        <div id="tplChips" class="tpl-chips">
+          <button class="filt-btn active" data-f="open" onclick="tplSetFilter('open')">All open</button>
+          <button class="filt-btn filt-btn-danger" data-f="overdue" onclick="tplSetFilter('overdue')">Overdue</button>
+          <button class="filt-btn" data-f="toclose" onclick="tplSetFilter('toclose')">To close</button>
+          <button class="filt-btn" data-f="notsent" onclick="tplSetFilter('notsent')">Not sent</button>
         </div>
         <span class="c-muted" id="tappalCount" style="font-size:12px;white-space:nowrap;margin-left:auto">&#8212;</span>
       </div>
-      <div class="tbl-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th style="text-align:left;padding:8px 10px;font-size:11px;font-weight:700;color:var(--tx3);text-transform:uppercase;border-bottom:2px solid var(--border);cursor:pointer;user-select:none" onclick="sortTappal('date')">Date<span id="tplsort-date"></span></th>
-              <th style="text-align:left;padding:8px 10px;font-size:11px;font-weight:700;color:var(--tx3);text-transform:uppercase;border-bottom:2px solid var(--border);cursor:pointer;user-select:none" onclick="sortTappal('petitionType')">Type<span id="tplsort-petitionType"></span></th>
-              <th style="text-align:left;padding:8px 10px;font-size:11px;font-weight:700;color:var(--tx3);text-transform:uppercase;border-bottom:2px solid var(--border);cursor:pointer;user-select:none" onclick="sortTappal('petitionerName')">Petitioner<span id="tplsort-petitionerName"></span></th>
-              <th style="text-align:left;padding:8px 10px;font-size:11px;font-weight:700;color:var(--tx3);text-transform:uppercase;border-bottom:2px solid var(--border);cursor:pointer;user-select:none" onclick="sortTappal('subject')">Subject<span id="tplsort-subject"></span></th>
-              <th style="text-align:left;padding:8px 10px;font-size:11px;font-weight:700;color:var(--tx3);text-transform:uppercase;border-bottom:2px solid var(--border);cursor:pointer;user-select:none" onclick="sortTappal('zone')">Zone<span id="tplsort-zone"></span></th>
-              <th style="text-align:left;padding:8px 10px;font-size:11px;font-weight:700;color:var(--tx3);text-transform:uppercase;border-bottom:2px solid var(--border);cursor:pointer;user-select:none" onclick="sortTappal('divisionNo')">Div. No<span id="tplsort-divisionNo"></span></th>
-              <th style="text-align:left;padding:8px 10px;font-size:11px;font-weight:700;color:var(--tx3);text-transform:uppercase;border-bottom:2px solid var(--border);cursor:pointer;user-select:none" onclick="sortTappal('files')">Files<span id="tplsort-files"></span></th>
-              <th style="text-align:right;padding:8px 10px;font-size:11px;font-weight:700;color:var(--tx3);text-transform:uppercase;border-bottom:2px solid var(--border)">Actions</th>
-            </tr>
-          </thead>
-          <tbody id="tappalTableBody"></tbody>
-        </table>
-      </div>
+      <div id="tappalList"></div>
       <div id="tappalEmpty" class="dn" style="text-align:center;padding:48px 24px">
         <span class="material-icons-round" style="font-size:48px;color:var(--tx3)">markunread_mailbox</span>
-        <h3 style="color:var(--tx2);margin:12px 0 6px">No tappal records found</h3>
-        <p style="color:var(--tx3)" id="tappalEmptyMsg">Add your first tappal record to get started.</p>
+        <h3 style="color:var(--tx2);margin:12px 0 6px">Nothing here</h3>
+        <p style="color:var(--tx3)" id="tappalEmptyMsg">Add your first tappal to get started.</p>
+      </div>
+    </div>
+
+    <!-- v138: weekly meeting mode -->
+    <div class="modal-bg" id="mTplMeet">
+      <div class="modal-box" style="max-width:780px">
+        <div class="modal-hd"><span class="modal-title" id="tplMeetTitle">Meeting mode</span><button class="modal-close" onclick="closeModal('mTplMeet')"><span class="material-icons-round">close</span></button></div>
+        <div class="modal-body" id="tplMeetBody"></div>
+        <div class="modal-ft" id="tplMeetFt"></div>
       </div>
     </div>
 
@@ -2528,6 +2638,9 @@ tbody tr:hover { background: var(--surface2); }
           <input type="hidden" id="tpl-id">
           <div class="f-row">
             <div class="f-group"><label class="f-label">Date <span class="req">*</span></label><input type="date" class="f-ctrl" id="tpl-date"></div>
+            <div class="f-group"><label class="f-label">Inward No <span style="font-size:11px;color:var(--tx3);font-weight:400">(optional)</span></label><input type="text" class="f-ctrl" id="tpl-inward" placeholder="e.g. 4521"></div>
+          </div>
+          <div class="f-row">
             <div class="f-group">
               <label class="f-label">Type of Petition <span class="req">*</span></label>
               <input type="text" class="f-ctrl" id="tpl-type" placeholder="Select or type a new one" list="tappalTypeList">
@@ -2536,8 +2649,9 @@ tbody tr:hover { background: var(--surface2); }
           </div>
           <div class="f-group">
             <label class="f-label">Name of the Petitioner <span class="req">*</span></label>
-            <input type="text" class="f-ctrl" id="tpl-petitioner" placeholder="Select or type a new name" list="tappalPetitionerList">
+            <input type="text" class="f-ctrl" id="tpl-petitioner" placeholder="Select or type a new name" list="tappalPetitionerList" oninput="tplPetitionerHistory()" onchange="tplPetitionerHistory()">
             <datalist id="tappalPetitionerList"></datalist>
+            <div id="tplHistory"></div>
           </div>
           <div class="f-group">
             <label class="f-label">Subject <span class="req">*</span></label>
@@ -2546,6 +2660,24 @@ tbody tr:hover { background: var(--surface2); }
           <div class="f-row">
             <div class="f-group"><label class="f-label">Zone <span style="font-size:11px;color:var(--tx3);font-weight:400">(optional)</span></label><select class="f-sel" id="tpl-zone"><option value="">Not specified</option></select></div>
             <div class="f-group"><label class="f-label">Division No <span style="font-size:11px;color:var(--tx3);font-weight:400">(optional)</span></label><input type="text" class="f-ctrl" id="tpl-division" placeholder="e.g. 24"></div>
+          </div>
+          <!-- v138: Commissioner's markup + follow-up -->
+          <div class="tpl-follow-box">
+            <div class="tpl-follow-hd"><span class="material-icons-round">assignment_ind</span> Commissioner&rsquo;s markup &amp; follow-up</div>
+            <div class="f-group">
+              <label class="f-label">Commissioner&rsquo;s markup</label>
+              <input type="text" class="f-ctrl" id="tpl-markup" list="tplMarkupList" placeholder="e.g. Examine and report">
+              <datalist id="tplMarkupList"><option value="Examine and report"><option value="Take necessary action"><option value="Take action and send reply to petitioner"><option value="Inspect and report"><option value="Discuss with me"><option value="For information"></datalist>
+            </div>
+            <div class="f-row">
+              <div class="f-group"><label class="f-label">Department</label><select class="f-sel" id="tpl-fdept" onchange="tplFillOfficers()"><option value="">Select department</option></select></div>
+              <div class="f-group"><label class="f-label">Concerned officer</label><select class="f-sel" id="tpl-foff" onchange="tplOfficerPicked()"><option value="">Not sent yet</option></select></div>
+            </div>
+            <div class="f-row" id="tplFollowExtra">
+              <div class="f-group"><label class="f-label">Reply due by</label><input type="date" class="f-ctrl" id="tpl-fdue"></div>
+              <div class="f-group" style="align-self:end"><label class="remember-label" style="font-size:13px;font-weight:600"><input type="checkbox" id="tpl-furgent" onchange="tplUrgentChanged()"> &#128308; Urgent (3 days)</label></div>
+            </div>
+            <div id="tplFollowNote" style="font-size:11.5px;color:var(--tx3)">Choosing an officer creates a follow-up in their task list (due in 7 days, or 3 if urgent). You can send it on WhatsApp after saving.</div>
           </div>
           <div class="f-group">
             <label class="f-label">Remarks</label>
@@ -2556,7 +2688,7 @@ tbody tr:hover { background: var(--surface2); }
             <div id="tappalDropZone" style="border:2px dashed var(--border);border-radius:10px;padding:18px;text-align:center;cursor:pointer;background:var(--surface2)"
               onclick="document.getElementById('tappalFileInput').click()">
               <span class="material-icons-round mi" style="font-size:28px;color:var(--tx3)">upload_file</span>
-              <div style="font-size:13px;color:var(--tx3);margin-top:6px">Tap to upload PDF or image files</div>
+              <div style="font-size:13px;color:var(--tx3);margin-top:6px">Tap to upload the scanned tappal (PDF or photo)</div>
             </div>
             <input type="file" id="tappalFileInput" accept="application/pdf,image/jpeg,image/png" multiple style="display:none" onchange="tappalHandleFileSelect(this.files)">
             <div id="tappalFilePreview" style="display:flex;flex-direction:column;gap:6px;margin-top:10px"></div>
@@ -2647,7 +2779,8 @@ tbody tr:hover { background: var(--surface2); }
         <section class="ab-card">
           <div class="ab-h" onclick="aboutToggleChangelog()" style="cursor:pointer"><span class="material-icons-round">new_releases</span> What&rsquo;s new <span class="material-icons-round" id="aboutChangelogChevron" style="margin-left:auto;transition:transform .25s;color:var(--tx3)">expand_more</span></div>
           <div class="ab-tl">
-            <div class="ab-tl-i"><em style="background:#2563eb"></em><b>Made for phones <span class="ab-new">NEW</span></b><small>Task cards instead of a wide table, bigger buttons, pop-ups that slide up from the bottom.</small><span class="ab-v">v137</span></div>
+            <div class="ab-tl-i"><em style="background:#d97706"></em><b>Tappal follow-up <span class="ab-new">NEW</span></b><small>Marked tappals go to the concerned officer with a due date, WhatsApp, reply upload, weekly meeting mode and printouts.</small><span class="ab-v">v138</span></div>
+            <div class="ab-tl-i"><em style="background:#2563eb"></em><b>Made for phones</b><small>Task cards instead of a wide table, bigger buttons, pop-ups that slide up from the bottom.</small><span class="ab-v">v137</span></div>
             <div class="ab-tl-i"><em style="background:#10b981"></em><b>Faster every day</b><small>Stay signed in for 30 days, &ldquo;My work today&rdquo;, lighter dashboard, automatic tidy-up of old records.</small><span class="ab-v">v136</span></div>
             <div id="aboutChangelogBody" style="display:none">
               <div class="ab-tl-i"><em style="background:#16a34a"></em><b>Before / after photos &amp; WhatsApp</b><small>Officers add both photos; Done needs an After photo. One-tap WhatsApp reminders.</small><span class="ab-v">v135</span></div>
@@ -3756,7 +3889,7 @@ function applyRoleNav(role){
     if(ad)ad.classList.remove('dn');if(od)od.classList.add('dn');if(hd)hd.classList.add('dn');if(spd)spd.classList.add('dn');
   }
 }
-var PAGE_META={review:['Review','Workload \u00b7 Backlog clean-up \u00b7 Meeting printout'],dashboard:['Dashboard','Overview & Analytics'],taskEntry:['Task Entry','Create and assign tasks'],tracker:['Task Tracker','Monitor all tasks'],users:['User Management','Manage accounts'],settings:['Settings','System configuration'],photolog:['Notes','Inspection & Meeting Records'],reports:['Reports','Dynamic Report Generator'],tappal:['Tappal Tracker','Special tappals received at the office'],about:['About','Application information']};
+var PAGE_META={review:['Review','Workload \u00b7 Backlog clean-up \u00b7 Meeting printout'],dashboard:['Dashboard','Overview & Analytics'],taskEntry:['Task Entry','Create and assign tasks'],tracker:['Task Tracker','Monitor all tasks'],users:['User Management','Manage accounts'],settings:['Settings','System configuration'],photolog:['Notes','Inspection & Meeting Records'],reports:['Reports','Dynamic Report Generator'],tappal:['Tappal Follow-up','Marked tappals \u00b7 officers \u00b7 replies'],about:['About','Application information']};
 function go(page){
   if(S.allowedPages&&S.allowedPages.length&&S.allowedPages.indexOf(page)===-1){toast('Access restricted.','error');return;}
   S.page=page;
@@ -3994,6 +4127,7 @@ function loadDashboard(){
 }
 
 function applyAdminDashData(r){
+  try{loadDashTappal();}catch(e){}
   hideLoader();
   var s=r.stats;
   var kv={'k-total':s.total,'k-pending':s.pending,'k-progress':s.inProgress,'k-done':s.completed,'k-overdue':s.overdue,'k-today':s.dueToday,'k-high':s.highPriority,'k-rate':r.completionRate+'%'};
@@ -6012,6 +6146,7 @@ function ensureTaskDetail(t,cb){
       if(r.task.timeline)t._timeline=r.task.timeline;
       if(r.task.seenAt!==undefined)t.seenAt=r.task.seenAt;
       t._beforePhotos=r.task.beforePhotos||[];
+      t._tappal=r.task.tappal||null;
     }
     cb();
   });
@@ -6138,6 +6273,7 @@ function viewTask(taskID){
         if(r.task.timeline)t._timeline=r.task.timeline;
         if(r.task.seenAt!==undefined)t.seenAt=r.task.seenAt;
         t._beforePhotos=r.task.beforePhotos||[];
+        t._tappal=r.task.tappal||null;
         // Photos and attachments arrive in this SAME response now —
         // consume them directly instead of firing more calls for it.
         t.newPhotos=r.task.photos||[];
@@ -6237,6 +6373,15 @@ function taskDetailHTML(t){
       +'<div style="font-size:13px;font-weight:500">'+(rows[i][1]||'\u2014')+'</div></div>';
   }
   detailsHtml+='</div>';
+  if(t._tappal){ // v138: the tappal behind this follow-up
+    var tp=t._tappal;
+    detailsHtml+='<div class="tpl-intask"><div class="tpl-intask-hd"><span class="material-icons-round">markunread_mailbox</span> Tappal'+(tp.inwardNo?' · Inward '+htmlEsc(tp.inwardNo):'')+' · '+htmlEsc(tappalFormatDate(tp.date))+'</div>'
+      +'<div style="font-size:13.5px;font-weight:600;margin:4px 0">'+htmlEsc(tp.subject)+'</div>'
+      +'<div style="font-size:12.5px;color:var(--tx2)">From: <b>'+htmlEsc(tp.petitionerName)+'</b>'+(tp.petitionType?' ('+htmlEsc(tp.petitionType)+')':'')+'</div>'
+      +(tp.markup?'<div class="tpl-markup" style="margin-top:6px"><span class="material-icons-round">edit_note</span><b>Commissioner:</b> '+htmlEsc(tp.markup)+'</div>':'')
+      +'<div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap">'+((tp.attachments||[]).map(function(a){return '<a class="tpl-link" href="'+htmlEsc(a.driveURL)+'" target="_blank" rel="noopener"><span class="material-icons-round">description</span> '+htmlEsc(a.fileName||'Scanned copy')+'</a>';}).join('')||'<span class="tpl-noscan">No scanned copy</span>')+'</div>'
+      +'<div style="font-size:11.5px;color:var(--tx3);margin-top:6px">To finish: attach the reply letter / action-taken report (PDF or photo) and mark <b>Done</b>.</div></div>';
+  }
   detailsHtml+='<div style="margin-bottom:12px">'
     +'<div style="font-size:10px;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px">Description</div>'
     +'<div style="background:var(--surface2);padding:11px;border-radius:8px;font-size:13px;line-height:1.6">'+(t.description||'\u2014')+'</div>'
@@ -7198,7 +7343,16 @@ function submitPhotoUpdate(){
   // on the task counts.
   var isAdminLikePU=(S.user&&(S.user.role==='Admin'||S.user.role==='Commissioner'));
   var pickedAfter=pickedPhotos.some(function(f){return photoKindOf(f)==='After';});
-  if(status==='Done'&&!isAdminLikePU&&!pickedAfter){
+  var tTP=null;for(var tpi=0;tpi<S.tasks.length;tpi++){if(S.tasks[tpi].taskID===taskID){tTP=S.tasks[tpi];break;}}
+  var isTappalTask=!!(tTP&&tTP.taskType==='Tappal');
+  if(isTappalTask){ // v138: a tappal needs the reply document or a photo, either kind
+    pickedAfter=pickedPhotos.length>0||pickedDocs.length>0;
+    if(status==='Done'&&!isAdminLikePU&&!pickedAfter){
+      var dd=tTP._detail;var hasProof=!!(dd?((dd.photos&&dd.photos.length)||(dd.attachments&&dd.attachments.length)):((tTP.photoCount||0)>0||(tTP.docCount||0)>0));
+      if(!hasProof){toast('Please attach the reply / action-taken report (PDF or photo) before marking this tappal Done.','error');return;}
+      pickedAfter=true;
+    }
+  } else if(status==='Done'&&!isAdminLikePU&&!pickedAfter){
     var tPU=null;for(var pi2=0;pi2<S.tasks.length;pi2++){if(S.tasks[pi2].taskID===taskID){tPU=S.tasks[pi2];break;}}
     var dPh=tPU&&tPU._detail&&tPU._detail.photos;
     var hasAfterAlready=!!(tPU&&(dPh?(dPh.some(function(p){return p.kind!=='Before';})||String(tPU.photoLinks||'').length>10):((tPU.photoCount||0)>0||tPU.hasPhotos)));
@@ -7366,7 +7520,7 @@ function submitPhotoUpdate(){
 
   // STEP 2 — save status/remarks/priority to the server
   // (photosAttached tells the server photos are being uploaded right after)
-  gasCall('serverUpdateTask',S.token,taskID,{status:status,officerRemarks:remarks,priority:priority,photosAttached:pickedAfter}).then(function(r){
+  gasCall('serverUpdateTask',S.token,taskID,{status:status,officerRemarks:remarks,priority:priority,photosAttached:pickedAfter,docsAttached:pickedDocs.length>0}).then(function(r){
     if(!r||!r.success){
       setUploadingUI(false);
       var failMsg=(r&&r.message)||'Update failed to save.';
@@ -11203,7 +11357,7 @@ function loadSettings(){
 // ABOUT PAGE — interactive elements
 // ════════════════════════════════════════════════════════════
 var ABOUT_INITED=false;
-var APP_VERSION='v137',APP_VERSION_DATE='28 Nov 2026';
+var APP_VERSION='v138',APP_VERSION_DATE='28 Nov 2026';
 function loadAboutPage(){
   // v137: real numbers from what the app already has — no extra server call
   var role=S.user?S.user.role:'',me=S.user?S.user.userID:'';
@@ -11316,22 +11470,16 @@ var TPL={files:[],editID:null,existingAtt:[]};
 
 function loadReportsPage(){ /* v133: report links removed — page only offers the Custom Period Report */ }
 function loadTappalPage(){
-  var body=id('tappalTableBody');
-  if(body)body.innerHTML='<tr><td colspan="8" style="text-align:center;padding:24px;color:var(--tx3)">Loading\u2026</td></tr>';
-  // Zone dropdown + petition type/petitioner datalists all need fresh data
-  // whenever the page opens — zones rarely change but types/petitioners
-  // grow over time as new ones get added inline.
+  var box=id('tappalList');
+  if(box&&!(S.tappal&&S.tappal.length))box.innerHTML='<div style="text-align:center;padding:24px;color:var(--tx3)">Loading…</div>';
+  else if(S.tappal)filterTappal(); // show what we have instantly, refresh below
   var p1=gasCall('serverGetTappalRecords',S.token);
   var p2=gasCall('serverGetTappalPetitionTypes',S.token);
   var p3=gasCall('serverGetTappalPetitioners',S.token);
   Promise.all([p1,p2,p3]).then(function(results){
     var r1=results[0],r2=results[1],r3=results[2];
-    if(r1&&r1.success){
-      S.tappal=r1.data||[];
-    } else {
-      S.tappal=[];
-      toast((r1&&r1.message)||'Could not load Tappal records.','error');
-    }
+    if(r1&&r1.success){S.tappal=r1.data||[];}
+    else{S.tappal=S.tappal||[];toast((r1&&r1.message)||'Could not load Tappal records.','error');}
     S._tappalTypes=(r2&&r2.success)?(r2.data||[]):[];
     S._tappalPetitioners=(r3&&r3.success)?(r3.data||[]):[];
     tappalFillDatalist('tappalTypeList',S._tappalTypes);
@@ -11346,9 +11494,6 @@ function tappalFillDatalist(id_,values){
   for(var i=0;i<values.length;i++)html+='<option value="'+htmlEsc(values[i])+'">';
   dl.innerHTML=html;
 }
-// Formats a 'YYYY-MM-DD' date string (as normalized by the backend) into
-// 'DD/MM/YY - DAY' for display, e.g. "22/08/26 - Sat". Falls back to the
-// raw value if it doesn't look like a date, rather than showing nothing.
 function tappalFormatDate(dateStr){
   if(!dateStr)return'';
   var m=/^(\d{4})-(\d{2})-(\d{2})/.exec(dateStr);
@@ -11358,116 +11503,222 @@ function tappalFormatDate(dateStr){
   var days=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
   return m[3]+'/'+m[2]+'/'+m[1].slice(2)+' - '+days[d.getDay()];
 }
-// ── Sorting: click a header to sort by that column, click again to
-// reverse. Default: Date, newest first (matches load order).
-var TPL_SORT={col:'date',dir:-1};
-function sortTappal(col){
-  if(TPL_SORT.col===col)TPL_SORT.dir*=-1;
-  else{TPL_SORT.col=col;TPL_SORT.dir=1;}
-  var cols=['date','petitionType','petitionerName','subject','zone','divisionNo','files'];
-  for(var i=0;i<cols.length;i++){var el=id('tplsort-'+cols[i]);if(el)el.textContent='';}
-  var active=id('tplsort-'+col);if(active)active.textContent=TPL_SORT.dir===1?' \u25b2':' \u25bc';
+// ── v138 status of a tappal, in plain words ──
+function tplState(t){
+  var f=t.follow;
+  if(!f)return {key:'notsent',label:'Not sent',cls:'grey'};
+  if(f.status==='Verified')return {key:'closed',label:'Closed',cls:'slate'};
+  if(f.status==='Done')return {key:'toclose',label:'Action taken — to close',cls:'green'};
+  if(f.status==='In Progress')return {key:'open',label:'Officer working on it',cls:'blue'};
+  return {key:'open',label:'Sent to officer',cls:'amber'};
+}
+function tplDaysPending(t){
+  var from=(t.follow&&t.follow.dateAssigned)||t.date;if(!from)return 0;
+  return Math.max(0,Math.round((new Date(new Date().toISOString().slice(0,10))-new Date(from.slice(0,10)))/86400000));
+}
+var TPL_VIEW={tab:'follow',filter:'open'};
+function tplSetTab(tab){
+  TPL_VIEW.tab=tab;
+  ['follow','register'].forEach(function(k){var b=id('tplTab-'+k);if(b)b.classList.toggle('active',k===tab);});
+  var ch=id('tplChips');if(ch)ch.style.display=tab==='follow'?'':'none';
   filterTappal();
 }
-function applyTappalSort(list){
-  var col=TPL_SORT.col,dir=TPL_SORT.dir;
-  list.sort(function(a,b){
-    var av,bv;
-    if(col==='files'){av=(a.attachments||[]).length;bv=(b.attachments||[]).length;return(av-bv)*dir;}
-    if(col==='divisionNo'){
-      // Numeric compare when both values look like plain numbers, so "9"
-      // sorts before "10" instead of falling back to lexical order.
-      av=a.divisionNo||'';bv=b.divisionNo||'';
-      var an=Number(av),bn=Number(bv);
-      if(av!==''&&bv!==''&&!isNaN(an)&&!isNaN(bn))return(an-bn)*dir;
-      return av<bv?-dir:av>bv?dir:0;
-    }
-    av=(a[col]||'').toString().toLowerCase();bv=(b[col]||'').toString().toLowerCase();
-    return av<bv?-dir:av>bv?dir:0;
-  });
-  return list;
+function tplSetFilter(f){
+  TPL_VIEW.filter=f;if(TPL_VIEW.tab!=='follow')tplSetTab('follow');
+  document.querySelectorAll('#tplChips .filt-btn').forEach(function(b){b.classList.toggle('active',b.getAttribute('data-f')===f);});
+  filterTappal();
+}
+function tplCounts(){
+  var c={open:0,overdue:0,toclose:0,notsent:0};
+  (S.tappal||[]).forEach(function(t){var st=tplState(t);if(st.key==='open'){c.open++;if(t.follow&&t.follow.isOverdue)c.overdue++;}else if(st.key==='toclose')c.toclose++;else if(st.key==='notsent')c.notsent++;});
+  ['open','overdue','toclose','notsent'].forEach(function(k){var e=id('tplK-'+k);if(e)e.textContent=c[k];});
+  return c;
 }
 function filterTappal(){
+  tplCounts();
   var q=(V('tappalSearch')||'').toLowerCase().trim();
   var list=(S.tappal||[]).slice();
   if(q){
     var tokens=q.replace(/\s+/g,' ').split(' ');
     list=list.filter(function(t){
-      var hay=((t.date||'')+' '+(t.petitionType||'')+' '+(t.petitionerName||'')+' '+(t.subject||'')+' '+(t.zone||'')+' '+(t.divisionNo||'')+' '+(t.remarks||'')).toLowerCase();
+      var f=t.follow||{};
+      var hay=((t.date||'')+' '+(t.inwardNo||'')+' '+(t.petitionType||'')+' '+(t.petitionerName||'')+' '+(t.subject||'')+' '+(t.zone||'')+' '+(t.divisionNo||'')+' '+(t.remarks||'')+' '+(t.markup||'')+' '+(f.officerName||'')).toLowerCase();
       for(var i=0;i<tokens.length;i++){if(tokens[i]&&hay.indexOf(tokens[i])<0)return false;}
       return true;
     });
   }
-  applyTappalSort(list);
-  renderTappalTable(list);
+  if(TPL_VIEW.tab==='follow'){
+    var fl=TPL_VIEW.filter;
+    list=list.filter(function(t){var st=tplState(t);
+      if(fl==='open')return st.key==='open'||st.key==='toclose';
+      if(fl==='overdue')return st.key==='open'&&t.follow&&t.follow.isOverdue;
+      return st.key===fl;});
+    renderTappalFollow(list);
+  } else {
+    list.sort(function(a,b){return String(b.date).localeCompare(String(a.date))||String(b.createdAt).localeCompare(String(a.createdAt));});
+    renderTappalRegister(list);
+  }
 }
-function renderTappalTable(list){
-  var body=id('tappalTableBody'),wrap=id('tappalEmpty'),cnt=id('tappalCount');
-  if(cnt)cnt.textContent=list.length+' record'+(list.length!==1?'s':'');
-  if(!body)return;
-  if(!list.length){
-    body.innerHTML='';
-    if(wrap){
-      wrap.classList.remove('dn');
-      var msg=id('tappalEmptyMsg');
-      if(msg)msg.textContent=(S.tappal&&S.tappal.length)?'No records match your search.':'Add your first tappal record to get started.';
-    }
-    return;
-  }
-  if(wrap)wrap.classList.add('dn');
-  var html='';
-  for(var i=0;i<list.length;i++){
-    var t=list[i];
-    var fileChips='';
-    if(t.attachments&&t.attachments.length){
-      for(var f=0;f<t.attachments.length;f++){
-        fileChips+='<a href="'+htmlEsc(t.attachments[f].driveURL)+'" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:3px;font-size:11px;color:var(--c-blue);text-decoration:none;margin-right:6px"><span class="material-icons-round" style="font-size:13px">description</span>'+(f===0?'View':'')+'</a>';
-      }
-    } else {
-      fileChips='<span style="font-size:11px;color:var(--tx3)">&#8212;</span>';
-    }
-    html+='<tr style="border-bottom:1px solid var(--border)">'
-      +'<td style="padding:8px 10px;font-size:12.5px;white-space:nowrap">'+htmlEsc(tappalFormatDate(t.date))+'</td>'
-      +'<td style="padding:8px 10px;font-size:12.5px">'+htmlEsc(t.petitionType)+'</td>'
-      +'<td style="padding:8px 10px;font-size:12.5px">'+htmlEsc(t.petitionerName)+'</td>'
-      +'<td style="padding:8px 10px;font-size:12.5px;max-width:260px">'+htmlEsc(t.subject)+'</td>'
-      +'<td style="padding:8px 10px;font-size:12.5px">'+htmlEsc(t.zone||'\u2014')+'</td>'
-      +'<td style="padding:8px 10px;font-size:12.5px">'+htmlEsc(t.divisionNo||'\u2014')+'</td>'
-      +'<td style="padding:8px 10px">'+fileChips+'</td>'
-      +'<td style="padding:8px 10px;text-align:right;white-space:nowrap">'
-      +'<button class="btn btn-ghost btn-sm" style="padding:4px 8px" onclick="editTappalRecord(\''+t.tappalID+'\')" title="Edit"><span class="material-icons-round" style="font-size:16px">edit</span></button> '
-      +'<button class="btn btn-ghost btn-sm" style="padding:4px 8px;color:var(--c-red)" onclick="deleteTappalRecord(\''+t.tappalID+'\',\''+htmlEsc(t.subject).replace(/'/g,"\\'")+'\')" title="Delete"><span class="material-icons-round" style="font-size:16px">delete</span></button>'
-      +'</td></tr>';
-  }
-  body.innerHTML=html;
+function renderTappalTable(list){renderTappalRegister(list);} // compatibility
+function tplEmpty(list,msg){
+  var wrap=id('tappalEmpty'),cnt=id('tappalCount'),box=id('tappalList');
+  if(cnt)cnt.textContent=list.length+' tappal'+(list.length!==1?'s':'');
+  if(!list.length){if(box)box.innerHTML='';if(wrap){wrap.classList.remove('dn');var m=id('tappalEmptyMsg');if(m)m.textContent=msg;}return true;}
+  if(wrap)wrap.classList.add('dn');return false;
+}
+function tplCard(t,showOfficer){
+  var st=tplState(t),f=t.follow||{},days=tplDaysPending(t);
+  var scan=(t.attachments&&t.attachments[0])?'<a class="tpl-link" href="'+htmlEsc(t.attachments[0].driveURL)+'" target="_blank" rel="noopener" onclick="event.stopPropagation()"><span class="material-icons-round">description</span> Scan'+(t.attachments.length>1?' ('+t.attachments.length+')':'')+'</a>':'<span class="tpl-noscan">No scan</span>';
+  var due='';
+  if(f.dueDate&&st.key==='open')due=f.isOverdue?'<span class="tpl-due od">Overdue · due '+fDateShort(f.dueDate)+'</span>':'<span class="tpl-due">Due '+fDateShort(f.dueDate)+'</span>';
+  var acts='';
+  if(st.key==='notsent')acts+='<button class="btn btn-primary btn-sm" onclick="event.stopPropagation();editTappalRecord(\''+t.tappalID+'\',true)"><span class="material-icons-round mi">send</span> Send to officer</button>';
+  if(st.key==='open'||st.key==='toclose')acts+='<button class="btn btn-sm tpl-wa" onclick="event.stopPropagation();tplWhatsApp(\''+t.tappalID+'\')"><span class="material-icons-round mi">chat</span> WhatsApp</button>';
+  if(st.key==='toclose')acts+='<button class="btn btn-sm" style="background:#059669;color:#fff" onclick="event.stopPropagation();tplMeetOpen(\''+t.tappalID+'\')"><span class="material-icons-round mi">fact_check</span> Review &amp; close</button>';
+  if(t.taskID)acts+='<button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();tplOpenTask(\''+t.tappalID+'\')"><span class="material-icons-round mi">open_in_new</span> Open</button>';
+  acts+='<button class="btn btn-ghost btn-sm btn-icon" title="Edit" onclick="event.stopPropagation();editTappalRecord(\''+t.tappalID+'\')"><span class="material-icons-round mi">edit</span></button>';
+  return '<div class="tpl-card '+(f.isOverdue&&st.key==='open'?'od':'')+'" onclick="'+(t.taskID?'tplOpenTask(\''+t.tappalID+'\')':'editTappalRecord(\''+t.tappalID+'\')')+'">'
+    +'<div class="tpl-top"><span class="tpl-st '+st.cls+'">'+st.label+'</span>'+(f.priority==='High'&&st.key!=='closed'?'<span class="tpl-urg">🔴 Urgent</span>':'')
+    +(st.key==='open'&&f.officerID&&!f.seenAt?'<span class="tpl-ns">👁 Not seen</span>':'')+due
+    +'<span class="tpl-meta">'+(t.inwardNo?'Inward '+htmlEsc(t.inwardNo)+' · ':'')+htmlEsc(tappalFormatDate(t.date))+'</span></div>'
+    +'<div class="tpl-subj">'+htmlEsc(t.subject)+'</div>'
+    +'<div class="tpl-from"><span class="material-icons-round">person</span>'+htmlEsc(t.petitionerName)+(t.petitionType?' <span class="tpl-type">'+htmlEsc(t.petitionType)+'</span>':'')+(t.zone?' · '+htmlEsc(t.zone):'')+'</div>'
+    +(t.markup?'<div class="tpl-markup"><span class="material-icons-round">edit_note</span><b>Commissioner:</b> '+htmlEsc(t.markup)+'</div>':'')
+    +(showOfficer&&f.officerName?'<div class="tpl-off"><span class="material-icons-round">badge</span>'+htmlEsc(f.officerName)+(f.department?' · '+htmlEsc(f.department):'')+(st.key==='open'||st.key==='toclose'?' · <b>'+days+' day'+(days!==1?'s':'')+'</b> with officer':'')+'</div>':'')
+    +(f.officerRemarks&&(st.key==='toclose'||st.key==='open')?'<div class="tpl-reply"><span class="material-icons-round">reply</span>'+htmlEsc(f.officerRemarks)+'</div>':'')
+    +'<div class="tpl-bot">'+scan+'<div class="tpl-acts">'+acts+'</div></div></div>';
+}
+function renderTappalFollow(list){
+  var msgs={open:'No tappals are with officers right now.',overdue:'Nothing overdue — good.',toclose:'No replies waiting for you to close.',notsent:'Every tappal has been sent to an officer.'};
+  if(tplEmpty(list,(S.tappal&&S.tappal.length)?msgs[TPL_VIEW.filter]||'No tappals match.':'Add your first tappal to get started.'))return;
+  var box=id('tappalList');
+  if(TPL_VIEW.filter==='notsent'){box.innerHTML='<div class="tpl-grid">'+list.map(function(t){return tplCard(t,false);}).join('')+'</div>';return;}
+  // group by officer; most overdue officers first
+  var groups={};
+  list.forEach(function(t){var k=(t.follow&&t.follow.officerName)||'Not sent';(groups[k]=groups[k]||{name:k,id:t.follow&&t.follow.officerID,dept:t.follow&&t.follow.department,items:[],od:0}).items.push(t);if(t.follow&&t.follow.isOverdue)groups[k].od++;});
+  var gl=Object.keys(groups).map(function(k){return groups[k];}).sort(function(a,b){return b.od-a.od||b.items.length-a.items.length;});
+  var h='';
+  gl.forEach(function(g){
+    g.items.sort(function(a,b){var sa=tplState(a).key==='toclose'?0:1,sb=tplState(b).key==='toclose'?0:1;return sa-sb||((b.follow&&b.follow.isOverdue)?1:0)-((a.follow&&a.follow.isOverdue)?1:0)||tplDaysPending(b)-tplDaysPending(a);});
+    h+='<div class="tpl-group"><div class="tpl-ghd"><div><b>'+htmlEsc(g.name)+'</b> <span>'+htmlEsc(g.dept||'')+'</span></div><div class="tpl-gcount">'+g.items.length+' tappal'+(g.items.length!==1?'s':'')+(g.od?' · <span style="color:#dc2626">'+g.od+' overdue</span>':'')+'</div>'
+      +'<div class="tpl-gacts">'+(g.id?'<button class="btn btn-sm tpl-wa" data-n="'+htmlEsc(g.name)+'" onclick="tplWhatsAppOfficer(this.dataset.n)"><span class="material-icons-round mi">chat</span> Send list</button>':'')
+      +'<button class="btn btn-ghost btn-sm" data-n="'+htmlEsc(g.name)+'" onclick="tplPrint(\'officer\',this.dataset.n)"><span class="material-icons-round mi">print</span></button></div></div>'
+      +'<div class="tpl-grid">'+g.items.map(function(t){return tplCard(t,false);}).join('')+'</div></div>';
+  });
+  box.innerHTML=h;
+}
+function renderTappalRegister(list){
+  if(tplEmpty(list,(S.tappal&&S.tappal.length)?'No tappals match your search.':'Add your first tappal to get started.'))return;
+  id('tappalList').innerHTML='<div class="tpl-grid">'+list.map(function(t){return tplCard(t,true);}).join('')+'</div>';
+}
+function tplFind(tid){for(var i=0;i<(S.tappal||[]).length;i++)if(S.tappal[i].tappalID===tid)return S.tappal[i];return null;}
+function tplOpenTask(tid){
+  var t=tplFind(tid);if(!t||!t.taskID)return;
+  if(t.follow&&t.follow.archived){toast('This tappal was closed and archived.','info');return;}
+  var have=false;for(var i=0;i<S.tasks.length;i++)if(S.tasks[i].taskID===t.taskID){have=true;break;}
+  if(!have){var f=t.follow||{};S.tasks.push({taskID:t.taskID,taskType:'Tappal',description:'📮 TAPPAL: '+t.subject,officerID:f.officerID,officerName:f.officerName,department:f.department,status:f.status,dueDate:f.dueDate,priority:f.priority,isOverdue:f.isOverdue,seenAt:f.seenAt,zone:t.zone});}
+  viewTask(t.taskID);
+}
+
+// ── v138 WhatsApp ──
+function tplScanLink(t){return (t&&t.attachments&&t.attachments[0])?t.attachments[0].driveURL:'';}
+function tplWaText(t){
+  var f=t.follow||{};
+  return '*Salem Corporation – Tappal for action*\n'
+    +(t.inwardNo?'Inward No: '+t.inwardNo+' ('+tappalFormatDate(t.date)+')\n':'Date: '+tappalFormatDate(t.date)+'\n')
+    +'From: '+t.petitionerName+'\n'
+    +'Subject: '+t.subject+'\n'
+    +(t.markup?'Commissioner: *'+t.markup+'*\n':'')
+    +(f.priority==='High'?'🔴 *URGENT*\n':'')
+    +(f.dueDate?'Reply due by: '+fDateShort(f.dueDate)+'\n':'')
+    +(tplScanLink(t)?'\nScanned copy: '+tplScanLink(t)+'\n':'')
+    +'\nPlease update the action taken (with reply / report) in TMS:\n'+waAppLink();
+}
+function tplWhatsApp(tid){var t=tplFind(tid);if(!t||!t.follow)return;waOpen(t.follow.officerID,t.follow.officerName,tplWaText(t));}
+function tplWhatsAppOfficer(name){
+  var list=(S.tappal||[]).filter(function(t){var st=tplState(t);return t.follow&&t.follow.officerName===name&&st.key==='open';});
+  if(!list.length){toast('No pending tappals for '+name+'.','info');return;}
+  list.sort(function(a,b){return ((b.follow.isOverdue)?1:0)-((a.follow.isOverdue)?1:0)||tplDaysPending(b)-tplDaysPending(a);});
+  var lines=['*Salem Corporation – Pending tappals*','Officer: '+name+' ('+list.length+')',''];
+  list.slice(0,15).forEach(function(t,i){lines.push((i+1)+'. '+(t.inwardNo?'['+t.inwardNo+'] ':'')+String(t.subject).slice(0,80)+' — from '+t.petitionerName+' — '+(t.follow.isOverdue?'*OVERDUE* (due '+fDateShort(t.follow.dueDate)+')':'due '+fDateShort(t.follow.dueDate)));});
+  if(list.length>15)lines.push('…and '+(list.length-15)+' more.');
+  lines.push('','Please update the action taken in TMS:',waAppLink());
+  waOpen(list[0].follow.officerID,name,lines.join('\n'));
+}
+
+// ── v138 New / Edit form ──
+function tplFillDepts(sel){
+  var d=id('tpl-fdept');if(!d)return;
+  var depts=(S.lookup&&S.lookup.departments)||[];
+  d.innerHTML='<option value="">Select department</option>'+depts.map(function(x){var n=x.DeptName||x.deptName||x;return '<option value="'+htmlEsc(n)+'">'+htmlEsc(n)+'</option>';}).join('');
+  if(sel)d.value=sel;
+}
+function tplFillOfficers(selID){
+  var dept=V('tpl-fdept'),o=id('tpl-foff');if(!o)return;
+  var offs=((S.lookup&&S.lookup.officers)||[]).filter(function(x){return (!dept||x.department===dept)&&x.role!=='Admin'&&x.role!=='Commissioner';});
+  offs.sort(function(a,b){return String(a.name).localeCompare(String(b.name));});
+  o.innerHTML='<option value="">Not sent yet</option>'+offs.map(function(x){return '<option value="'+htmlEsc(x.userID)+'">'+htmlEsc(x.name)+(x.designation?' — '+htmlEsc(x.designation):'')+'</option>';}).join('');
+  if(selID)o.value=selID;
+  tplOfficerPicked();
+}
+function tplOfficerPicked(){
+  var on=!!V('tpl-foff'),ex=id('tplFollowExtra');if(ex)ex.style.display=on?'':'none';
+  var due=id('tpl-fdue');if(on&&due&&!due.value)tplUrgentChanged();
+}
+function tplUrgentChanged(){var due=id('tpl-fdue');if(!due)return;if(TPL.editHasTask&&due.value&&!TPL._urgentTouched){TPL._urgentTouched=true;}var u=id('tpl-furgent')&&id('tpl-furgent').checked;due.value=rvDatePlus(u?3:7);}
+function tplPetitionerHistory(){
+  var box=id('tplHistory');if(!box)return;
+  var n=V('tpl-petitioner').trim().toLowerCase();
+  if(n.length<3){box.innerHTML='';return;}
+  var prev=(S.tappal||[]).filter(function(t){return t.tappalID!==TPL.editID&&String(t.petitionerName||'').trim().toLowerCase()===n;});
+  if(!prev.length){box.innerHTML='';return;}
+  prev.sort(function(a,b){return String(b.date).localeCompare(String(a.date));});
+  box.innerHTML='<div class="tpl-hist"><div class="tpl-hist-hd"><span class="material-icons-round">history</span> Earlier tappals from this petitioner: '+prev.length+'</div>'
+    +prev.slice(0,5).map(function(t){var st=tplState(t);return '<div class="tpl-hist-i"><span>'+htmlEsc(tappalFormatDate(t.date))+'</span> '+htmlEsc(String(t.subject).slice(0,70))+' <span class="tpl-st '+st.cls+'">'+st.label+'</span></div>';}).join('')+'</div>';
+}
+function tplResetFollow(t){
+  tplFillDepts(t&&t.follow?t.follow.department:'');
+  tplFillOfficers(t&&t.follow?t.follow.officerID:'');
+  var u=id('tpl-furgent');if(u)u.checked=!!(t&&t.follow&&t.follow.priority==='High');
+  var due=id('tpl-fdue');if(due)due.value=(t&&t.follow&&t.follow.dueDate)||'';
+  var note=id('tplFollowNote');
+  if(note)note.innerHTML=(t&&t.follow)?'Already with <b>'+htmlEsc(t.follow.officerName||'')+'</b> ('+tplState(t).label+'). Pick another officer to move it.':'Choosing an officer creates a follow-up in their task list (due in 7 days, or 3 if urgent). You can send it on WhatsApp after saving.';
+  tplOfficerPicked();
 }
 function showTappalModal(){
-  TPL.files=[];TPL.editID=null;TPL.existingAtt=[];
+  TPL.files=[];TPL.editID=null;TPL.existingAtt=[];TPL.editHasTask=false;
   id('mTappalTitle').textContent='New Tappal';
   id('tpl-id').value='';
   id('tpl-date').value=new Date().toISOString().slice(0,10);
-  id('tpl-type').value='';id('tpl-petitioner').value='';id('tpl-subject').value='';
-  id('tpl-zone').value='';id('tpl-division').value='';id('tpl-remarks').value='';
+  ['tpl-inward','tpl-type','tpl-petitioner','tpl-subject','tpl-zone','tpl-division','tpl-remarks','tpl-markup'].forEach(function(k){var e=id(k);if(e)e.value='';});
+  var hb=id('tplHistory');if(hb)hb.innerHTML='';
+  tplResetFollow(null);
   tappalRenderFilePreview();
   var ex=id('tappalExistingFiles');if(ex)ex.innerHTML='';
+  if(S.lookup&&S.lookup.zones&&id('tpl-zone')&&id('tpl-zone').options.length<=1)fillSelZone('tpl-zone',S.lookup.zones,'Not specified');
   openModal('mTappal');
 }
-function editTappalRecord(tappalID){
-  var t=null;for(var i=0;i<S.tappal.length;i++)if(S.tappal[i].tappalID===tappalID){t=S.tappal[i];break;}
-  if(!t)return;
-  TPL.files=[];TPL.editID=tappalID;TPL.existingAtt=(t.attachments||[]).slice();
-  id('mTappalTitle').textContent='Edit Tappal';
+function editTappalRecord(tappalID,focusFollow){
+  var t=tplFind(tappalID);if(!t)return;
+  TPL.files=[];TPL.editID=tappalID;TPL.existingAtt=(t.attachments||[]).slice();TPL.editHasTask=!!t.taskID;
+  id('mTappalTitle').textContent=focusFollow?'Send to officer':'Edit Tappal';
   id('tpl-id').value=tappalID;
   id('tpl-date').value=t.date||'';
+  id('tpl-inward').value=t.inwardNo||'';
   id('tpl-type').value=t.petitionType||'';
   id('tpl-petitioner').value=t.petitionerName||'';
   id('tpl-subject').value=t.subject||'';
+  if(S.lookup&&S.lookup.zones&&id('tpl-zone')&&id('tpl-zone').options.length<=1)fillSelZone('tpl-zone',S.lookup.zones,'Not specified');
   id('tpl-zone').value=t.zone||'';
   id('tpl-division').value=t.divisionNo||'';
   id('tpl-remarks').value=t.remarks||'';
+  id('tpl-markup').value=t.markup||'';
+  tplResetFollow(t);
+  tplPetitionerHistory();
   tappalRenderFilePreview();
   tappalRenderExistingFiles();
   openModal('mTappal');
+  if(focusFollow)setTimeout(function(){var el=id('tpl-fdept');if(el&&el.scrollIntoView)el.scrollIntoView({block:'center'});},250);
 }
 function tappalRenderExistingFiles(){
   var ex=id('tappalExistingFiles');if(!ex)return;
@@ -11503,7 +11754,7 @@ function tappalHandleFileSelect(files){
     if(files[i].size>8*1024*1024){tooBig.push(files[i].name);continue;}
     TPL.files.push(files[i]);
   }
-  if(wrongType)toast(wrongType+' file(s) skipped \u2014 only PDF or JPG/PNG images are accepted.','info');
+  if(wrongType)toast(wrongType+' file(s) skipped — only PDF or JPG/PNG images are accepted.','info');
   if(tooBig.length)toast('Too large (max 8MB): '+tooBig.join(', '),'error');
   tappalRenderFilePreview();
 }
@@ -11524,70 +11775,203 @@ function saveTappal(){
   if(!btnFreeze('saveTappal','tappalSaveBtn','<span class="material-icons-round mi" style="animation:spin 1s linear infinite">sync</span> Saving...'))return;
   var payload={
     date:V('tpl-date').trim(),
+    inwardNo:V('tpl-inward').trim(),
     petitionType:V('tpl-type').trim(),
     petitionerName:V('tpl-petitioner').trim(),
     subject:id('tpl-subject')?id('tpl-subject').value.trim():'',
     zone:V('tpl-zone'),
     divisionNo:V('tpl-division').trim(),
-    remarks:id('tpl-remarks')?id('tpl-remarks').value.trim():''
+    remarks:id('tpl-remarks')?id('tpl-remarks').value.trim():'',
+    markup:V('tpl-markup').trim()
   };
   if(!payload.date){toast('Please select a date.','error');btnRelease('saveTappal','tappalSaveBtn');return;}
   if(!payload.petitionType){toast('Please enter the Type of Petition.','error');btnRelease('saveTappal','tappalSaveBtn');return;}
   if(!payload.petitionerName){toast('Please enter the Name of the Petitioner.','error');btnRelease('saveTappal','tappalSaveBtn');return;}
   if(!payload.subject){toast('Please enter the Subject.','error');btnRelease('saveTappal','tappalSaveBtn');return;}
-
-  var editID=TPL.editID;
+  // v138 follow-up: only send when an officer is picked (and it changed, when editing)
+  var offID=V('tpl-foff'),editID=TPL.editID,cur=editID?tplFind(editID):null;
+  if(offID){
+    var o=null;((S.lookup&&S.lookup.officers)||[]).forEach(function(x){if(String(x.userID)===String(offID))o=x;});
+    var f={officerID:offID,officerName:o?o.name:'',department:o?o.department:V('tpl-fdept'),designation:o?o.designation:'',zone:o?o.zone:'',dueDate:V('tpl-fdue'),priority:(id('tpl-furgent')&&id('tpl-furgent').checked)?'High':'Medium'};
+    var cf=cur&&cur.follow;
+    if(!cf||cf.officerID!==f.officerID||cf.dueDate!==f.dueDate||(cf.priority==='High')!==(f.priority==='High'))payload.followUp=f;
+  }
   showLoader(editID?'Updating tappal...':'Adding tappal...');
-  var call=editID
-    ? gasCall('serverUpdateTappal',S.token,Object.assign({tappalID:editID},payload))
-    : gasCall('serverAddTappal',S.token,payload);
-
+  var call=editID?gasCall('serverUpdateTappal',S.token,Object.assign({tappalID:editID},payload)):gasCall('serverAddTappal',S.token,payload);
   call.then(function(r){
     hideLoader();
-    if(!r||!r.success){
-      btnRelease('saveTappal','tappalSaveBtn');
-      toast((r&&r.message)||'Failed to save tappal.','error');
-      return;
-    }
-    var savedID=editID||r.tappalID;
-    var filesToUpload=TPL.files.slice();
-    if(!filesToUpload.length){
-      btnRelease('saveTappal','tappalSaveBtn');
-      toast(editID?'Tappal updated!':'Tappal added!','ok');
-      closeModal('mTappal');
-      loadTappalPage();
-      return;
-    }
-    // Files upload AFTER the record is confirmed saved — close the modal
-    // right away so the officer isn't stuck waiting on a slow upload;
-    // progress reported via toast, same pattern as Notes PDF uploads.
     btnRelease('saveTappal','tappalSaveBtn');
-    toast(editID?'Tappal updated!':'Tappal added!','ok');
+    if(!r||!r.success){toast((r&&r.message)||'Failed to save tappal.','error');return;}
+    var savedID=editID||r.tappalID,sentNow=!!(payload.followUp&&r.taskID);
+    if(r.followUpError)toast('Tappal saved, but the follow-up could not be created: '+r.followUpError,'error');
     closeModal('mTappal');
-    loadTappalPage();
-    toast('Uploading '+filesToUpload.length+' file'+(filesToUpload.length>1?'s':'')+' in background\u2026','info');
+    var filesToUpload=TPL.files.slice();
+    function after(){
+      gasCall('serverGetTappalRecords',S.token).then(function(rr){
+        if(rr&&rr.success){S.tappal=rr.data||[];filterTappal();}
+        if(sentNow)tplAfterSend(savedID);else toast(editID?'Tappal updated ✓':'Tappal added ✓','ok');
+      });
+    }
+    if(!filesToUpload.length){after();return;}
+    toast('Saved — uploading '+filesToUpload.length+' file'+(filesToUpload.length>1?'s':'')+'…','info');
     var idx=0,failed=0;
-    function uploadNext(){
-      if(idx>=filesToUpload.length){
-        if(failed)toast(failed+' file(s) failed to upload. Please try attaching them again from Edit.','error');
-        else toast('All files uploaded.','ok');
-        loadTappalPage();
-        return;
-      }
-      var f=filesToUpload[idx++];
-      var reader=new FileReader();
+    (function uploadNext(){
+      if(idx>=filesToUpload.length){if(failed)toast(failed+' file(s) failed to upload. Attach them again from Edit.','error');after();return;}
+      var f=filesToUpload[idx++],reader=new FileReader();
       reader.onload=function(ev){
-        var b64=ev.target.result.split(',')[1];
-        gasCall('serverUploadTappalAttachment',S.token,{tappalID:savedID,fileName:f.name,mimeType:f.type,base64Data:b64}).then(function(ur){
-          if(!ur||!ur.success)failed++;
-          uploadNext();
-        });
+        gasCall('serverUploadTappalAttachment',S.token,{tappalID:savedID,fileName:f.name,mimeType:f.type,base64Data:ev.target.result.split(',')[1]}).then(function(ur){if(!ur||!ur.success)failed++;uploadNext();});
       };
       reader.onerror=function(){failed++;uploadNext();};
       reader.readAsDataURL(f);
-    }
-    uploadNext();
+    })();
   });
+}
+// after sending to an officer: one tap to WhatsApp it
+function tplAfterSend(tid){
+  var t=tplFind(tid);if(!t||!t.follow)return;
+  id('mGenericTitle').textContent='Sent to '+(t.follow.officerName||'officer')+' ✓';
+  id('mGenericBody').innerHTML='<div style="text-align:center;padding:6px 0 4px">'
+    +'<div style="width:56px;height:56px;border-radius:50%;background:#dcfce7;color:#16a34a;display:flex;align-items:center;justify-content:center;margin:0 auto 10px"><span class="material-icons-round" style="font-size:30px">assignment_turned_in</span></div>'
+    +'<div style="font-size:14px;font-weight:700">It is now in '+htmlEsc(t.follow.officerName||'')+'&rsquo;s task list</div>'
+    +'<div style="font-size:12.5px;color:var(--tx3);margin-top:4px">Reply due by '+fDateShort(t.follow.dueDate)+(tplScanLink(t)?' · scanned copy attached':' · no scan attached yet')+'</div></div>'
+    +'<div class="body-ft" style="display:flex;gap:8px;margin-top:16px"><button class="btn btn-ghost" onclick="closeModal(\'mGeneric\')">Done</button>'
+    +'<button class="btn tpl-wa" style="flex:1" onclick="closeModal(\'mGeneric\');tplWhatsApp(\''+tid+'\')"><span class="material-icons-round mi">chat</span> Send on WhatsApp</button></div>';
+  openModal('mGeneric');
+}
+
+// ── v138 Weekly meeting mode: one tappal at a time ──
+var TPLM={list:[],i:0};
+function tplMeetOpen(startID){
+  var list=(S.tappal||[]).filter(function(t){var k=tplState(t).key;return k==='open'||k==='toclose';});
+  if(!list.length){toast('No open tappals to review.','info');return;}
+  list.sort(function(a,b){var ka=tplState(a).key==='toclose'?0:1,kb=tplState(b).key==='toclose'?0:1;return ka-kb||((b.follow.isOverdue?1:0)-(a.follow.isOverdue?1:0))||tplDaysPending(b)-tplDaysPending(a);});
+  TPLM.list=list;TPLM.i=0;
+  if(startID)for(var i=0;i<list.length;i++)if(list[i].tappalID===startID){TPLM.i=i;break;}
+  openModal('mTplMeet');tplMeetRender();
+}
+function tplDriveID(url){var m=/[?&]id=([\w-]+)/.exec(url||'')||/\/d\/([\w-]+)/.exec(url||'');return m?m[1]:'';}
+function tplMeetRender(){
+  var t=TPLM.list[TPLM.i];if(!t){closeModal('mTplMeet');return;}
+  var st=tplState(t),f=t.follow||{},days=tplDaysPending(t);
+  id('tplMeetTitle').textContent='Tappal '+(TPLM.i+1)+' of '+TPLM.list.length;
+  var scan='';
+  if(t.attachments&&t.attachments.length){
+    var a0=t.attachments[0],did=tplDriveID(a0.driveURL);
+    scan='<div class="tplm-scan">'+(did?'<iframe src="https://drive.google.com/file/d/'+did+'/preview" loading="lazy" allow="autoplay"></iframe>':'')
+      +'<div class="tplm-scan-links">'+t.attachments.map(function(a){return '<a class="tpl-link" href="'+htmlEsc(a.driveURL)+'" target="_blank" rel="noopener"><span class="material-icons-round">open_in_new</span> '+htmlEsc(a.fileName||'Scan')+'</a>';}).join('')+'</div></div>';
+  } else scan='<div class="tpl-noscan" style="padding:10px 0">No scanned copy attached.</div>';
+  id('tplMeetBody').innerHTML='<div class="tplm">'
+    +'<div class="tpl-top"><span class="tpl-st '+st.cls+'">'+st.label+'</span>'+(f.priority==='High'?'<span class="tpl-urg">🔴 Urgent</span>':'')+(f.isOverdue?'<span class="tpl-due od">Overdue · due '+fDateShort(f.dueDate)+'</span>':(f.dueDate?'<span class="tpl-due">Due '+fDateShort(f.dueDate)+'</span>':''))+'<span class="tpl-meta">'+(t.inwardNo?'Inward '+htmlEsc(t.inwardNo)+' · ':'')+htmlEsc(tappalFormatDate(t.date))+'</span></div>'
+    +'<div class="tplm-subj">'+htmlEsc(t.subject)+'</div>'
+    +'<div class="tpl-from"><span class="material-icons-round">person</span>'+htmlEsc(t.petitionerName)+(t.petitionType?' <span class="tpl-type">'+htmlEsc(t.petitionType)+'</span>':'')+(t.zone?' · '+htmlEsc(t.zone):'')+'</div>'
+    +(t.markup?'<div class="tpl-markup"><span class="material-icons-round">edit_note</span><b>Commissioner:</b> '+htmlEsc(t.markup)+'</div>':'')
+    +'<div class="tplm-off"><div><span class="material-icons-round">badge</span><b>'+htmlEsc(f.officerName||'')+'</b> '+htmlEsc(f.department||'')+'</div><div>'+days+' day'+(days!==1?'s':'')+' with officer · '+(f.seenAt?'Seen ✓':'<span style="color:#b45309">Not seen</span>')+'</div></div>'
+    +'<div class="tplm-reply" id="tplmReply"><div class="tplm-lbl">Officer&rsquo;s reply</div>'+(f.officerRemarks?'<div>'+htmlEsc(f.officerRemarks)+'</div>':'<div style="color:var(--tx3)">No reply yet.</div>')+'<div id="tplmDocs" style="margin-top:6px;color:var(--tx3);font-size:12px">Loading reply documents…</div></div>'
+    +scan
+    +'<div id="tplmRemarkBox" style="display:none;margin-top:10px"><textarea class="f-ctrl" id="tplmRemark" rows="2" placeholder="Commissioner’s remark — what more is needed?"></textarea></div>'
+    +'</div>';
+  var isDone=st.key==='toclose';
+  id('tplMeetFt').innerHTML='<button class="btn btn-ghost" onclick="tplMeetStep(-1)" '+(TPLM.i===0?'disabled':'')+'><span class="material-icons-round mi">chevron_left</span> Previous</button>'
+    +'<button class="btn btn-ghost" onclick="tplMeetStep(1)" '+(TPLM.i>=TPLM.list.length-1?'disabled':'')+'>Next <span class="material-icons-round mi">chevron_right</span></button>'
+    +'<button class="btn" style="background:#059669;color:#fff" onclick="tplMeetClose()"><span class="material-icons-round mi">verified</span> Close tappal</button>'
+    +'<button class="btn tpl-wa" onclick="tplWhatsApp(\''+t.tappalID+'\')"><span class="material-icons-round mi">chat</span> Remind officer</button>'
+    +'<button class="btn btn-ghost" onclick="tplMeetExtend()"><span class="material-icons-round mi">event_repeat</span> +7 days</button>'
+    +'<button class="btn btn-ghost" style="border-color:#B45309;color:#B45309" onclick="tplMeetRemark()"><span class="material-icons-round mi">rate_review</span> '+(isDone?'Send back with remark':'Add remark')+'</button>';
+  // reply documents / photos from the follow-up task
+  gasCall('serverGetTaskDetail',S.token,t.taskID).then(function(r){
+    var box=id('tplmDocs');if(!box||TPLM.list[TPLM.i]!==t)return;
+    if(!r||!r.success){box.textContent='';return;}
+    var docs=(r.task.attachments||[]),ph=(r.task.photos||[]),h='';
+    docs.forEach(function(d){h+='<a class="tpl-link" href="'+htmlEsc(d.driveURL)+'" target="_blank" rel="noopener"><span class="material-icons-round">picture_as_pdf</span> '+htmlEsc(d.fileName||'Reply')+'</a> ';});
+    ph.forEach(function(p,i){h+='<a class="tpl-link" href="'+htmlEsc(p.photoData)+'" target="_blank" rel="noopener"><span class="material-icons-round">image</span> Photo '+(i+1)+'</a> ';});
+    var tl=r.task.timeline||[],last=null;for(var k=tl.length-1;k>=0;k--){if(tl[k].text){last=tl[k];break;}}
+    box.innerHTML=(h||'No reply document attached.')+(last&&last.text!==f.officerRemarks?'<div style="margin-top:6px;color:var(--tx2)"><b>Latest note:</b> '+htmlEsc(last.text)+' <span style="color:var(--tx3)">— '+htmlEsc(last.by||'')+'</span></div>':'');
+  });
+}
+function tplMeetStep(d){TPLM.i=Math.max(0,Math.min(TPLM.list.length-1,TPLM.i+d));tplMeetRender();}
+function tplMeetDone(msg){
+  TPLM.list.splice(TPLM.i,1);if(TPLM.i>=TPLM.list.length)TPLM.i=TPLM.list.length-1;
+  toast(msg,'ok');filterTappal();
+  if(!TPLM.list.length){closeModal('mTplMeet');toast('All open tappals reviewed ✓','ok');return;}
+  tplMeetRender();
+}
+function tplMeetClose(){
+  var t=TPLM.list[TPLM.i];if(!t)return;
+  if(tplState(t).key!=='toclose'&&!confirm('The officer has not marked this tappal Done yet. Close it anyway?'))return;
+  queueTaskUpdate(t.taskID,{status:'Verified'});
+  t.follow.status='Verified';t.follow.updatedAt=new Date().toISOString();
+  tplMeetDone('Tappal closed ✓');
+}
+function tplMeetExtend(){
+  var t=TPLM.list[TPLM.i];if(!t)return;
+  var due=rvDatePlus(7);queueTaskUpdate(t.taskID,{dueDate:due});
+  t.follow.dueDate=due;t.follow.isOverdue=false;
+  toast('New due date '+fDateShort(due),'ok');filterTappal();tplMeetRender();
+}
+function tplMeetRemark(){
+  var box=id('tplmRemarkBox'),ta=id('tplmRemark');if(!box)return;
+  if(box.style.display==='none'){
+    box.style.display='';if(ta)ta.focus();
+    var b=[].slice.call(id('tplMeetFt').querySelectorAll('button')).pop();
+    if(b){b.innerHTML='<span class="material-icons-round mi">send</span> Send remark';b.style.background='#B45309';b.style.color='#fff';}
+    return;
+  }
+  var text=(ta&&ta.value||'').trim();if(!text){toast('Please type the remark.','error');return;}
+  var t=TPLM.list[TPLM.i];
+  gasCall('serverAddTaskRemark',S.token,{taskID:t.taskID,remark:text}).then(function(r){
+    if(r&&r.success){
+      if(r.newStatus)t.follow.status=r.newStatus;t.follow.officerRemarks=t.follow.officerRemarks;
+      toast(r.newStatus==='In Progress'?'Remark sent — back to the officer.':'Remark added.','ok');
+      TPLM.i=Math.min(TPLM.i+1,TPLM.list.length-1);filterTappal();tplMeetRender();
+    } else toast((r&&r.message)||'Could not add remark.','error');
+  });
+}
+
+// ── v138 Printouts ──
+function tplPrintMenu(){
+  var m=new Date().toISOString().slice(0,7);
+  id('mGenericTitle').textContent='Print';
+  id('mGenericBody').innerHTML='<div style="display:flex;flex-direction:column;gap:10px">'
+    +'<button class="btn btn-primary" onclick="closeModal(\'mGeneric\');tplPrint(\'weekly\')"><span class="material-icons-round mi">event_note</span> Weekly review list (all pending, by officer)</button>'
+    +'<div style="display:flex;gap:8px;align-items:center"><input type="month" class="f-ctrl" id="tplPrintMonth" value="'+m+'" style="flex:1"><button class="btn btn-ghost" onclick="var v=document.getElementById(\'tplPrintMonth\').value;closeModal(\'mGeneric\');tplPrint(\'register\',v)"><span class="material-icons-round mi">menu_book</span> Monthly register</button></div>'
+    +'<div style="font-size:12px;color:var(--tx3)">For one officer&rsquo;s pending list, use the print button next to their name on the Follow-up tab.</div></div>';
+  openModal('mGeneric');
+}
+function tplPrint(kind,arg){
+  var esc=htmlEsc,rows='',title='',sub='',today=new Date().toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'});
+  var css='body{font-family:Arial,sans-serif;font-size:11px;color:#111;margin:18px}h1{font-size:16px;margin:0}h2{font-size:12.5px;margin:16px 0 4px;padding:4px 6px;background:#eef2ff;border-left:4px solid #1d4ed8}.sub{color:#555;margin:2px 0 10px}table{width:100%;border-collapse:collapse;margin-bottom:6px}th,td{border:1px solid #999;padding:4px 5px;vertical-align:top;text-align:left}th{background:#f1f5f9;font-size:10px;text-transform:uppercase}.od{color:#b91c1c;font-weight:bold}.n{text-align:center;white-space:nowrap}.dir{width:22%}@media print{h2{page-break-after:avoid}tr{page-break-inside:avoid}}';
+  if(kind==='register'){
+    var mon=arg||new Date().toISOString().slice(0,7);
+    var list=(S.tappal||[]).filter(function(t){return String(t.date).slice(0,7)===mon;}).sort(function(a,b){return String(a.date).localeCompare(String(b.date));});
+    title='Tappal Inward Register — '+new Date(mon+'-01').toLocaleDateString('en-IN',{month:'long',year:'numeric'});sub=list.length+' tappals · printed '+today;
+    rows='<table><tr><th class="n">#</th><th>Date</th><th>Inward No</th><th>Type</th><th>From</th><th>Subject</th><th>Commissioner</th><th>Sent to</th><th>Status</th></tr>'
+      +list.map(function(t,i){var f=t.follow||{};return '<tr><td class="n">'+(i+1)+'</td><td class="n">'+esc(tappalFormatDate(t.date))+'</td><td>'+esc(t.inwardNo||'')+'</td><td>'+esc(t.petitionType||'')+'</td><td>'+esc(t.petitionerName)+'</td><td>'+esc(t.subject)+'</td><td>'+esc(t.markup||'')+'</td><td>'+esc(f.officerName||'—')+'</td><td>'+esc(tplState(t).label)+'</td></tr>';}).join('')+'</table>';
+  } else {
+    var lst=(S.tappal||[]).filter(function(t){var k=tplState(t).key;return (k==='open'||k==='toclose')&&(kind!=='officer'||(t.follow&&t.follow.officerName===arg));});
+    var g={};lst.forEach(function(t){var k=t.follow.officerName||'—';(g[k]=g[k]||[]).push(t);});
+    var names=Object.keys(g).sort(function(a,b){return g[b].length-g[a].length;});
+    title=kind==='officer'?'Pending tappals — '+arg:'Tappal follow-up — weekly review';
+    sub=lst.length+' pending · '+lst.filter(function(t){return t.follow.isOverdue;}).length+' overdue · '+lst.filter(function(t){return tplState(t).key==='toclose';}).length+' action taken (to close) · printed '+today;
+    names.forEach(function(n){
+      var items=g[n].sort(function(a,b){return tplDaysPending(b)-tplDaysPending(a);});
+      rows+='<h2>'+esc(n)+' — '+items.length+' tappal'+(items.length!==1?'s':'')+'</h2><table><tr><th class="n">#</th><th>Inward / Date</th><th>From</th><th>Subject</th><th>Commissioner</th><th class="n">Days</th><th>Status / Officer reply</th><th class="dir">Direction in meeting</th></tr>'
+        +items.map(function(t,i){var f=t.follow,d=tplDaysPending(t);return '<tr><td class="n">'+(i+1)+'</td><td>'+esc(t.inwardNo||'')+'<br>'+esc(tappalFormatDate(t.date))+'</td><td>'+esc(t.petitionerName)+'</td><td>'+esc(t.subject)+'</td><td>'+esc(t.markup||'')+'</td><td class="n'+(f.isOverdue?' od':'')+'">'+d+(f.isOverdue?'<br>overdue':'')+'</td><td><b>'+esc(tplState(t).label)+'</b>'+(f.officerRemarks?'<br>'+esc(f.officerRemarks):'')+'</td><td></td></tr>';}).join('')+'</table>';
+    });
+    if(!names.length)rows='<p>No pending tappals.</p>';
+  }
+  var w=window.open('','_blank');if(!w){toast('Please allow pop-ups to print.','error');return;}
+  w.document.write('<!DOCTYPE html><html><head><meta charset="utf-8"><title>'+esc(title)+'</title><style>'+css+'</style></head><body><h1>Salem City Municipal Corporation</h1><div style="font-size:13px;font-weight:bold;margin-top:2px">'+esc(title)+'</div><div class="sub">'+esc(sub)+'</div>'+rows+'<script>setTimeout(function(){window.print()},300)<\/script></body></html>');
+  w.document.close();
+}
+
+// ── v138 Dashboard card ──
+function loadDashTappal(){
+  var card=id('dashTappalCard');if(!card)return;
+  var role=S.user&&S.user.role;if(role!=='Admin'&&role!=='Commissioner'){card.style.display='none';return;}
+  function show(d){card.style.display='';var m={rcv:d.receivedThisWeek,pend:d.pending,od:d.overdue,cl:d.toClose};for(var k in m){var e=id('dtp-'+k);if(e)e.textContent=m[k];}}
+  if(S._tplSum)show(S._tplSum);
+  if(S._tplSumAt&&Date.now()-S._tplSumAt<60000)return;S._tplSumAt=Date.now();
+  gasCall('serverGetTappalSummary',S.token).then(function(r){if(r&&r.success){S._tplSum=r.data;show(r.data);}});
 }
 function deleteTappalRecord(tappalID,subject){
   if(!confirm('Delete the tappal record "'+subject+'"? This cannot be undone.'))return;
