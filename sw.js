@@ -3,7 +3,7 @@
 // the saved copy when there is no signal, so officers can still open the
 // app offline (their saved updates/photos are sent when signal returns).
 // v134: also keeps the install files (manifest + icons) for the phone app.
-var CACHE_NAME = 'salem-tms-shell-v6';
+var CACHE_NAME = 'salem-tms-shell-v11';
 var SHELL = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', function(e) {
