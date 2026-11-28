@@ -308,6 +308,43 @@ body {
   bottom: -80px; left: -60px;
 }
 
+
+/* v142: real photos of our office — shown CLEARLY beside (computer) or above (phone) the login card */
+.lg-slides{position:absolute;top:0;bottom:0;left:0;right:480px;z-index:0;overflow:hidden;background:#0b1f45}
+.lg-slide{position:absolute;inset:0;background-size:cover;background-position:center;transform:translateX(100%);transition:transform .9s cubic-bezier(.65,0,.35,1);will-change:transform}
+.lg-slide.on{transform:translateX(0)}
+.lg-slide.out-l,.lg-slide.from-l{transform:translateX(-100%)}
+.lg-slide.out-r{transform:translateX(100%)}
+.lg-slide.noanim{transition:none}
+.lg-dots i{cursor:pointer}
+.lg-shade{position:absolute;left:0;right:480px;bottom:0;height:34%;z-index:0;pointer-events:none;background:linear-gradient(180deg,rgba(7,19,48,0) 0%,rgba(7,19,48,.75) 100%)}
+.lg-brand{position:absolute;left:28px;bottom:58px;z-index:1;color:#fff;text-shadow:0 2px 8px rgba(0,0,0,.5)}
+.lg-brand b{display:block;font-size:26px;font-weight:800;letter-spacing:.01em}
+.lg-brand span{font-size:14px;opacity:.9}
+.lg-cap{position:absolute;left:28px;bottom:18px;z-index:1;color:rgba(255,255,255,.92);font-size:12.5px;display:flex;align-items:center;gap:6px;transition:opacity .6s}
+.lg-cap .material-icons-round{font-size:15px;color:#fbbf24}
+.lg-dots{position:absolute;right:500px;bottom:22px;z-index:1;display:flex;gap:6px}
+.lg-dots i{width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,.5);transition:all .4s}
+.lg-dots i.on{background:#fbbf24;width:20px;border-radius:4px}
+#loginPage.has-photos{justify-content:flex-end;padding:0}
+#loginPage.has-photos::before,#loginPage.has-photos::after{display:none}
+#loginPage.has-photos .login-card{max-width:480px;min-height:100vh;border-radius:0;border:0;border-left:1px solid rgba(255,255,255,.08);display:flex;flex-direction:column;justify-content:center;background:linear-gradient(160deg,#071330 0%,#0b1f45 50%,#0c2553 100%);backdrop-filter:none;-webkit-backdrop-filter:none;box-shadow:-20px 0 50px rgba(0,0,0,.35)}
+#loginPage.has-photos .login-card>*{width:100%;max-width:380px;margin-left:auto;margin-right:auto}
+#loginPage.has-photos .login-emblem{width:72px}
+@media (prefers-reduced-motion:reduce){.lg-slide{transition:none}}
+/* tablets & phones: photo on top, card below like a sheet */
+@media (max-width:900px){
+  #loginPage.has-photos{flex-direction:column;justify-content:flex-start;align-items:stretch;overflow-y:auto;overflow-x:hidden}
+  .lg-slides{position:relative;right:auto;height:40vh;min-height:230px;flex-shrink:0}
+  .lg-shade{right:0;top:0;bottom:auto;height:40vh;min-height:230px;background:linear-gradient(180deg,rgba(7,19,48,0) 55%,rgba(7,19,48,.7) 100%)}
+  .lg-brand{display:none}
+  .lg-cap{top:calc(max(40vh,230px) - 54px);bottom:auto;left:16px;font-size:11.5px;background:rgba(0,0,0,.35);padding:5px 10px;border-radius:20px}
+  .lg-dots{right:16px;bottom:auto;top:calc(max(40vh,230px) - 48px)}
+  #loginPage.has-photos .login-card{max-width:none;min-height:0;flex:1;margin-top:-22px;border-radius:22px 22px 0 0;border-left:0;box-shadow:0 -10px 30px rgba(0,0,0,.35);padding:26px 22px 22px;justify-content:flex-start}
+  #loginPage.has-photos .login-emblem{width:56px;height:56px;margin-bottom:10px}
+  #loginPage.has-photos .login-emblem .mi{font-size:28px}
+}
+
 .login-card {
   width: 100%;
   max-width: 400px;
@@ -1378,6 +1415,109 @@ tbody tr:hover { background: var(--surface2); }
 
 
 
+
+/* v139 export options */
+.exp-sec{border:1px solid var(--border);border-radius:10px;margin-bottom:10px;background:var(--surface)}
+.exp-sec summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:7px;padding:10px 12px;font-size:13px;font-weight:700;color:var(--tx1)}
+.exp-sec summary::-webkit-details-marker{display:none}
+.exp-sec summary .material-icons-round{font-size:18px;color:var(--c-blue)}
+.exp-sec summary:after{content:"expand_more";font-family:'Material Icons Round';margin-left:auto;font-size:20px;color:var(--tx3);transition:transform .2s}
+.exp-sec[open] summary:after{transform:rotate(180deg)}
+.exp-body{padding:0 12px 12px}
+.exp-badge{font-size:11px;font-weight:700;color:var(--c-blue);background:rgba(37,99,235,.1);border-radius:999px;padding:1px 8px}
+.exp-badge:empty{display:none}
+.exp-quick{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.exp-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px}
+.exp-chips label{display:inline-flex;align-items:center;gap:5px;font-size:12.5px;padding:5px 10px;border:1.5px solid var(--border);border-radius:999px;cursor:pointer;background:var(--surface2);user-select:none}
+.exp-chips label:has(input:checked){border-color:var(--c-blue);background:rgba(37,99,235,.08);color:var(--c-blue);font-weight:600}
+.exp-chips label.od:has(input:checked){border-color:#dc2626;background:rgba(220,38,38,.07);color:#dc2626}
+.exp-chips input{accent-color:var(--c-blue);margin:0}
+
+
+/* ════ v140 MORNING INSPECTIONS ═════════════════════════════ */
+.in-bar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:8px 12px}
+.in-dates{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.in-dates .f-ctrl{width:auto;min-width:150px}
+.in-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:12px}
+.in-kpi{background:var(--surface);border:1px solid var(--border);border-top:4px solid #1A4A8B;border-radius:12px;padding:12px 14px}
+.in-kpi b{display:block;font-size:26px;font-weight:800;color:var(--tx1);line-height:1.1}
+.in-kpi small{font-size:11.5px;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:.03em}
+.in-kpi.green{border-top-color:#1A6B3A}.in-kpi.green b{color:#15803d}
+.in-kpi.red{border-top-color:#C0392B}.in-kpi.red b{color:#c0392b}
+.in-kpi.brown{border-top-color:#7D3C1A}
+.in-status{font-size:12px;color:var(--tx3);margin-bottom:10px}
+.in-status.err{color:#b91c1c;background:rgba(220,38,38,.07);border:1px solid rgba(220,38,38,.25);border-radius:10px;padding:10px 12px}
+.in-sec{background:var(--surface);border:1px solid var(--border);border-radius:14px;margin-bottom:14px;overflow:hidden}
+.in-sec-hd{display:flex;align-items:center;gap:8px;padding:12px 14px;border-bottom:1px solid var(--border);font-size:13.5px;font-weight:800;color:var(--tx1)}
+.in-sec-hd .material-icons-round{font-size:19px;color:var(--c-blue)}
+.in-sec-hd .in-cnt{font-size:12px;font-weight:700;color:var(--tx3)}
+.in-sec-hd .btn{margin-left:auto}
+.in-sec-bd{padding:12px 14px}
+.in-not{display:grid;grid-template-columns:repeat(auto-fill,minmax(205px,1fr));gap:6px}
+.in-not-i > div{min-width:0}
+.in-not-i{display:flex;align-items:center;gap:6px;border:1px solid rgba(192,57,43,.25);background:rgba(192,57,43,.05);border-radius:9px;padding:5px 6px 5px 10px}
+.in-not-i div{flex:1;min-width:0}
+.in-not-i b{display:block;font-size:12.5px;color:var(--tx1)}
+.in-not-i small{display:block;font-size:10.5px;color:var(--tx3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.in-not-i .btn-icon{width:32px;height:32px;min-width:32px;padding:0 !important}
+.in-not-i b{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.in-zone{width:100%;border-collapse:collapse;font-size:13px}
+.in-zone th{text-align:left;font-size:10.5px;text-transform:uppercase;color:var(--tx3);padding:6px 8px;border-bottom:1px solid var(--border)}
+.in-zone td{padding:7px 8px;border-bottom:1px solid var(--border)}
+.in-zone .bar{height:8px;border-radius:99px;background:#3b82f6;min-width:3px}
+.in-dept{font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--tx3);margin:12px 0 6px}
+.in-off{border:1px solid var(--border);border-radius:12px;margin-bottom:8px;overflow:hidden}
+.in-off-hd{display:flex;align-items:center;gap:10px;padding:9px 12px;cursor:pointer;background:var(--surface2)}
+.in-off-hd b{font-size:13px;color:var(--tx1)}
+.in-off-hd small{font-size:11.5px;color:var(--tx3)}
+.in-off-hd .in-badge{margin-left:auto;font-size:12px;font-weight:800;color:#15803d;background:rgba(21,128,61,.1);border-radius:999px;padding:2px 10px;white-space:nowrap}
+.in-off-list{padding:4px 12px 8px}
+.in-row{display:grid;grid-template-columns:52px 1fr;gap:8px;padding:7px 0;border-bottom:1px dashed var(--border);font-size:12.5px}
+.in-row:last-child{border-bottom:none}
+.in-row .tm{color:var(--tx3);font-weight:700;font-size:12px}
+.in-row .ty{font-weight:600;color:var(--tx1)}
+.in-row .mt{color:var(--tx3);font-size:11.5px}
+.in-row .rm{color:var(--tx2);font-size:12px;margin-top:2px}
+.in-ph{display:flex;gap:6px;flex-wrap:wrap;margin-top:4px}
+.in-ph a{display:inline-flex;align-items:center;gap:3px;font-size:11.5px;font-weight:600;color:var(--c-blue);text-decoration:none;border:1px solid var(--border);border-radius:7px;padding:2px 7px}
+.in-ph a .material-icons-round{font-size:14px}
+.in-trend{display:flex;align-items:flex-end;gap:4px;height:90px;padding-top:6px}
+.in-trend div{flex:1;background:#3b82f6;border-radius:5px 5px 0 0;position:relative;min-height:2px}
+.in-trend div span{position:absolute;bottom:100%;left:50%;transform:translateX(-50%);font-size:10px;font-weight:700;color:var(--tx2)}
+.in-trend-l{display:flex;gap:4px;font-size:9.5px;color:var(--tx3);margin-top:3px}
+.in-trend-l span{flex:1;text-align:center;overflow:hidden}
+.in-unk{display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px dashed var(--border);font-size:12.5px}
+.in-roster-add{display:grid;grid-template-columns:1.3fr 1.3fr 1fr auto;gap:6px;margin-bottom:12px}
+.in-r-dept{font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--tx3);margin:12px 0 4px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.in-r-dbtn{margin-left:auto;display:flex;gap:6px}
+.in-r-dbtn button{font-size:11px;font-weight:700;text-transform:none;letter-spacing:0;border:1px solid var(--border);background:var(--surface2);color:var(--c-blue);border-radius:7px;padding:3px 9px;cursor:pointer;font-family:inherit}
+.in-skipped{display:flex;gap:8px;margin-top:10px;padding:8px 10px;border-radius:10px;background:rgba(100,116,139,.08);border:1px dashed var(--border);font-size:12.5px;color:var(--tx2)}
+.in-skipped .material-icons-round{font-size:18px;color:var(--tx3)}
+.in-skipped small{color:var(--tx3);font-size:11px}
+.in-sk{display:inline-block;margin:2px 6px 2px 0;background:var(--surface);border:1px solid var(--border);border-radius:999px;padding:1px 8px;font-weight:600}
+.in-sk a{color:var(--c-blue);font-weight:700;font-size:11px;margin-left:3px}
+.in-not-i .in-skip{color:var(--tx3);background:transparent;border:1px solid var(--border)}
+.in-r-i{display:flex;align-items:center;gap:8px;padding:5px 2px;border-bottom:1px solid var(--border);font-size:12.5px}
+.in-r-i label{display:flex;align-items:center;gap:8px;flex:1;min-width:0;cursor:pointer}
+.in-r-i small{color:var(--tx3);font-size:11px}
+.in-r-i.off{opacity:.5}
+.in-r-i button{background:none;border:none;color:var(--tx3);cursor:pointer;display:flex}
+.in-dash{display:flex;align-items:center;gap:12px;background:var(--surface);border:1px solid var(--border);border-left:4px solid #1A6B3A;border-radius:14px;padding:11px 14px;margin-bottom:12px;cursor:pointer}
+.in-dash > .material-icons-round:first-child{font-size:26px;color:#1A6B3A}
+.in-dash b{display:block;font-size:13.5px;color:var(--tx1)}
+.in-dash small{display:block;font-size:12px;color:var(--tx3)}
+.in-dash-num{font-size:22px;font-weight:800;color:#15803d;white-space:nowrap}
+.rv-insp{font-size:11px;font-weight:700;color:#1A6B3A;background:rgba(26,107,58,.1);border-radius:999px;padding:1px 8px;margin-left:6px;white-space:nowrap}
+.rv-insp.zero{color:#b91c1c;background:rgba(185,28,28,.08)}
+@media (max-width:767px){
+  .in-kpis{grid-template-columns:repeat(2,1fr);gap:8px}
+  .in-kpi b{font-size:22px}
+  .in-dates .f-ctrl{min-width:0;flex:1}
+  .in-roster-add{grid-template-columns:1fr 1fr}
+  .in-not{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .in-not-i{min-width:0}
+}
+
 /* ════ v138 TAPPAL FOLLOW-UP ═════════════════════════════════ */
 .tpl-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px}
 .tpl-kpi{background:var(--surface);border:1px solid var(--border);border-left:4px solid #f59e0b;border-radius:12px;padding:12px 14px;cursor:pointer;transition:transform .15s}
@@ -1515,6 +1655,33 @@ tbody tr:hover { background: var(--surface2); }
 .ab-tips li{counter-increment:t;position:relative;padding-left:38px;font-size:13px;line-height:1.5;color:var(--tx2)}
 .ab-tips li b{color:var(--tx1)}
 .ab-tips li:before{content:counter(t);position:absolute;left:0;top:0;width:26px;height:26px;border-radius:50%;background:linear-gradient(135deg,#2563eb,#0ea5e9);color:#fff;font-weight:800;font-size:12.5px;display:flex;align-items:center;justify-content:center}
+.pd-task{background:var(--surface2);border-left:4px solid #7c3aed;border-radius:10px;padding:10px 12px;margin-bottom:12px}
+.pd-task-id{font-size:12px;font-weight:700;color:var(--c-blue)}.pd-task-desc{font-size:14px;font-weight:600;margin:2px 0}.pd-task-meta{font-size:12.5px;color:var(--tx3)}
+.pd-step{font-size:14px;font-weight:700;margin:14px 0 6px;color:var(--tx1)}
+.pd-search{margin-bottom:8px;font-size:16px}
+.pd-list{display:flex;flex-direction:column;gap:6px;max-height:300px;overflow-y:auto;padding:2px}
+.pd-grp{font-size:11px;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;margin:6px 0 0}
+.pd-opt{display:flex;align-items:center;gap:10px;padding:12px;border:1.5px solid var(--border);border-radius:10px;cursor:pointer;background:var(--surface);min-height:48px}
+.pd-opt input{width:20px;height:20px;flex-shrink:0;accent-color:#7c3aed}
+.pd-opt.on{border-color:#7c3aed;background:rgba(124,58,237,.07)}
+.pd-nm{font-size:15px;font-weight:600;flex:1;min-width:0}.pd-sub{font-size:12px;color:var(--tx3);text-align:right}
+.pd-ic{font-size:22px;color:#b45309}
+.pd-date{font-size:16px;max-width:220px}.pd-hint{font-size:12px;color:var(--tx3);margin-top:4px}
+.pd-btns{display:flex;gap:8px;justify-content:flex-end;margin-top:16px;flex-wrap:wrap}
+.pd-go,.pd-back,.pd-pass{font-size:15px;padding:10px 18px}
+.btn.pd-pass{background:#7c3aed;color:#fff;border-color:#7c3aed}
+.btn.pd-back{background:#fff7ed;color:#b45309;border:1.5px solid #f59e0b}
+.pd-info,.pd-banner,.pd-retbox,.pd-frombox{display:flex;gap:10px;align-items:flex-start;border-radius:10px;padding:10px 12px;font-size:13.5px;line-height:1.45}
+.pd-info{background:#fff7ed;border:1px solid #fcd34d;margin-bottom:4px}.pd-info .material-icons-round{color:#b45309}
+.pd-banner{background:#fef2f2;border:1.5px solid #fca5a5;margin-bottom:10px;color:#991b1b}.pd-banner .material-icons-round{color:#dc2626}
+.pd-retbox{background:#fef2f2;border:1.5px solid #fca5a5;margin-bottom:12px;color:#7f1d1d}.pd-retbox .material-icons-round{color:#dc2626}
+.pd-frombox{background:rgba(124,58,237,.06);border:1px solid rgba(124,58,237,.3);margin-bottom:12px}.pd-frombox .material-icons-round{color:#7c3aed}
+.pd-tag{display:inline-block;font-size:10px;font-weight:700;border-radius:6px;padding:1px 6px;margin-top:3px;margin-right:3px}
+.pd-t-ret{background:#fee2e2;color:#b91c1c}.pd-t-team{background:rgba(124,58,237,.1);color:#6d28d9}.pd-t-bnc{background:#fef3c7;color:#92400e}
+.pd-sec{display:flex;align-items:center;flex-wrap:wrap;gap:6px;font-size:13px;font-weight:700;color:#6d28d9;margin:18px 0 6px;text-transform:uppercase;letter-spacing:.04em}
+.pd-sec small{flex-basis:100%;font-size:12px;font-weight:400;color:var(--tx3);text-transform:none;letter-spacing:0}
+.pd-bnc-card{border:1.5px solid #fcd34d}
+.pd-bnc-row{padding:9px 0;border-bottom:1px solid var(--border);cursor:pointer;font-size:13px}.pd-bnc-row:last-child{border-bottom:0}
 .ab-tl{border-left:2px solid var(--border);margin-left:6px;padding-left:18px;display:flex;flex-direction:column}
 .ab-tl-i{position:relative;padding:0 0 14px}
 .ab-tl-i em{position:absolute;left:-25px;top:3px;width:12px;height:12px;border-radius:50%;border:2px solid var(--surface)}
@@ -1679,7 +1846,17 @@ tbody tr:hover { background: var(--surface2); }
 <body>
 
 <!-- LOGIN -->
-<div id="loginPage">
+<div id="loginPage" class="has-photos">
+  <div class="lg-slides" id="lgSlides">
+    <div class="lg-slide on" style="background-image:url('login-1.webp')"></div>
+    <div class="lg-slide" data-src="login-2.webp"></div>
+    <div class="lg-slide" data-src="login-3.webp"></div>
+    <div class="lg-slide" data-src="login-4.webp"></div>
+  </div>
+  <div class="lg-shade"></div>
+  <div class="lg-brand"><b>Salem City Municipal Corporation</b><span>&#2970;&#3015;&#2994;&#2990;&#3021; &#2990;&#3006;&#2984;&#2965;&#2992;&#3006;&#2975;&#3021;&#2970;&#3007; &middot; Task Management System</span></div>
+  <div class="lg-cap" id="lgCap"><span class="material-icons-round">place</span><span id="lgCapTxt">Corporation Main Office, Salem</span></div>
+  <div class="lg-dots" id="lgDots"><i class="on" onclick="lgGo(0)"></i><i onclick="lgGo(1)"></i><i onclick="lgGo(2)"></i><i onclick="lgGo(3)"></i></div>
   <div class="login-card">
     <div class="login-emblem" id="loginEmblem">
       <img id="loginLogo" src="" alt="" style="width:100%;height:100%;border-radius:50%;object-fit:cover;display:none">
@@ -1746,6 +1923,7 @@ tbody tr:hover { background: var(--surface2); }
       <div class="sb-item" id="snav-chgpw" onclick="showMyProfile()" title="My Profile"><span class="material-icons-round sb-i">manage_accounts</span><span class="sb-label">My Profile</span></div>
       <div class="sb-item" id="snav-photolog" data-page="photolog" onclick="go('photolog')" title="Notes"><span class="material-icons-round sb-i">photo_library</span><span class="sb-label">Notes</span></div>
       <div class="sb-item" id="snav-review" data-page="review" onclick="go('review')" style="display:none" title="Review"><span class="material-icons-round sb-i">fact_check</span><span class="sb-label">Review</span></div>
+      <div class="sb-item" id="snav-inspection" data-page="inspection" onclick="go('inspection')" style="display:none" title="Morning Inspections"><span class="material-icons-round sb-i">travel_explore</span><span class="sb-label">Morning Inspections</span></div>
       <div class="sb-item" id="snav-reports" data-page="reports" onclick="go('reports')" style="display:none" title="Reports"><span class="material-icons-round sb-i">summarize</span><span class="sb-label">Reports</span></div>
       <div class="sb-item" id="snav-tappal" data-page="tappal" onclick="go('tappal')" style="display:none" title="Tappal Tracker"><span class="material-icons-round sb-i">markunread_mailbox</span><span class="sb-label">Tappal Tracker</span></div>
       <div class="sb-item" id="snav-install" onclick="installApp()" style="display:none" title="Install app"><span class="material-icons-round sb-i">install_mobile</span><span class="sb-label">Install app</span></div>
@@ -1805,6 +1983,13 @@ tbody tr:hover { background: var(--surface2); }
             <div class="red"><b id="dtp-od">&#8212;</b><small>Overdue</small></div>
             <div class="green"><b id="dtp-cl">&#8212;</b><small>To close</small></div>
           </div>
+        </div>
+        <!-- v140: morning inspections today -->
+        <div class="in-dash" id="dashInspCard" style="display:none" onclick="go('inspection')">
+          <span class="material-icons-round">travel_explore</span>
+          <div style="flex:1;min-width:0"><b>Morning inspections today</b><small id="dinsp-txt">Loading&hellip;</small></div>
+          <div class="in-dash-num" id="dinsp-num">&#8212;</div>
+          <span class="material-icons-round" style="opacity:.5">chevron_right</span>
         </div>
         <div class="kpi-grid" id="kpiGrid">
           <div class="kpi blue" onclick="drillDown('all')" style="cursor:pointer"><div class="kpi-stripe"></div><div class="kpi-icon-wrap"><span class="material-icons-round mi">assignment</span></div><div class="kpi-val" id="k-total">&#8212;</div><div class="kpi-lbl">Total Tasks</div></div>
@@ -2543,6 +2728,7 @@ tbody tr:hover { background: var(--surface2); }
         <div class="ph-left"><h1>&#9989; Review</h1><p>Who has how much work, clear the old backlog, and print the meeting list</p></div>
         <div class="ph-actions"><button class="btn btn-ghost" onclick="loadReviewPage(true)"><span class="material-icons-round mi">refresh</span> Refresh</button></div>
       </div>
+      <div class="card pd-bnc-card" id="rvBounced" style="display:none;margin-bottom:24px"></div>
       <div class="card"><div class="card-hd"><span class="card-title">&#128101; Workload by officer</span><span id="rvWorkloadNote" style="font-size:11.5px;color:var(--tx3)"></span></div>
         <div class="card-bd" id="rvWorkload"><div style="color:var(--tx3);font-size:13px">Loading…</div></div></div>
       <div class="card mt24"><div class="card-hd"><span class="card-title">&#129529; Backlog clean-up</span><span id="rvBacklogCount" style="font-size:11.5px;color:var(--tx3)"></span></div>
@@ -2579,6 +2765,53 @@ tbody tr:hover { background: var(--surface2); }
 
     </div>
 
+
+    <!-- v140 MORNING INSPECTIONS PAGE (Admin & Commissioner) -->
+    <div class="page" id="page-inspection">
+      <div class="ph">
+        <div class="ph-left"><h1>&#128270; Morning Inspections</h1><p>Officers&rsquo; field inspections from the Google Form &mdash; no copy-paste</p></div>
+        <div class="ph-actions">
+          <button class="btn btn-ghost btn-sm" onclick="inRosterOpen()"><span class="material-icons-round mi">groups</span> Officer list</button>
+          <button class="btn btn-ghost btn-sm" onclick="inCopyTSV()"><span class="material-icons-round mi">content_copy</span> Copy for old generator</button>
+          <button class="btn btn-sm tpl-wa" onclick="inWhatsAppSummary()"><span class="material-icons-round mi">chat</span> Summary</button>
+          <button class="btn btn-primary btn-sm" onclick="inPrint()"><span class="material-icons-round mi">print</span> Print report</button>
+        </div>
+      </div>
+      <div class="in-bar">
+        <div class="tpl-tabs" style="margin:0;border:none">
+          <button class="tpl-tab active" id="inMode-day" onclick="inSetMode('day')"><span class="material-icons-round">today</span> Daily</button>
+          <button class="tpl-tab" id="inMode-range" onclick="inSetMode('range')"><span class="material-icons-round">date_range</span> Date range</button>
+        </div>
+        <div class="in-dates" id="inDay"><input type="date" class="f-ctrl" id="inDate" onchange="inLoad()"><button class="btn btn-ghost btn-sm" onclick="inQuick('today')">Today</button><button class="btn btn-ghost btn-sm" onclick="inQuick('yday')">Yesterday</button></div>
+        <div class="in-dates" id="inRange" style="display:none"><input type="date" class="f-ctrl" id="inFrom"><span style="color:var(--tx3)">to</span><input type="date" class="f-ctrl" id="inTo"><button class="btn btn-ghost btn-sm" onclick="inQuick('week')">This week</button><button class="btn btn-ghost btn-sm" onclick="inQuick('month')">This month</button><label class="remember-label" style="font-size:12.5px"><input type="checkbox" id="inSkipSun" checked onchange="inRender()"> Skip Sundays</label><button class="btn btn-primary btn-sm" onclick="inLoad()">Show</button></div>
+      </div>
+      <div class="in-kpis">
+        <div class="in-kpi blue"><b id="inK-total">&#8212;</b><small>Total entries</small></div>
+        <div class="in-kpi green"><b id="inK-sub">&#8212;</b><small id="inK-subL">Officers submitted</small></div>
+        <div class="in-kpi red"><b id="inK-not">&#8212;</b><small>Not submitted</small></div>
+        <div class="in-kpi brown"><b id="inK-cov">&#8212;</b><small>Coverage</small></div>
+      </div>
+      <div id="inStatus" class="in-status"></div>
+      <div id="inBody"></div>
+    </div>
+
+    <!-- v140 officer list (who must submit) -->
+    <div class="modal-bg" id="mInRoster">
+      <div class="modal-box" style="max-width:620px">
+        <div class="modal-hd"><span class="modal-title">Officers who must submit</span><button class="modal-close" onclick="closeModal('mInRoster')"><span class="material-icons-round">close</span></button></div>
+        <div class="modal-body">
+          <div style="font-size:12.5px;color:var(--tx3);margin-bottom:10px">Untick an officer to leave them out of &ldquo;Not submitted&rdquo; (on leave, transferred). Saved on the server, so it is the same on every phone and computer.</div>
+          <div class="in-roster-add">
+            <input class="f-ctrl" id="inAddName" placeholder="Name (as in the form)">
+            <input class="f-ctrl" id="inAddDesig" placeholder="Designation" list="inDesigList"><datalist id="inDesigList"></datalist>
+            <select class="f-sel" id="inAddDept"></select>
+            <button class="btn btn-primary btn-sm" onclick="inRosterAdd()"><span class="material-icons-round mi">person_add</span> Add</button>
+          </div>
+          <div id="inRosterList"></div>
+        </div>
+        <div class="modal-ft"><button class="btn btn-ghost" onclick="inRosterReset()">Reset to default list</button><button class="btn btn-primary" onclick="inRosterSave()"><span class="material-icons-round mi">save</span> Save list</button></div>
+      </div>
+    </div>
 
     <!-- TAPPAL TRACKER PAGE (Admin & Commissioner only) -->
     <div class="page" id="page-tappal">
@@ -2779,7 +3012,9 @@ tbody tr:hover { background: var(--surface2); }
         <section class="ab-card">
           <div class="ab-h" onclick="aboutToggleChangelog()" style="cursor:pointer"><span class="material-icons-round">new_releases</span> What&rsquo;s new <span class="material-icons-round" id="aboutChangelogChevron" style="margin-left:auto;transition:transform .25s;color:var(--tx3)">expand_more</span></div>
           <div class="ab-tl">
-            <div class="ab-tl-i"><em style="background:#d97706"></em><b>Tappal follow-up <span class="ab-new">NEW</span></b><small>Marked tappals go to the concerned officer with a due date, WhatsApp, reply upload, weekly meeting mode and printouts.</small><span class="ab-v">v138</span></div>
+            <div class="ab-tl-i"><em style="background:#7c3aed"></em><b>Pass down to my staff <span class="ab-new">NEW</span></b><small>Seniors can pass a task to the officer below them and still follow it. Not yours? Send it back with a reason.</small><span class="ab-v">v141</span></div>
+            <div class="ab-tl-i"><em style="background:#1A6B3A"></em><b>Morning inspections</b><small>The officers&rsquo; Google Form report inside the app &mdash; daily or date range, not-submitted list with WhatsApp reminders, print, dashboard card.</small><span class="ab-v">v140</span></div>
+            <div class="ab-tl-i"><em style="background:#d97706"></em><b>Tappal follow-up</b><small>Marked tappals go to the concerned officer with a due date, WhatsApp, reply upload, weekly meeting mode and printouts.</small><span class="ab-v">v138</span></div>
             <div class="ab-tl-i"><em style="background:#2563eb"></em><b>Made for phones</b><small>Task cards instead of a wide table, bigger buttons, pop-ups that slide up from the bottom.</small><span class="ab-v">v137</span></div>
             <div class="ab-tl-i"><em style="background:#10b981"></em><b>Faster every day</b><small>Stay signed in for 30 days, &ldquo;My work today&rdquo;, lighter dashboard, automatic tidy-up of old records.</small><span class="ab-v">v136</span></div>
             <div id="aboutChangelogBody" style="display:none">
@@ -2939,7 +3174,7 @@ tbody tr:hover { background: var(--surface2); }
 
 <!-- Export Choice Modal -->
 <div class="modal-bg" id="mExport">
-  <div class="modal-box" style="max-width:420px">
+  <div class="modal-box" style="max-width:560px">
     <div class="modal-hd"><span class="modal-title" id="mExportTitle">Export Report</span><button class="modal-close" onclick="closeModal('mExport')"><span class="material-icons-round">close</span></button></div>
     <div class="modal-body">
       <p class="c-muted mb12" id="mExportDesc">Choose export format.</p>
@@ -2956,22 +3191,47 @@ tbody tr:hover { background: var(--surface2); }
         </button>
       </div>
       <div id="mExportFilterSummary" style="margin-bottom:14px;padding:10px;background:var(--surface2);border-radius:8px;font-size:12.5px;color:var(--tx2)"></div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-        <button class="btn btn-primary w100" style="flex-direction:column;padding:20px 12px;gap:8px;font-size:13px" onclick="doExport('excel')">
-          <span class="material-icons-round mi" style="font-size:32px">table_chart</span>
-          Export as Excel<br><span style="font-size:11px;font-weight:400;opacity:.8">.csv — opens in Excel</span>
-        </button>
-        <button class="btn btn-danger w100" style="flex-direction:column;padding:20px 12px;gap:8px;font-size:13px" onclick="doExport('pdf')">
-          <span class="material-icons-round mi" style="font-size:32px">picture_as_pdf</span>
-          Export as PDF<br><span style="font-size:11px;font-weight:400;opacity:.8">Print-ready report</span>
-        </button>
-      </div>
+      <!-- v139: filter rows -->
+      <details class="exp-sec" id="expRowsSec">
+        <summary><span class="material-icons-round">filter_alt</span> Filter rows <span class="exp-badge" id="expRowsBadge"></span></summary>
+        <div class="exp-body">
+          <div class="f-row">
+            <div class="f-group mb0"><label class="f-label">Assigned from</label><input type="date" class="f-ctrl" id="expFrom" onchange="expChanged()"></div>
+            <div class="f-group mb0"><label class="f-label">Assigned to</label><input type="date" class="f-ctrl" id="expTo" onchange="expChanged()"></div>
+          </div>
+          <div class="exp-quick"><button type="button" class="btn btn-ghost btn-sm" onclick="expRange('today')">Today</button><button type="button" class="btn btn-ghost btn-sm" onclick="expRange('week')">Last 7 days</button><button type="button" class="btn btn-ghost btn-sm" onclick="expRange('month')">This month</button><button type="button" class="btn btn-ghost btn-sm" onclick="expRange('')">Any date</button></div>
+          <label class="f-label" style="margin-top:10px">Status</label>
+          <div class="exp-chips" id="expStatus">
+            <label><input type="checkbox" value="Pending" checked onchange="expChanged()"> Pending</label>
+            <label><input type="checkbox" value="In Progress" checked onchange="expChanged()"> In Progress</label>
+            <label><input type="checkbox" value="Done" checked onchange="expChanged()"> Done</label>
+            <label><input type="checkbox" value="Verified" checked onchange="expChanged()"> Verified</label>
+            <label class="od"><input type="checkbox" id="expOverdue" onchange="expChanged()"> Overdue only</label>
+            <label class="od"><input type="checkbox" id="expUrgent" onchange="expChanged()"> Urgent only</label>
+          </div>
+          <div class="f-row" style="margin-top:10px">
+            <div class="f-group mb0"><label class="f-label">Department</label><select class="f-sel" id="expDept" onchange="expFillOfficers();expChanged()"><option value="">All departments</option></select></div>
+            <div class="f-group mb0"><label class="f-label">Officer</label><select class="f-sel" id="expOfficer" onchange="expChanged()"><option value="">All officers</option></select></div>
+          </div>
+        </div>
+      </details>
+      <!-- v139: choose columns -->
+      <details class="exp-sec" id="expColsSec">
+        <summary><span class="material-icons-round">view_column</span> Choose columns <span class="exp-badge" id="expColsBadge"></span></summary>
+        <div class="exp-body">
+          <div class="exp-quick"><button type="button" class="btn btn-ghost btn-sm" onclick="expPreset('standard')">Standard</button><button type="button" class="btn btn-ghost btn-sm" onclick="expPreset('all')">All</button><button type="button" class="btn btn-ghost btn-sm" onclick="expPreset('none')">Clear</button></div>
+          <div class="exp-chips exp-cols" id="expCols"></div>
+          <label class="remember-label" style="margin-top:10px;font-size:12.5px"><input type="checkbox" id="expPdfSummary" checked> PDF: include summary pages (totals, officer-wise, zone-wise)</label>
+        </div>
+      </details>
       <!-- Hidden checkbox kept so existing updateExportSummary()/doExport()
            logic (which reads #mExportAllTasks) needs zero changes — the two
            scope buttons above just drive this value now. -->
       <input type="checkbox" id="mExportAllTasks" checked style="display:none">
     </div>
-    <div class="modal-ft"><button class="btn btn-ghost" onclick="closeModal('mExport')">Cancel</button></div>
+    <div class="modal-ft"><button class="btn btn-ghost ft-close" onclick="closeModal('mExport')">Cancel</button>
+      <button class="btn" style="background:#16a34a;color:#fff" onclick="doExport('excel')"><span class="material-icons-round mi">table_chart</span> Excel</button>
+      <button class="btn btn-danger" onclick="doExport('pdf')"><span class="material-icons-round mi">picture_as_pdf</span> PDF</button></div>
   </div>
 </div>
 
@@ -3078,7 +3338,8 @@ tbody tr:hover { background: var(--surface2); }
     </div>
     <div class="modal-ft">
       <button class="btn btn-ghost" id="pu-cancelBtn" onclick="closeModal('mPhotoUpload')">Cancel</button>
-      <button class="btn btn-ghost" id="pu-reassignBtn" style="display:none" onclick="hodReassignFromUpdate()"><span class="material-icons-round mi">swap_horiz</span> Reassign</button>
+      <button class="btn pd-back" id="pu-backBtn" style="display:none" onclick="passBackOpen(V('pu-taskid'))"><span class="material-icons-round mi">undo</span> Send back</button>
+      <button class="btn pd-pass" id="pu-reassignBtn" style="display:none" onclick="hodReassignFromUpdate()"><span class="material-icons-round mi">subdirectory_arrow_right</span> Pass down</button>
       <button class="btn btn-primary" id="pu-saveBtn" onclick="submitPhotoUpdate()"><span class="material-icons-round mi">save</span> Save Update</button>
     </div>
   </div>
@@ -3849,6 +4110,7 @@ function applyRoleNav(role){
   show('snav-settings', isAdminOnly);
   show('snav-reports', false); // v136: Reports merged into the Review page
   show('snav-review', isAdmin); // v134: Commissioner + Admin
+  show('snav-inspection', isAdmin); // v140
   show('snav-tappal', isAdmin); // Admin AND Commissioner, per requirement — unlike Reports which is Admin-only
   show('snav-chgpw', true);
   show('snav-photolog', true); // All roles can view Notes/Photo Log
@@ -3869,13 +4131,13 @@ function applyRoleNav(role){
     // and full Notes create/delete access (enforced server-side).
     S.allowedPages=['dashboard','taskEntry','tracker','photolog','about'];
   } else if(isAdminOnly){
-    S.allowedPages=['dashboard','taskEntry','tracker','users','settings','reports','review','photolog','tappal','about'];
+    S.allowedPages=['dashboard','taskEntry','tracker','users','settings','reports','review','inspection','photolog','tappal','about'];
   } else {
     // Commissioner: full visibility into tasks and analytics, but
     // User Management and Settings remain Admin-only.
     // Tappal Tracker IS included here — Admin AND Commissioner both get it.
     // v137: Review page (workload, backlog clean-up, printout, period report) too.
-    S.allowedPages=['dashboard','taskEntry','tracker','review','reports','photolog','tappal','about'];
+    S.allowedPages=['dashboard','taskEntry','tracker','review','inspection','reports','photolog','tappal','about'];
   }
 
   var ad=id('adminDash'),od=id('officerDash'),hd=id('hodDash'),spd=id('supDash');
@@ -3889,7 +4151,7 @@ function applyRoleNav(role){
     if(ad)ad.classList.remove('dn');if(od)od.classList.add('dn');if(hd)hd.classList.add('dn');if(spd)spd.classList.add('dn');
   }
 }
-var PAGE_META={review:['Review','Workload \u00b7 Backlog clean-up \u00b7 Meeting printout'],dashboard:['Dashboard','Overview & Analytics'],taskEntry:['Task Entry','Create and assign tasks'],tracker:['Task Tracker','Monitor all tasks'],users:['User Management','Manage accounts'],settings:['Settings','System configuration'],photolog:['Notes','Inspection & Meeting Records'],reports:['Reports','Dynamic Report Generator'],tappal:['Tappal Follow-up','Marked tappals \u00b7 officers \u00b7 replies'],about:['About','Application information']};
+var PAGE_META={inspection:['Morning Inspections','From the officers\u2019 Google Form'],review:['Review','Workload \u00b7 Backlog clean-up \u00b7 Meeting printout'],dashboard:['Dashboard','Overview & Analytics'],taskEntry:['Task Entry','Create and assign tasks'],tracker:['Task Tracker','Monitor all tasks'],users:['User Management','Manage accounts'],settings:['Settings','System configuration'],photolog:['Notes','Inspection & Meeting Records'],reports:['Reports','Dynamic Report Generator'],tappal:['Tappal Follow-up','Marked tappals \u00b7 officers \u00b7 replies'],about:['About','Application information']};
 function go(page){
   if(S.allowedPages&&S.allowedPages.length&&S.allowedPages.indexOf(page)===-1){toast('Access restricted.','error');return;}
   S.page=page;
@@ -3923,6 +4185,7 @@ function go(page){
   else if(page==='photolog')loadPhotoLog();
   else if(page==='reports')loadReportsPage();
   else if(page==='review')loadReviewPage();
+  else if(page==='inspection')loadInspectionPage();
   else if(page==='tappal')loadTappalPage();
   else if(page==='about')loadAboutPage();
 }
@@ -4128,6 +4391,7 @@ function loadDashboard(){
 
 function applyAdminDashData(r){
   try{loadDashTappal();}catch(e){}
+  try{loadDashInspection();}catch(e){}
   hideLoader();
   var s=r.stats;
   var kv={'k-total':s.total,'k-pending':s.pending,'k-progress':s.inProgress,'k-done':s.completed,'k-overdue':s.overdue,'k-today':s.dueToday,'k-high':s.highPriority,'k-rate':r.completionRate+'%'};
@@ -5013,6 +5277,8 @@ function normalizeTaskList(data){
       photoCount:(typeof t.photoCount==='number'?t.photoCount:0),
       docCount:(typeof t.docCount==='number'?t.docCount:0),
       sourceNoteID:String(t.sourceNoteID||''),
+      seenAt:String(t.seenAt||''),
+      team:!!t.team,passPath:t.passPath||'',passBack:t.passBack||0,passRet:t.passRet||null,passFrom:t.passFrom||null, // v141
       isOverdue:(due&&new Date(due)<new Date()&&t.status!=='Done'&&t.status!=='Verified')?true:false});
   }
   outboxOverlay(out);
@@ -5106,7 +5372,9 @@ var RV_WORKLOAD_LIMIT=30;   // warn when an officer has more open tasks than thi
 var RV_PAGE=20;
 function rvDaysOld(t){var d=new Date(String(t.dateAssigned||t.createdAt||'').slice(0,10));if(isNaN(d.getTime()))return 0;return Math.max(0,Math.floor((Date.now()-d.getTime())/86400000));}
 function rvDatePlus(days){var d=new Date(Date.now()+days*86400000);return d.getFullYear()+'-'+zeroPad(d.getMonth()+1,2)+'-'+zeroPad(d.getDate(),2);}
+function loadReviewPage_v140hook(){try{loadDashInspection();}catch(e){}}
 function loadReviewPage(force){
+  loadReviewPage_v140hook(); // v140: weekly inspection counts for the workload list
   if(!force&&RV.tasks.length&&(Date.now()-RV.loadedAt)<120000){rvRenderAll();return;}
   var w=id('rvWorkload');if(w)w.innerHTML='<div style="color:var(--tx3);font-size:13px">Loading all open tasks…</div>';
   gasCall('serverGetTasks',S.token,{days:0,fullDescription:true}).then(function(r){
@@ -5126,7 +5394,7 @@ function rvFillFilters(){
   });
   var o=id('rvOfficer');if(o){var c=o.value;o.innerHTML='<option value="">All officers</option>'+Object.keys(offs).sort().map(function(n){return '<option>'+htmlEsc(n)+'</option>';}).join('');o.value=c;}
 }
-function rvRenderAll(){rvRenderWorkload();rvRenderBacklog(true);}
+function rvRenderAll(){rvRenderBounced();rvRenderWorkload();rvRenderBacklog(true);}
 
 // ─── v135 WHATSAPP (Admin & Commissioner only) ─────────────────
 // Opens WhatsApp with a ready-made message to the officer's mobile.
@@ -5197,6 +5465,233 @@ function waSendOfficer(name){
   list.sort(function(a,b){return (b.isOverdue?1:0)-(a.isOverdue?1:0)||(String(b.priority)==='High')-(String(a.priority)==='High')||String(a.dueDate||'9').localeCompare(String(b.dueDate||'9'));});
   waOpen(list[0].officerID,name,waOfficerText(name,list));
 }
+
+// ════ v140 MORNING INSPECTIONS ════════════════════════════════
+var INS={mode:'day',data:null,roster:null,loading:false,skip:{},skipKey:''};
+function inYmd(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+function inFmt(y){if(!y)return'';var d=new Date(y+'T00:00:00');return d.toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'});}
+function inFmtDay(y){var d=new Date(y+'T00:00:00');return d.toLocaleDateString('en-IN',{weekday:'short',day:'2-digit',month:'short'});}
+function loadInspectionPage(){
+  var di=id('inDate');if(di&&!di.value)di.value=inYmd(new Date());
+  if(id('inFrom')&&!id('inFrom').value)inQuick('week',true);
+  if(INS.data){inRender();}
+  inLoad();
+}
+function inSetMode(m){INS.mode=m;['day','range'].forEach(function(k){var b=id('inMode-'+k);if(b)b.classList.toggle('active',k===m);});id('inDay').style.display=m==='day'?'':'none';id('inRange').style.display=m==='range'?'':'none';inLoad();}
+function inQuick(k,noLoad){
+  var d=new Date();
+  if(k==='today'){id('inDate').value=inYmd(d);}
+  else if(k==='yday'){id('inDate').value=inYmd(new Date(d.getTime()-86400000));}
+  else if(k==='week'){var mon=new Date(d);mon.setDate(d.getDate()-((d.getDay()+6)%7));id('inFrom').value=inYmd(mon);id('inTo').value=inYmd(d);}
+  else if(k==='month'){id('inFrom').value=inYmd(new Date(d.getFullYear(),d.getMonth(),1));id('inTo').value=inYmd(d);}
+  if(!noLoad)inLoad();
+}
+function inRangeDates(){
+  if(INS.mode==='day'){var y=V('inDate')||inYmd(new Date());return {from:y,to:y};}
+  return {from:V('inFrom')||inYmd(new Date()),to:V('inTo')||inYmd(new Date())};
+}
+function inLoad(){
+  var r=inRangeDates(),st=id('inStatus');
+  var key=r.from+'|'+r.to;INS.want=key;
+  if(INS.skipKey!==key){INS.skip={};INS.skipKey=key;INS.showAllNot=false;} // "this report only" choices never carry to another day
+  if(st){st.className='in-status';st.textContent='Reading the form sheet for '+(r.from===r.to?inFmt(r.from):inFmt(r.from)+' – '+inFmt(r.to))+'…';}
+  gasCall('serverGetInspections',S.token,r.from,r.to).then(function(res){
+    if(INS.want!==key)return; // a newer request replaced this one
+    if(!res||!res.success){if(st){st.className='in-status err';st.textContent=(res&&res.message)||'Could not read the inspection sheet.';}return;}
+    INS.data=res;INS.roster=res.roster||[];
+    if(st){st.className='in-status';st.textContent='Updated '+new Date(res.generatedAt).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'})+' · straight from the Google Form sheet';}
+    inRender();
+  });
+}
+function inWorkingDays(){
+  var d=INS.data;if(!d)return [];
+  var out=[],x=new Date(d.from+'T00:00:00'),end=new Date(d.to+'T00:00:00'),skip=INS.mode==='range'&&id('inSkipSun')&&id('inSkipSun').checked;
+  while(x<=end){if(!(skip&&x.getDay()===0))out.push(inYmd(x));x=new Date(x.getTime()+86400000);}
+  return out;
+}
+function inCompute(){
+  var d=INS.data;if(!d)return null;
+  var days=inWorkingDays(),set={};days.forEach(function(y){set[y]=1;});
+  var rows=d.rows.filter(function(r){return set[r.d];});
+  var actAll=(INS.roster||[]).filter(function(o){return o.active!==false;});
+  var act=actAll.filter(function(o){return !INS.skip[o.name];});
+  var skipped=actAll.filter(function(o){return INS.skip[o.name];});
+  var byOff={},unknown={},byZone={},byDay={};days.forEach(function(y){byDay[y]=0;});
+  rows.forEach(function(r){
+    byDay[r.d]=(byDay[r.d]||0)+1;
+    var z=r.z||'UNKNOWN';(byZone[z]=byZone[z]||{n:0,off:{}}).n++;byZone[z].off[r.m||r.n]=1;
+    if(r.m){var o=(byOff[r.m]=byOff[r.m]||{rows:[],days:{}});o.rows.push(r);o.days[r.d]=1;}
+    else (unknown[r.n]=unknown[r.n]||{rows:[],desig:r.g}).rows.push(r);
+  });
+  var notSub=act.filter(function(o){return !byOff[o.name];});
+  return {days:days,rows:rows,act:act,skipped:skipped,byOff:byOff,unknown:unknown,byZone:byZone,byDay:byDay,notSub:notSub,submitted:act.length-notSub.length,coverage:act.length?Math.round((act.length-notSub.length)*100/act.length):0};
+}
+function inPhotoLinks(ids){
+  return (ids||[]).map(function(pid,i){return '<a href="https://drive.google.com/file/d/'+encodeURIComponent(pid)+'/view" target="_blank" rel="noopener"><span class="material-icons-round">image</span> Photo'+(ids.length>1?' '+(i+1):'')+'</a>';}).join('');
+}
+function inRender(){
+  var c=inCompute(),box=id('inBody');if(!c||!box)return;
+  INS.c=c;
+  var isRange=INS.mode==='range'||INS.data.from!==INS.data.to;
+  id('inK-total').textContent=c.rows.length;
+  id('inK-sub').textContent=c.submitted+' / '+c.act.length;
+  id('inK-not').textContent=c.notSub.length;
+  id('inK-cov').textContent=c.coverage+'%';
+  id('inK-subL').textContent=isRange?'Officers submitted (any day)':'Officers submitted';
+  var h='';
+  // 1. not submitted — first, because it needs action
+  h+='<div class="in-sec"><div class="in-sec-hd"><span class="material-icons-round" style="color:#c0392b">person_off</span> Not submitted <span class="in-cnt">'+c.notSub.length+'</span></div><div class="in-sec-bd">';
+  if(!c.notSub.length)h+='<div style="color:#15803d;font-weight:700;font-size:13px">✅ Every officer in the list has submitted.</div>';
+  else{
+    var showAll=INS.showAllNot||c.notSub.length<=12;
+    h+='<div class="in-not">'+c.notSub.map(function(o,ix){return '<div class="in-not-i"'+(!showAll&&ix>=12?' style="display:none"':'')+'><div><b>'+htmlEsc(o.name)+'</b><small>'+htmlEsc(o.desig)+'</small></div><button class="btn btn-sm tpl-wa btn-icon" title="Remind on WhatsApp" data-n="'+htmlEsc(o.name)+'" onclick="inRemind(this.dataset.n)"><span class="material-icons-round mi">chat</span></button><button class="btn btn-sm btn-ghost btn-icon in-skip" title="Leave out of this report only" data-n="'+htmlEsc(o.name)+'" onclick="inSkip(this.dataset.n,true)"><span class="material-icons-round mi">person_remove</span></button></div>';}).join('')+'</div>';
+    if(!showAll)h+='<div style="text-align:center;margin-top:8px"><button class="btn btn-ghost btn-sm" onclick="INS.showAllNot=true;inRender()">Show all '+c.notSub.length+'</button></div>';
+  }
+  if(c.skipped.length)h+='<div class="in-skipped"><span class="material-icons-round">event_busy</span><div><b>Left out of this report only ('+c.skipped.length+'):</b> '+c.skipped.map(function(o){return '<span class="in-sk">'+htmlEsc(o.name)+' <a href="#" data-n="'+htmlEsc(o.name)+'" onclick="event.preventDefault();inSkip(this.dataset.n,false)">undo</a></span>';}).join(' ')+'<br><small>Not counted in &ldquo;Not submitted&rdquo; or coverage. The saved officer list is not changed, and they are counted again on any other day.</small></div></div>';
+  h+='</div></div>';
+  // range: day trend
+  if(isRange&&c.days.length>1){
+    var mx=Math.max.apply(null,c.days.map(function(y){return c.byDay[y]||0;}).concat([1]));
+    h+='<div class="in-sec"><div class="in-sec-hd"><span class="material-icons-round">bar_chart</span> Entries per day <span class="in-cnt">'+c.days.length+' working day'+(c.days.length>1?'s':'')+'</span></div><div class="in-sec-bd"><div class="in-trend">'
+      +c.days.map(function(y){var n=c.byDay[y]||0;return '<div style="height:'+Math.max(2,Math.round(n/mx*80))+'px" title="'+inFmtDay(y)+': '+n+'"><span>'+n+'</span></div>';}).join('')+'</div><div class="in-trend-l">'+c.days.map(function(y){return '<span>'+new Date(y+'T00:00:00').getDate()+'</span>';}).join('')+'</div></div></div>';
+  }
+  // 2. zone-wise
+  var zones=Object.keys(c.byZone).sort(function(a,b){return c.byZone[b].n-c.byZone[a].n;}),zmax=zones.length?c.byZone[zones[0]].n:1;
+  h+='<div class="in-sec"><div class="in-sec-hd"><span class="material-icons-round">location_city</span> Zone-wise summary</div><div class="in-sec-bd"><table class="in-zone"><tr><th>Zone</th><th>Entries</th><th>Officers</th><th style="width:40%"></th></tr>'
+    +(zones.length?zones.map(function(z){var o=c.byZone[z];return '<tr><td><b>'+htmlEsc(z)+'</b></td><td>'+o.n+'</td><td>'+Object.keys(o.off).length+'</td><td><div class="bar" style="width:'+Math.round(o.n/zmax*100)+'%"></div></td></tr>';}).join(''):'<tr><td colspan="4" style="color:var(--tx3)">No entries</td></tr>')+'</table></div></div>';
+  // 3. officer-wise, grouped by department in list order
+  h+='<div class="in-sec"><div class="in-sec-hd"><span class="material-icons-round">badge</span> Officer-wise inspection detail <span class="in-cnt">'+c.submitted+' officers</span></div><div class="in-sec-bd">';
+  var depts=[];c.act.forEach(function(o){if(depts.indexOf(o.dept)<0)depts.push(o.dept);});
+  depts.forEach(function(dp){
+    var offs=c.act.filter(function(o){return o.dept===dp&&c.byOff[o.name];});if(!offs.length)return;
+    h+='<div class="in-dept">'+htmlEsc(dp)+'</div>';
+    offs.forEach(function(o){
+      var b=c.byOff[o.name],nd=Object.keys(b.days).length;
+      var badge=isRange?nd+'/'+c.days.length+' days · '+b.rows.length+' entr'+(b.rows.length>1?'ies':'y'):b.rows.length+' entr'+(b.rows.length>1?'ies':'y');
+      h+='<div class="in-off"><div class="in-off-hd" onclick="this.nextSibling.style.display=this.nextSibling.style.display===\'none\'?\'\':\'none\'"><div><b>'+htmlEsc(o.name)+'</b> <small>'+htmlEsc(o.desig)+'</small></div><span class="in-badge">'+badge+'</span></div>'
+        +'<div class="in-off-list"'+(isRange?' style="display:none"':'')+'>'+b.rows.map(function(r){return '<div class="in-row"><div class="tm">'+(isRange?new Date(r.d+'T00:00:00').toLocaleDateString('en-IN',{day:'2-digit',month:'short'})+'<br>':'')+htmlEsc(r.t)+'</div><div><div class="ty">'+htmlEsc(r.i)+'</div><div class="mt">'+htmlEsc(r.z||'')+(r.w?' · Ward '+htmlEsc(r.w):'')+(r.n!==o.name?' · typed as “'+htmlEsc(r.n)+'”':'')+'</div>'+(r.r?'<div class="rm">'+htmlEsc(r.r)+'</div>':'')+(r.p&&r.p.length?'<div class="in-ph">'+inPhotoLinks(r.p)+'</div>':'')+'</div></div>';}).join('')+'</div></div>';
+    });
+  });
+  if(!c.submitted)h+='<div style="color:var(--tx3);font-size:13px">No inspections for this '+(isRange?'period':'day')+' yet.</div>';
+  h+='</div></div>';
+  // 4. names not in the officer list
+  var unk=Object.keys(c.unknown);
+  if(unk.length){
+    h+='<div class="in-sec"><div class="in-sec-hd"><span class="material-icons-round" style="color:#b45309">help_outline</span> Not in the officer list <span class="in-cnt">'+unk.length+'</span></div><div class="in-sec-bd"><div style="font-size:12px;color:var(--tx3);margin-bottom:6px">These names were typed in the form but don&rsquo;t match anyone in the officer list. Add them, or fix the name in the list.</div>'
+      +unk.map(function(n){var u=c.unknown[n];return '<div class="in-unk"><div style="flex:1"><b>'+htmlEsc(n)+'</b> <small style="color:var(--tx3)">'+htmlEsc(u.desig||'')+' · '+u.rows.length+' entr'+(u.rows.length>1?'ies':'y')+'</small></div><button class="btn btn-ghost btn-sm" data-n="'+htmlEsc(n)+'" data-g="'+htmlEsc(u.desig||'')+'" onclick="inRosterOpen(this.dataset.n,this.dataset.g)"><span class="material-icons-round mi">person_add</span> Add</button></div>';}).join('')+'</div></div>';
+  }
+  box.innerHTML=h;
+}
+// officer phone number from TMS users (names are matched loosely)
+function inCompact(n){return String(n||'').toUpperCase().replace(/[^A-Z]/g,'');}
+function inEdit1(a,b){if(a===b)return true;if(Math.abs(a.length-b.length)>1)return false;var i=0,j=0,d=0;while(i<a.length&&j<b.length){if(a[i]===b[j]){i++;j++;continue;}if(++d>1)return false;if(a.length>b.length)i++;else if(b.length>a.length)j++;else{i++;j++;}}return d+(a.length-i)+(b.length-j)<=1;}
+function inFindUser(name){
+  var c=inCompact(name),offs=(S.lookup&&S.lookup.officers)||[],hit=offs.filter(function(o){return inCompact(o.name)===c;});
+  if(!hit.length)hit=offs.filter(function(o){var oc=inCompact(o.name);return oc.length>=5&&(oc.indexOf(c)>=0||c.indexOf(oc)>=0||inEdit1(oc,c));});
+  return hit.length===1?hit[0]:null;
+}
+function inRemind(name){
+  var u=inFindUser(name),d=INS.data,day=d&&d.from===d.to?inFmt(d.from):'today';
+  var txt='*Salem Corporation – Morning inspection*\nDear '+name+',\nYour field inspection report for '+day+' has not been received yet. Please submit it in the Google Form with photos.\n\nThank you.';
+  waOpen(u?u.userID:'',name,txt);
+}
+function inSkip(name,on){if(on)INS.skip[name]=1;else delete INS.skip[name];inRender();toast(on?name+' left out of this report.':name+' counted again.','ok');}
+function inSummaryText(){
+  var c=INS.c,d=INS.data;if(!c)return '';
+  var when=d.from===d.to?inFmt(d.from):inFmt(d.from)+' – '+inFmt(d.to);
+  var z=Object.keys(c.byZone).sort(function(a,b){return c.byZone[b].n-c.byZone[a].n;}).map(function(k){return '• '+k+': '+c.byZone[k].n;});
+  return '*Salem Corporation – Morning inspection report*\n'+when+'\n\nTotal entries: *'+c.rows.length+'*\nOfficers submitted: *'+c.submitted+' / '+c.act.length+'* ('+c.coverage+'%)\n\n*Zone-wise*\n'+z.join('\n')
+    +(c.notSub.length?'\n\n*Not submitted ('+c.notSub.length+')*\n'+c.notSub.map(function(o){return o.name;}).join(', '):'\n\nAll officers submitted ✅');
+}
+function inWhatsAppSummary(){if(!INS.c){toast('Load a day first.','info');return;}waOpen('','Commissioner',inSummaryText());}
+function inCopyTSV(){
+  var c=INS.c;if(!c||!c.rows.length){toast('No entries to copy.','info');return;}
+  var lines=['Timestamp\tNAME OF THE OFFICER\tDESIGNATION\tZONE NAME\tWARD NO\tINSPECTION & SITE VISIT\tPHOTO / FILE UPLOAD\tREMARKS'];
+  c.rows.forEach(function(r){var p=r.d.split('-');lines.push([(+p[1])+'/'+(+p[2])+'/'+p[0]+' '+r.t+':00',r.n,r.g,r.z,r.w,r.i,(r.p||[]).map(function(x){return 'https://drive.google.com/open?id='+x;}).join(', '),String(r.r||'').replace(/[\t\n]/g,' ')].join('\t'));});
+  var txt=lines.join('\n');
+  function ok(){toast('Copied '+c.rows.length+' rows — paste them into the old generator’s Paste Data box.','ok');}
+  if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(txt).then(ok,function(){inCopyFallback(txt);ok();});else{inCopyFallback(txt);ok();}
+}
+function inCopyFallback(t){var ta=document.createElement('textarea');ta.value=t;ta.style.position='fixed';ta.style.opacity='0';document.body.appendChild(ta);ta.select();try{document.execCommand('copy');}catch(e){}document.body.removeChild(ta);}
+function inPrint(){
+  var c=INS.c,d=INS.data;if(!c){toast('Load a day first.','info');return;}
+  var isRange=d.from!==d.to,esc=htmlEsc,when=isRange?inFmt(d.from)+' to '+inFmt(d.to):new Date(d.from+'T00:00:00').toLocaleDateString('en-IN',{weekday:'long',day:'2-digit',month:'long',year:'numeric'});
+  var logo='';try{logo=localStorage.getItem('sc-logo')||'';}catch(e){}
+  var css='@page{size:A4;margin:12mm}body{font-family:Arial,sans-serif;font-size:10.5px;color:#111;margin:0}.hd{background:#0b1f45;color:#fff;padding:10px 14px;display:flex;align-items:center;gap:12px}.hd img{width:44px;height:44px;border-radius:50%;background:#fff;object-fit:contain}.hd h1{font-size:15px;margin:0}.hd .s{font-size:10px;opacity:.8}.hd .r{margin-left:auto;text-align:right;font-size:10px}h2{font-size:11.5px;color:#fff;background:#1A4A8B;padding:5px 8px;margin:14px 0 6px}.k{display:flex;gap:8px}.k div{flex:1;border:1px solid #ccc;border-radius:6px;text-align:center;padding:8px}.k b{display:block;font-size:20px}.k small{font-size:8.5px;font-weight:bold;text-transform:uppercase}table{width:100%;border-collapse:collapse}th,td{border:1px solid #bbb;padding:4px 5px;vertical-align:top;text-align:left}th{background:#e8eef7;font-size:9px;text-transform:uppercase}.n{text-align:center;white-space:nowrap}.dept td{background:#f3f4f6;font-weight:bold;font-size:9.5px;letter-spacing:.04em}.ns{color:#C0392B;font-weight:bold}.ft{margin-top:14px;font-size:9px;color:#666;display:flex;justify-content:space-between}tr{page-break-inside:avoid}';
+  var h='<div class="hd">'+(logo?'<img src="'+logo+'">':'')+'<div><h1>Salem City Municipal Corporation</h1><div class="s">'+(isRange?'FIELD INSPECTION REPORT — DATE RANGE':'DAILY FIELD INSPECTION REPORT ABSTRACT')+'</div></div><div class="r">'+esc(when)+'<br>Prepared by: '+esc(S.user?S.user.name:'')+'</div></div>';
+  h+='<h2>1. '+(isRange?'SUMMARY':'DAILY SUMMARY')+'</h2><div class="k"><div style="color:#1A4A8B"><b>'+c.rows.length+'</b><small>Total entries</small></div><div style="color:#1A6B3A"><b>'+c.submitted+'</b><small>Officers submitted</small></div><div style="color:#C0392B"><b>'+c.notSub.length+'</b><small>Not submitted</small></div><div style="color:#7D3C1A"><b>'+c.coverage+'%</b><small>Coverage</small></div>'+(isRange?'<div><b>'+c.days.length+'</b><small>Working days</small></div>':'')+'</div>';
+  var zones=Object.keys(c.byZone).sort(function(a,b){return c.byZone[b].n-c.byZone[a].n;});
+  h+='<h2>2. ZONE-WISE SUMMARY</h2><table><tr><th class="n">#</th><th>Zone</th><th class="n">Entries</th><th class="n">Officers</th></tr>'+zones.map(function(z,i){return '<tr><td class="n">'+(i+1)+'</td><td>'+esc(z)+'</td><td class="n">'+c.byZone[z].n+'</td><td class="n">'+Object.keys(c.byZone[z].off).length+'</td></tr>';}).join('')+'</table>';
+  h+='<h2>3. OFFICER-WISE INSPECTION DETAIL</h2><table><tr><th class="n">#</th><th>Officer</th><th>Designation</th>'+(isRange?'<th class="n">Days</th><th class="n">Entries</th><th>Inspections carried out</th>':'<th>Inspections carried out</th>')+'</tr>';
+  var depts=[],k=0;c.act.forEach(function(o){if(depts.indexOf(o.dept)<0)depts.push(o.dept);});
+  depts.forEach(function(dp){
+    var offs=c.act.filter(function(o){return o.dept===dp&&c.byOff[o.name];});if(!offs.length)return;
+    h+='<tr class="dept"><td colspan="'+(isRange?6:4)+'">'+esc(dp)+'</td></tr>';
+    offs.forEach(function(o){var b=c.byOff[o.name];k++;
+      var list=b.rows.map(function(r){return (isRange?esc(new Date(r.d+'T00:00:00').toLocaleDateString('en-IN',{day:'2-digit',month:'short'}))+' ':'')+esc(r.t)+' – '+esc(r.i)+(r.z?' ('+esc(r.z)+(r.w?', W'+esc(r.w):'')+')':'')+(r.r?' — '+esc(r.r):'');}).join('<br>');
+      h+='<tr><td class="n">'+k+'</td><td><b>'+esc(o.name)+'</b></td><td>'+esc(o.desig)+'</td>'+(isRange?'<td class="n">'+Object.keys(b.days).length+'/'+c.days.length+'</td><td class="n">'+b.rows.length+'</td>':'')+'<td>'+list+'</td></tr>';});
+  });
+  h+='</table>';
+  h+='<h2>4. OFFICERS NOT SUBMITTED REPORT</h2><table><tr><th class="n">#</th><th>Officer</th><th>Designation</th><th>Department</th><th>Status</th></tr>'+(c.notSub.length?c.notSub.map(function(o,i){return '<tr><td class="n">'+(i+1)+'</td><td>'+esc(o.name)+'</td><td>'+esc(o.desig)+'</td><td>'+esc(o.dept)+'</td><td class="ns">[!] Report Not Submitted</td></tr>';}).join(''):'<tr><td colspan="5">All officers submitted.</td></tr>')+'</table>';
+  if(c.skipped.length)h+='<p style="font-size:9.5px;margin-top:6px"><b>Not counted in this report (on leave / exempted):</b> '+c.skipped.map(function(o){return esc(o.name);}).join(', ')+'</p>';
+  h+='<div class="ft"><span>Salem City Municipal Corporation · Task Monitoring System</span><span>Printed '+new Date().toLocaleString('en-IN')+'</span></div>';
+  var w=window.open('','_blank');if(!w){toast('Please allow pop-ups to print.','error');return;}
+  w.document.write('<!DOCTYPE html><html><head><meta charset="utf-8"><title>Inspection report '+esc(when)+'</title><style>'+css+'</style></head><body>'+h+'<script>setTimeout(function(){window.print()},400)<\/script></body></html>');w.document.close();
+}
+// ── officer list editor ──
+var INR=null;
+function inRosterOpen(addName,addDesig){
+  INR=(INS.roster||[]).map(function(o){return {name:o.name,desig:o.desig,dept:o.dept,active:o.active!==false};});
+  var ds={},dp={};INR.forEach(function(o){ds[o.desig]=1;dp[o.dept]=1;});
+  id('inDesigList').innerHTML=Object.keys(ds).map(function(x){return '<option value="'+htmlEsc(x)+'">';}).join('');
+  id('inAddDept').innerHTML=Object.keys(dp).map(function(x){return '<option>'+htmlEsc(x)+'</option>';}).join('');
+  id('inAddName').value=addName||'';id('inAddDesig').value=addDesig||'';
+  inRosterRender();openModal('mInRoster');
+  if(addName)setTimeout(function(){id('inAddDesig').focus();},200);
+}
+function inRosterRender(){
+  var depts=[];INR.forEach(function(o){if(depts.indexOf(o.dept)<0)depts.push(o.dept);});
+  var h='<div style="font-size:12px;color:var(--tx3)">'+INR.filter(function(o){return o.active;}).length+' of '+INR.length+' must submit</div>';
+  depts.forEach(function(dp){
+    var on=INR.filter(function(o){return o.dept===dp&&o.active;}).length,tot=INR.filter(function(o){return o.dept===dp;}).length;
+    h+='<div class="in-r-dept"><span>'+htmlEsc(dp)+' <small>('+on+'/'+tot+')</small></span><span class="in-r-dbtn"><button type="button" data-d="'+htmlEsc(dp)+'" onclick="inRosterDept(this.dataset.d,true)">Select all</button><button type="button" data-d="'+htmlEsc(dp)+'" onclick="inRosterDept(this.dataset.d,false)">Deselect all</button></span></div>';
+    INR.forEach(function(o,i){if(o.dept!==dp)return;
+      h+='<div class="in-r-i'+(o.active?'':' off')+'"><label><input type="checkbox"'+(o.active?' checked':'')+' onchange="INR['+i+'].active=this.checked;inRosterRender()"><span><b>'+htmlEsc(o.name)+'</b> <small>'+htmlEsc(o.desig)+'</small></span></label><button title="Remove" onclick="if(confirm(\'Remove '+htmlEsc(o.name).replace(/'/g,'')+' from the list?\')){INR.splice('+i+',1);inRosterRender();}"><span class="material-icons-round" style="font-size:18px">close</span></button></div>';});
+  });
+  id('inRosterList').innerHTML=h;
+}
+function inRosterDept(dp,on){INR.forEach(function(o){if(o.dept===dp)o.active=on;});inRosterRender();}
+function inRosterAdd(){
+  var n=V('inAddName').trim().toUpperCase(),g=V('inAddDesig').trim().toUpperCase(),d=V('inAddDept');
+  if(!n){toast('Type the name as the officer types it in the form.','error');return;}
+  if(INR.some(function(o){return o.name===n;})){toast(n+' is already in the list.','info');return;}
+  INR.push({name:n,desig:g,dept:d||'GENERAL',active:true});id('inAddName').value='';id('inAddDesig').value='';inRosterRender();
+  toast(n+' added — press Save list.','ok');
+}
+function inRosterReset(){if(!confirm('Replace the list with the original 53 officers?'))return;INR=null;gasCall('serverSaveInspectionRoster',S.token,[]).then(function(){closeModal('mInRoster');toast('Default list restored.','ok');inLoad();});}
+function inRosterSave(){
+  gasCall('serverSaveInspectionRoster',S.token,INR).then(function(r){
+    if(r&&r.success){closeModal('mInRoster');toast('Officer list saved ('+r.count+').','ok');INS.roster=INR.slice();inLoad();S._inspSumAt=0;}
+    else toast((r&&r.message)||'Could not save the list.','error');
+  });
+}
+// ── Dashboard card (I2) and Review counts (I4) ──
+function loadDashInspection(){
+  var card=id('dashInspCard');if(!card)return;
+  var role=S.user&&S.user.role;if(role!=='Admin'&&role!=='Commissioner'){card.style.display='none';return;}
+  function show(r){card.style.display='';var d=r.day;id('dinsp-num').textContent=d.submitted+' / '+d.rosterCount;
+    id('dinsp-txt').textContent=d.total+' entries · '+d.coverage+'% coverage · '+d.notSubmitted.length+' not submitted yet';}
+  if(S._inspSum)show(S._inspSum);
+  if(S._inspSumAt&&Date.now()-S._inspSumAt<300000)return;S._inspSumAt=Date.now();
+  gasCall('serverGetInspectionSummary',S.token).then(function(r){if(r&&r.success){S._inspSum=r;show(r);if(S.page==='review')rvRenderWorkload();}else if(r&&!S._inspSum){card.style.display='';id('dinsp-num').textContent='—';id('dinsp-txt').textContent=r.message||'Not available';}});
+}
+function inWeekCountFor(officerName){
+  var s=S._inspSum;if(!s||!s.week)return null;
+  var per=s.week.perOfficer||{},c=inCompact(officerName);
+  for(var k in per){var kc=inCompact(k);if(kc===c||(kc.length>=6&&inEdit1(kc,c)))return per[k];}
+  var inList=(s.roster||[]).some(function(o){var oc=inCompact(o.name);return o.active!==false&&(oc===c||(oc.length>=6&&inEdit1(oc,c)));});
+  return inList?0:null; // null = not someone who files morning inspections
+}
 function rvRenderWorkload(){
   var box=id('rvWorkload');if(!box)return;
   var map={};
@@ -5214,7 +5709,7 @@ function rvRenderWorkload(){
   list.forEach(function(x){
     var pct=max?Math.round(x.open/max*100):0,heavy=x.open>RV_WORKLOAD_LIMIT;
     h+='<div style="cursor:pointer" onclick="rvPickOfficer(this.dataset.n)" data-n="'+htmlEsc(x.name)+'" title="Show this officer\'s tasks in the clean-up list">'
-      +'<div class="rv-wl-head" style="display:flex;justify-content:space-between;gap:8px;font-size:12.5px"><span><b>'+htmlEsc(x.name)+'</b> <span style="color:var(--tx3);font-size:11px">'+htmlEsc(x.dept)+'</span>'+(heavy?' <span style="color:#b91c1c;font-weight:700;font-size:11px">⚠ too many</span>':'')+'</span>'
+      +'<div class="rv-wl-head" style="display:flex;justify-content:space-between;gap:8px;font-size:12.5px"><span><b>'+htmlEsc(x.name)+'</b> <span style="color:var(--tx3);font-size:11px">'+htmlEsc(x.dept)+'</span>'+(heavy?' <span style="color:#b91c1c;font-weight:700;font-size:11px">⚠ too many</span>':'')+(function(){var n=inWeekCountFor(x.name);return n===null?'':'<span class="rv-insp'+(n?'':' zero')+'" title="Morning inspections in the last 7 days">\ud83d\udd0e '+n+' inspection'+(n!==1?'s':'')+' / 7 days</span>';})()+'</span>'
       +'<span style="white-space:nowrap;color:var(--tx2)"><b>'+x.open+'</b> open'+(x.overdue?' · <span style="color:#b91c1c">'+x.overdue+' overdue</span>':'')+(x.notSeen?' · <span style="color:#b45309">'+x.notSeen+' not seen</span>':'')+(x.done?' · <span style="color:#15803d">'+x.done+' to verify</span>':'')+(x.open&&x.name!=='Unassigned'?' <button class="btn btn-sm" title="Send pending list on WhatsApp" style="background:#25D366;color:#fff;padding:1px 8px;margin-left:6px;font-size:11px" data-n="'+htmlEsc(x.name)+'" onclick="event.stopPropagation();waSendOfficer(this.dataset.n)">WhatsApp</button>':'')+'</span></div>'
       +'<div style="height:9px;background:var(--surface2);border-radius:99px;overflow:hidden;margin-top:3px"><div style="height:100%;width:'+pct+'%;background:'+(heavy?'#ef4444':'#3b82f6')+';border-radius:99px"></div></div></div>';
   });
@@ -5813,6 +6308,7 @@ function makeTaskRow(t, isAdmin, isHOD, showReassign){
     var ns=document.createElement('span');ns.textContent='\ud83d\udc41 Not seen';ns.title='The assigned officer has not opened this task yet';
     ns.style.cssText='display:block;font-size:10px;color:#b45309;font-weight:700;margin-top:2px';stWrap.appendChild(ns);
   }
+  passRowTags(t,stWrap); // v141
   g.appendChild(cell(stWrap));
 
   var dueWrap=document.createElement('span');
@@ -5849,7 +6345,9 @@ function makeTaskRow(t, isAdmin, isHOD, showReassign){
     actWrap.appendChild(abtn('delete','btn-danger',function(){delTask(t.taskID);},'Delete'));
   } else if(isHOD){
     actWrap.appendChild(abtn('update','btn-primary',function(){officerUpdate(t.taskID);},'Update'));
-    if(showReassign)actWrap.appendChild(abtn('swap_horiz','btn-ghost',function(){hodReassignTask(t.taskID);},'Reassign'));
+    if(showReassign&&passMayAct(t))actWrap.appendChild(abtn('subdirectory_arrow_right','btn-ghost',function(){passOpen(t.taskID);},'Pass down'));
+  } else if(t.team){
+    if(passMayAct(t))actWrap.appendChild(abtn('subdirectory_arrow_right','btn-ghost',function(){passOpen(t.taskID);},'Pass to someone else'));
   } else {
     actWrap.appendChild(abtn('update','btn-primary',function(){officerUpdate(t.taskID);},'Update'));
   }
@@ -5921,6 +6419,7 @@ function renderCards(tasks){
     grid.appendChild(more);
   }
 
+  if(!isAdmin){var pbh=passBannerHTML(tasks);if(pbh){var pbd=document.createElement('div');pbd.innerHTML=pbh;grid.appendChild(pbd.firstChild);}} // v141
   if(isHOD){
     var myTasks=[], deptTasks=[];
     for(var i=0;i<tasks.length;i++){
@@ -5998,6 +6497,14 @@ function renderCards(tasks){
     return;
   }
 
+  // v141: officers — returned tasks first, tasks passed to my team in their own section
+  var teamTasks=[];
+  if(!isAdmin){
+    var meID=S.user?String(S.user.userID):'';
+    teamTasks=tasks.filter(function(t){return t.team;});
+    tasks=tasks.filter(function(t){return !t.team;});
+    tasks.sort(function(a,b){var x=(a.passRet&&String(a.officerID)===meID)?0:1,y=(b.passRet&&String(b.officerID)===meID)?0:1;return x-y;});
+  }
   var shown=Math.min(S._trackerShown||TRACKER_PAGE_SIZE, tasks.length);
   var flatWrap=document.createElement('div');
   flatWrap.className='task-table-wrap';
@@ -6009,6 +6516,14 @@ function renderCards(tasks){
   }
   grid.appendChild(flatWrap);
   appendLoadMoreIfNeeded(tasks, shown);
+  if(teamTasks.length){
+    var th=document.createElement('div');th.className='pd-sec';
+    th.innerHTML='<span class="material-icons-round">groups</span> Passed to my team ('+teamTasks.length+')<small>You gave these to your staff. You can follow them here.</small>';
+    grid.appendChild(th);
+    var tw=document.createElement('div');tw.className='task-table-wrap';tw.appendChild(taskRowHeader());
+    teamTasks.forEach(function(t){try{tw.appendChild(makeTaskRow(t,false,false,false));}catch(e){}});
+    grid.appendChild(tw);
+  }
 }
 
 function buildHODRows(tasks, canReassign){
@@ -6248,7 +6763,10 @@ function viewTask(taskID){
   var tvClose=(isAdmin&&t&&t.status==='Done')?'<button class="btn" id="tvCloseBtn" style="background:#059669;color:#fff;margin-right:4px" data-tid="'+taskID+'" onclick="tvCloseTask(this.dataset.tid)"><span class="material-icons-round mi">verified</span> Mark Verified</button>':'';
   var tvRemark=isAdmin?'<button class="btn btn-ghost" style="border-color:#B45309;color:#B45309;margin-right:4px" onclick="showAddRemarkModal(\''+taskID+'\')"><span class="material-icons-round mi">rate_review</span> Add Remark</button>':'';
   var tvWa=(isAdmin&&t.officerID&&t.status!=='Verified')?'<button class="btn" style="background:#25D366;color:#fff;margin-right:4px" onclick="waSendTask(\''+taskID+'\')"><span class="material-icons-round mi">chat</span> WhatsApp</button>':'';
-  id('mTaskFt').innerHTML=isAdmin?tvWa+tvClose+tvRemark+'<button class="btn btn-ghost ft-close" onclick="closeModal(\'mTask\')">Close</button><button class="btn btn-primary" onclick="closeModal(\'mTask\');editTask(\''+taskID+'\')">Edit All Fields</button>':'<button class="btn btn-ghost ft-close" onclick="closeModal(\'mTask\')">Close</button><button class="btn btn-primary" onclick="closeModal(\'mTask\');officerUpdate(\''+taskID+'\')">Update Progress</button>';
+  id('mTaskFt').innerHTML=isAdmin?tvWa+tvClose+tvRemark+'<button class="btn btn-ghost ft-close" onclick="closeModal(\'mTask\')">Close</button><button class="btn btn-primary" onclick="closeModal(\'mTask\');editTask(\''+taskID+'\')">Edit All Fields</button>':'<button class="btn btn-ghost ft-close" onclick="closeModal(\'mTask\')">Close</button>'
+    +(passMayBack(t)?'<button class="btn pd-back" onclick="passBackOpen(\''+taskID+'\')"><span class="material-icons-round mi">undo</span> Send back</button>':'')
+    +(passMayAct(t)&&passTargets(t).length?'<button class="btn pd-pass" onclick="passOpen(\''+taskID+'\')"><span class="material-icons-round mi">subdirectory_arrow_right</span> Pass down</button>':'')
+    +(t.team?'':'<button class="btn btn-primary" onclick="closeModal(\'mTask\');officerUpdate(\''+taskID+'\')">Update Progress</button>');
   openModal('mTask');
 
   // Load full task detail on-demand (heavy fields: officerRemarks,
@@ -6364,6 +6882,7 @@ function taskDetailHTML(t){
     ['Last Updated',t.updatedAt?fDateShort(t.updatedAt)+' by '+(t.updatedBy||'?'):'\u2014']
   ];
   if(t.completedAt)rows.push(['Done At',fDateShort(t.completedAt)]);
+  if(t.passPath)rows.push(['Passed down','<span style="font-size:12.5px">'+htmlEsc(t.passPath)+'</span>'+((t.passBack||0)>0?' <span class="pd-tag pd-t-bnc">sent back '+t.passBack+'\u00d7</span>':'')]); // v141
   rows.push(['Seen by officer',t.seenAt?('\u2713 '+fDateShort(t.seenAt)):'<span style="color:#b45309;font-weight:700">Not yet</span>']); // v134
 
   // ── DETAILS TAB ──────────────────────────────────────────────
@@ -6373,6 +6892,11 @@ function taskDetailHTML(t){
       +'<div style="font-size:13px;font-weight:500">'+(rows[i][1]||'\u2014')+'</div></div>';
   }
   detailsHtml+='</div>';
+  if(t.passRet&&S.user&&String(t.officerID)===String(S.user.userID)){ // v141
+    detailsHtml='<div class="pd-retbox"><span class="material-icons-round">undo</span><div><b>Sent back to you by '+htmlEsc(t.passRet.by)+'</b><br>Reason: '+htmlEsc(t.passRet.reason)+(t.passRet.note?' \u2014 '+htmlEsc(t.passRet.note):'')+'<br><small>Pass it to the right person, or do it yourself.</small></div></div>'+detailsHtml;
+  } else if(t.passFrom&&S.user&&String(t.officerID)===String(S.user.userID)){
+    detailsHtml='<div class="pd-frombox"><span class="material-icons-round">subdirectory_arrow_right</span><div>Given to you by <b>'+htmlEsc(t.passFrom.name)+'</b>. Not yours? Tap <b>Send back</b> below.</div></div>'+detailsHtml;
+  }
   if(t._tappal){ // v138: the tappal behind this follow-up
     var tp=t._tappal;
     detailsHtml+='<div class="tpl-intask"><div class="tpl-intask-hd"><span class="material-icons-round">markunread_mailbox</span> Tappal'+(tp.inwardNo?' · Inward '+htmlEsc(tp.inwardNo):'')+' · '+htmlEsc(tappalFormatDate(tp.date))+'</div>'
@@ -6925,7 +7449,8 @@ function hodReassignFromUpdate(){
   closeModal('mPhotoUpload');
   if(taskID)hodReassignTask(taskID);
 }
-function hodReassignTask(taskID){
+function hodReassignTask(taskID){passOpen(taskID);} // v141: one simple Pass down screen for everyone
+function hodReassignTask_old(taskID){
   var t=null;
   for(var i=0;i<S.tasks.length;i++){if(S.tasks[i].taskID===taskID){t=S.tasks[i];break;}}
   if(!t)return;
@@ -7091,6 +7616,161 @@ function doHodReassign(taskID){
     cloneNext();
   });
 }
+// ─── v141 PASS DOWN / SEND BACK ────────────────────────────────
+// Same rules as the server (Code.gs passCanTo_). The server checks again.
+var PASS_RULES={SE:['EE','AEE','AE','JE','TA'],EE:['AEE','AE','JE','TA'],AEE:['AE','JE','TA'],AE:['TA'],JE:['TA'],CHO:['SO','SI'],SO:['SI'],AC:['EE','AEE','SO','AE','JE','TA','SI']};
+var PASS_REASONS=[['Wrong ward / zone','location_off'],['Belongs to another department','apartment'],['Needs higher approval or funds','request_quote'],['Other','edit_note']];
+var PASS_ORDER=['DC','SE','EE','CHO','AC','AEE','SO','AE','JE','SI','TA',''];
+function pCode(d){d=String(d||'').toUpperCase();
+  if(/DEPUTY COMMISSIONER/.test(d))return 'DC';if(/ASSISTANT COMMISSIONER/.test(d))return 'AC';if(/COMMISSIONER/.test(d))return 'COMM';
+  if(/SUPERINTENDING ENGINEER/.test(d))return 'SE';if(/ASSISTANT EXECUTIVE ENGINEER/.test(d))return 'AEE';if(/EXECUTIVE ENGINEER/.test(d))return 'EE';
+  if(/ASSISTANT ENGINEER/.test(d))return 'AE';if(/JUNIOR ENGINEER/.test(d))return 'JE';if(/TECHNICAL ASSISTANT/.test(d))return 'TA';
+  if(/CITY HEALTH OFFICER/.test(d))return 'CHO';if(/SANITARY OFFICER/.test(d))return 'SO';if(/SANITARY INSPECTOR/.test(d))return 'SI';return '';}
+function pZone(z){var m=/ZONE\s*-?\s*(\d)/i.exec(String(z||''));return m?m[1]:'';}
+function pDepts(s){return String(s||'').toUpperCase().split(',').map(function(x){return x.trim();}).filter(function(x){return x;});}
+function pMe(){var u=S.user||{};return {userID:String(u.userID||''),role:u.role,designation:u.designation||'',department:u.department||'',zone:u.zone||'',hodDepartments:u.hodDepartments||''};}
+function pIsTop(me){var c=pCode(me.designation);return me.role==='Admin'||me.role==='Commissioner'||c==='DC'||c==='COMM';}
+function pCanTo(me,tg){
+  if(!tg||!tg.userID||String(tg.userID)===String(me.userID))return false;
+  if(tg.role==='Admin'||tg.role==='Commissioner')return false;
+  var tc=pCode(tg.designation);
+  if(pIsTop(me))return true;
+  if(tc==='COMM'||tc==='DC')return false;
+  var mc=pCode(me.designation),mz=pZone(me.zone),tz=pZone(tg.zone),zoneOk=!mz||!tz||mz===tz;
+  var md=pDepts(me.hodDepartments||me.department),td=pDepts(tg.department);
+  var deptOk=td.some(function(d){return md.indexOf(d)>=0;});
+  if((PASS_RULES[mc]||[]).indexOf(tc)>=0)return mc==='AC'?zoneOk:(zoneOk&&deptOk);
+  if(me.role==='HOD')return deptOk&&tg.role!=='HOD';
+  return false;
+}
+function passTargets(t){
+  var me=pMe(),list=(S.lookup&&S.lookup.officers)||[];
+  return list.filter(function(o){return String(o.userID)!==String(t.officerID)&&pCanTo(me,{userID:String(o.userID),role:o.role,designation:o.designation,department:o.department,zone:o.zone});});
+}
+function passMayAct(t){
+  if(!t||!S.user)return false;
+  var r=S.user.role;if(r==='Admin'||r==='Commissioner'||r==='Supervision')return false; // they use Edit
+  if(t.status==='Done'||t.status==='Verified')return false;
+  var me=pMe();
+  if(String(t.officerID)===me.userID||t.team||pIsTop(me))return true;
+  if(r==='HOD')return pDepts(me.hodDepartments||me.department).indexOf(String(t.department||'').toUpperCase().trim())>=0;
+  return false;
+}
+function passMayBack(t){
+  return !!(t&&S.user&&String(t.officerID)===String(S.user.userID)&&t.passFrom&&(t.status==='Pending'||!t.status)&&!(t.photoCount>0));
+}
+function passFind(taskID){for(var i=0;i<S.tasks.length;i++)if(S.tasks[i].taskID===taskID)return S.tasks[i];return null;}
+function passTaskBox(t){
+  return '<div class="pd-task"><div class="pd-task-id">'+htmlEsc(t.taskID)+'</div><div class="pd-task-desc">'+htmlEsc(String(t.description||'').slice(0,140))+'</div>'
+    +'<div class="pd-task-meta">Now with: <b>'+htmlEsc(t.officerName||'')+'</b>'+(t.dueDate?' &middot; Due '+htmlEsc(fDateShort(t.dueDate)):'')+'</div></div>';
+}
+var PD={taskID:'',sel:'',busy:false};
+function passOpen(taskID){
+  var t=passFind(taskID);if(!t)return;
+  var tg=passTargets(t);
+  if(!tg.length){toast('There is nobody below you to pass this task to.','info');return;}
+  PD={taskID:taskID,sel:'',busy:false};
+  tg.sort(function(a,b){var x=PASS_ORDER.indexOf(pCode(a.designation)),y=PASS_ORDER.indexOf(pCode(b.designation));if(x<0)x=99;if(y<0)y=99;return x-y||String(a.name).localeCompare(String(b.name));});
+  var today=new Date(Date.now()+5.5*3600e3).toISOString().slice(0,10);
+  var h=passTaskBox(t)
+    +'<div class="pd-step">1. Give this work to</div>'
+    +(tg.length>8?'<input class="f-ctrl pd-search" id="pdSearch" placeholder="Type a name to find…" oninput="passFilter(this.value)">':'')
+    +'<div class="pd-list" id="pdList">';
+  var lastD=null;
+  tg.forEach(function(o){
+    var d=String(o.designation||'Other');
+    if(d!==lastD){h+='<div class="pd-grp">'+htmlEsc(d)+'</div>';lastD=d;}
+    h+='<label class="pd-opt" data-n="'+htmlEsc(String(o.name).toLowerCase())+'"><input type="radio" name="pdTo" value="'+htmlEsc(o.userID)+'" onchange="PD.sel=this.value;passMark()">'
+      +'<span class="pd-nm">'+htmlEsc(o.name)+'</span><span class="pd-sub">'+htmlEsc([o.zone,o.department].filter(Boolean).join(' · '))+'</span></label>';
+  });
+  h+='</div>'
+    +'<div class="pd-step">2. Finish by</div>'
+    +'<input type="date" class="f-ctrl pd-date" id="pdDue" value="'+htmlEsc(t.dueDate||'')+'" min="'+today+'"'+(t.dueDate?' max="'+htmlEsc(t.dueDate)+'"':'')+'>'
+    +'<div class="pd-hint">You can give an earlier date so you have time to check. It cannot be later than '+(t.dueDate?htmlEsc(fDateShort(t.dueDate)):'the due date')+'.</div>'
+    +'<div class="pd-step">3. Instruction <span style="font-weight:400;color:var(--tx3)">(optional)</span></div>'
+    +'<textarea class="f-ctrl" id="pdNote" rows="2" placeholder="e.g. Clean and send photos by evening"></textarea>'
+    +'<div class="pd-btns"><button class="btn btn-ghost" onclick="closeModal(\'mGeneric\')">Cancel</button>'
+    +'<button class="btn btn-primary pd-go" id="pdGo" onclick="passSubmit()"><span class="material-icons-round mi">subdirectory_arrow_right</span> Pass down</button></div>';
+  id('mGenericTitle').textContent='Pass down to my staff';id('mGenericBody').innerHTML=h;
+  closeModal('mTask');closeModal('mPhotoUpload');openModal('mGeneric');
+}
+function passFilter(q){q=String(q||'').toLowerCase().trim();document.querySelectorAll('#pdList .pd-opt').forEach(function(el){el.style.display=(!q||el.getAttribute('data-n').indexOf(q)>=0)?'':'none';});}
+function passMark(){document.querySelectorAll('#pdList .pd-opt').forEach(function(el){var i=el.querySelector('input');el.classList.toggle('on',!!(i&&i.checked));});}
+function passSubmit(){
+  if(PD.busy)return;
+  if(!PD.sel){toast('Please tap the officer’s name first.','error');return;}
+  var t=passFind(PD.taskID);if(!t)return;
+  var due=(id('pdDue')||{}).value||'';
+  if(t.dueDate&&due&&due>t.dueDate){toast('The date cannot be later than '+fDateShort(t.dueDate)+'.','error');return;}
+  PD.busy=true;var b=id('pdGo');if(b){b.disabled=true;b.innerHTML='<span class="material-icons-round mi" style="animation:spin 1s linear infinite">sync</span> Passing…';}
+  gasCall('serverPassDownTask',S.token,{taskID:PD.taskID,toUserID:PD.sel,due:due,note:((id('pdNote')||{}).value||'').trim()}).then(function(r){
+    PD.busy=false;
+    if(!r||!r.success){if(b){b.disabled=false;b.innerHTML='<span class="material-icons-round mi">subdirectory_arrow_right</span> Pass down';}toast((r&&r.message)||'Could not pass the task. Please try again.','error');return;}
+    closeModal('mGeneric');toast('✓ Task passed to '+r.to+'. You can still follow it.','ok');
+    S._fullList=null;loadTasks();
+  }).catch(function(){PD.busy=false;if(b){b.disabled=false;b.innerHTML='<span class="material-icons-round mi">subdirectory_arrow_right</span> Pass down';}toast('No internet. Please try again.','error');});
+}
+var PB={taskID:'',reason:'',busy:false};
+function passBackOpen(taskID){
+  var t=passFind(taskID);if(!t||!t.passFrom)return;
+  PB={taskID:taskID,reason:'',busy:false};
+  var h=passTaskBox(t)
+    +'<div class="pd-info"><span class="material-icons-round">undo</span><div>This task will go back to <b>'+htmlEsc(t.passFrom.name)+'</b>, who gave it to you. They will pass it to the right person.</div></div>'
+    +'<div class="pd-step">Why is this not yours?</div><div class="pd-list">';
+  PASS_REASONS.forEach(function(r){
+    h+='<label class="pd-opt pd-why"><input type="radio" name="pbWhy" value="'+htmlEsc(r[0])+'" onchange="PB.reason=this.value;passMarkWhy()"><span class="material-icons-round pd-ic">'+r[1]+'</span><span class="pd-nm">'+htmlEsc(r[0])+'</span></label>';
+  });
+  h+='</div><div class="pd-step">Details <span id="pbReq" style="font-weight:400;color:var(--tx3)">(optional)</span></div>'
+    +'<textarea class="f-ctrl" id="pbNote" rows="2" placeholder="e.g. This is Ward 14, not my ward"></textarea>'
+    +'<div class="pd-btns"><button class="btn btn-ghost" onclick="closeModal(\'mGeneric\')">Cancel</button>'
+    +'<button class="btn pd-back" id="pbGo" onclick="passBackSubmit()"><span class="material-icons-round mi">undo</span> Send back</button></div>';
+  id('mGenericTitle').textContent='Not my task — send back';id('mGenericBody').innerHTML=h;
+  closeModal('mTask');closeModal('mPhotoUpload');openModal('mGeneric');
+}
+function passMarkWhy(){document.querySelectorAll('.pd-why').forEach(function(el){var i=el.querySelector('input');el.classList.toggle('on',!!(i&&i.checked));});var q=id('pbReq');if(q)q.textContent=PB.reason==='Other'?'(please write)':'(optional)';}
+function passBackSubmit(){
+  if(PB.busy)return;
+  if(!PB.reason){toast('Please choose a reason.','error');return;}
+  var note=((id('pbNote')||{}).value||'').trim();
+  if(PB.reason==='Other'&&!note){toast('Please write the reason.','error');return;}
+  PB.busy=true;var b=id('pbGo');if(b){b.disabled=true;b.innerHTML='<span class="material-icons-round mi" style="animation:spin 1s linear infinite">sync</span> Sending…';}
+  gasCall('serverSendBackTask',S.token,{taskID:PB.taskID,reason:PB.reason,note:note}).then(function(r){
+    PB.busy=false;
+    if(!r||!r.success){if(b){b.disabled=false;b.innerHTML='<span class="material-icons-round mi">undo</span> Send back';}toast((r&&r.message)||'Could not send back. Please try again.','error');return;}
+    closeModal('mGeneric');toast('✓ Sent back to '+r.to+'.','ok');
+    S._fullList=null;loadTasks();
+  }).catch(function(){PB.busy=false;if(b){b.disabled=false;b.innerHTML='<span class="material-icons-round mi">undo</span> Send back';}toast('No internet. Please try again.','error');});
+}
+// small labels on the task row
+function passRowTags(t,wrap){
+  var me=S.user?String(S.user.userID):'';
+  function tag(txt,cls,title){var s=document.createElement('span');s.className='pd-tag '+cls;s.textContent=txt;if(title)s.title=title;wrap.appendChild(s);}
+  if(t.passRet&&String(t.officerID)===me)tag('↩ Returned','pd-t-ret',t.passRet.by+': '+t.passRet.reason+(t.passRet.note?' — '+t.passRet.note:''));
+  else if(t.team)tag('👥 My team','pd-t-team','You passed this to '+(t.officerName||''));
+  if((t.passBack||0)>2)tag('⚠ Bounced '+t.passBack+'×','pd-t-bnc','Sent back '+t.passBack+' times — please give it to the right officer directly');
+}
+function passBannerHTML(tasks){
+  var me=S.user?String(S.user.userID):'';
+  var n=tasks.filter(function(t){return t.passRet&&String(t.officerID)===me&&t.status!=='Done'&&t.status!=='Verified';}).length;
+  if(!n)return '';
+  return '<div class="pd-banner"><span class="material-icons-round">undo</span><div><b>'+n+' task'+(n>1?'s were':' was')+' sent back to you.</b> Open '+(n>1?'each one':'it')+' and pass it to the right person, or do it yourself.</div></div>';
+}
+// v141: tasks sent back more than twice — for the Commissioner (Review page)
+function rvRenderBounced(){
+  var el=id('rvBounced');if(!el)return;
+  var list=(RV.tasks||[]).filter(function(t){return (t.passBack||0)>2&&t.status!=='Done'&&t.status!=='Verified';});
+  if(!list.length){el.style.display='none';return;}
+  el.style.display='';
+  el.innerHTML='<div class="card-hd"><span class="card-title">⚠ Bounced tasks ('+list.length+')</span><span style="font-size:11.5px;color:var(--tx3)">Sent back more than twice — give each one to the right officer directly</span></div>'
+    +'<div class="card-bd">'+list.map(function(t){return '<div class="pd-bnc-row" onclick="rvOpenTask(\''+htmlEsc(t.taskID)+'\')"><b class="mono" style="color:var(--c-blue)">'+htmlEsc(t.taskID)+'</b> '+htmlEsc(String(t.description||'').slice(0,90))
+      +'<div style="font-size:12px;color:var(--tx3)">'+htmlEsc(t.passPath||'')+' &middot; sent back '+t.passBack+'× &middot; now with <b>'+htmlEsc(t.officerName||'')+'</b></div></div>';}).join('')+'</div>';
+}
+function rvOpenTask(taskID){
+  var t=(RV.tasks||[]).filter(function(x){return x.taskID===taskID;})[0];
+  if(t&&!passFind(taskID))S.tasks.push(t);
+  viewTask(taskID);
+}
+
 function officerUpdate(taskID){
   var t=null;for(var i=0;i<S.tasks.length;i++)if(S.tasks[i].taskID===taskID){t=S.tasks[i];break;}if(!t)return;
   var isHOD=(S.user&&S.user.role==='HOD');
@@ -7135,7 +7815,8 @@ function officerUpdateOpen(t,taskID,isHOD){
   loadPuExistingDocs(taskID);
   // Show Reassign button for HOD's own tasks
   var rBtn=id('pu-reassignBtn');
-  if(rBtn)rBtn.style.display=isHOD?'':'none';
+  if(rBtn)rBtn.style.display=(passMayAct(t)&&passTargets(t).length)?'':'none'; // v141
+  var bBtn=id('pu-backBtn');if(bBtn)bBtn.style.display=passMayBack(t)?'':'none';
   closeModal('mTask');openModal('mPhotoUpload');
 }
 
@@ -8115,6 +8796,103 @@ function saveAllAI(){
   saveNext(0);
 }
 function clearAI(){S.aiTasks=[];var r=id('aiResults');if(r)r.classList.add('dn');var ai=id('aiInput');if(ai)ai.value='';}
+
+// ════ v139 EXPORT: choose columns + filter rows ════
+var EXP_COLS=[
+  {k:'sno',l:'#',std:1,v:function(t,i){return i+1;}},
+  {k:'taskID',l:'Task ID',std:1},
+  {k:'dateAssigned',l:'Date assigned',std:1},
+  {k:'taskType',l:'Type'},
+  {k:'description',l:'Description',std:1},
+  {k:'zone',l:'Zone',std:1},
+  {k:'department',l:'Department',std:1},
+  {k:'designation',l:'Designation'},
+  {k:'officerName',l:'Officer',std:1},
+  {k:'priority',l:'Urgent?',std:1,v:function(t){return String(t.priority)==='High'?'Urgent':'Normal';}},
+  {k:'dueDate',l:'Due date',std:1,v:function(t){return t.dueDate||'Not set';}},
+  {k:'status',l:'Status',std:1},
+  {k:'daysOverdue',l:'Days overdue',v:function(t){return t.isOverdue&&t.dueDate?Math.max(0,Math.floor((new Date()-new Date(t.dueDate))/86400000)):'';}},
+  {k:'seen',l:'Seen by officer',v:function(t){return t.seenAt?String(t.seenAt).slice(0,10):'Not yet';}},
+  {k:'officerRemarks',l:'Officer remarks'},
+  {k:'completedAt',l:'Done on',v:function(t){return t.completedAt?String(t.completedAt).slice(0,10):'';}},
+  {k:'photos',l:'Photos',v:function(t){return t.photoCount||0;}},
+  {k:'docs',l:'Documents',v:function(t){return t.docCount||0;}},
+  {k:'source',l:'Source'},
+  {k:'createdBy',l:'Created by'},
+  {k:'createdAt',l:'Created on',v:function(t){return t.createdAt?String(t.createdAt).slice(0,10):'';}},
+  {k:'updatedAt',l:'Last updated',v:function(t){return t.updatedAt?String(t.updatedAt).slice(0,10):'';}}
+];
+function expColVal(c,t,i){var v=c.v?c.v(t,i):t[c.k];return (v===undefined||v===null)?'':v;}
+function expSavedCols(){try{var a=JSON.parse(LS.get('tms_export_cols')||'null');if(a&&a.length)return a;}catch(e){}return EXP_COLS.filter(function(c){return c.std;}).map(function(c){return c.k;});}
+function expRenderCols(){
+  var box=id('expCols');if(!box)return;var on=expSavedCols();
+  box.innerHTML=EXP_COLS.map(function(c){return '<label><input type="checkbox" value="'+c.k+'"'+(on.indexOf(c.k)>=0?' checked':'')+' onchange="expColsChanged()"> '+htmlEsc(c.l)+'</label>';}).join('');
+  expColsChanged(true);
+}
+function expSelectedCols(){var ks=[].slice.call(document.querySelectorAll('#expCols input:checked')).map(function(i){return i.value;});return EXP_COLS.filter(function(c){return ks.indexOf(c.k)>=0;});}
+function expColsChanged(noSave){
+  var sel=expSelectedCols();if(!noSave)LS.set('tms_export_cols',JSON.stringify(sel.map(function(c){return c.k;})));
+  var b=id('expColsBadge');if(b)b.textContent=sel.length+' of '+EXP_COLS.length;
+}
+function expPreset(p){
+  document.querySelectorAll('#expCols input').forEach(function(i){var c=EXP_COLS.filter(function(x){return x.k===i.value;})[0];i.checked=p==='all'?true:p==='none'?false:!!(c&&c.std);});
+  expColsChanged();
+}
+function expRange(r){
+  var f=id('expFrom'),t=id('expTo'),d=new Date(),iso=function(x){return x.toISOString().slice(0,10);};
+  if(!r){f.value='';t.value='';}
+  else if(r==='today'){f.value=t.value=iso(d);}
+  else if(r==='week'){t.value=iso(d);f.value=iso(new Date(d.getTime()-6*86400000));}
+  else if(r==='month'){t.value=iso(d);f.value=iso(d).slice(0,8)+'01';}
+  expChanged();
+}
+function expFillDepts(){
+  var s=id('expDept');if(!s||s.options.length>1)return;
+  ((S.lookup&&S.lookup.departments)||[]).forEach(function(x){var n=x.DeptName||x.deptName||x;var o=document.createElement('option');o.value=n;o.textContent=n;s.appendChild(o);});
+}
+function expFillOfficers(){
+  var s=id('expOfficer');if(!s)return;var d=V('expDept'),cur=s.value;
+  var names={};((S.lookup&&S.lookup.officers)||[]).forEach(function(o){if(!d||o.department===d)names[o.name]=1;});
+  s.innerHTML='<option value="">All officers</option>'+Object.keys(names).sort().map(function(n){return '<option value="'+htmlEsc(n)+'">'+htmlEsc(n)+'</option>';}).join('');
+  if(names[cur])s.value=cur;
+}
+function expRowFilter(){
+  var st=[].slice.call(document.querySelectorAll('#expStatus input[value]:checked')).map(function(i){return i.value;});
+  return {from:V('expFrom'),to:V('expTo'),status:st,overdue:!!(id('expOverdue')&&id('expOverdue').checked),urgent:!!(id('expUrgent')&&id('expUrgent').checked),dept:V('expDept'),officer:V('expOfficer')};
+}
+function expApplyRows(tasks){
+  var f=expRowFilter();
+  return tasks.filter(function(t){
+    var d=String(t.dateAssigned||t.createdAt||'').slice(0,10);
+    if(f.from&&d<f.from)return false;if(f.to&&d>f.to)return false;
+    if(f.status.length<4&&f.status.indexOf(t.status)<0)return false;
+    if(f.overdue&&!t.isOverdue)return false;
+    if(f.urgent&&String(t.priority)!=='High')return false;
+    if(f.dept&&t.department!==f.dept)return false;
+    if(f.officer&&t.officerName!==f.officer)return false;
+    return true;
+  });
+}
+function expRowsBadge(){
+  var f=expRowFilter(),n=0;if(f.from||f.to)n++;if(f.status.length<4)n++;if(f.overdue)n++;if(f.urgent)n++;if(f.dept)n++;if(f.officer)n++;
+  var b=id('expRowsBadge');if(b)b.textContent=n?n+' filter'+(n>1?'s':'')+' on':'';
+}
+var _expAll=null;
+function expChanged(){expRowsBadge();updateExportSummary();}
+function expBaseTasks(cb){
+  // the complete list, with full descriptions and remarks (cached for this modal session)
+  if(_expAll){cb(_expAll);return;}
+  gasCall('serverGetTasks',S.token,{days:0,includeCompleted:true,includeClosed:true,fullDescription:true}).then(function(r){
+    if(r&&r.success){_expAll=normalizeTaskList(r.data||[]);cb(_expAll);}else cb(null,(r&&r.message)||'Could not load tasks.');
+  });
+}
+function expScopeTasks(all){
+  var allMode=id('mExportAllTasks')?id('mExportAllTasks').checked:true;
+  if(S.exportCtx==='commissioner')return all;
+  if(allMode)return all;
+  var ids={};(S.filtered.length?S.filtered:S.tasks).forEach(function(t){ids[t.taskID]=1;});
+  return all.filter(function(t){return ids[t.taskID];});
+}
 function showExportChoice(ctx){
   S.exportCtx=ctx||'tracker';
   var cb=id('mExportAllTasks');if(cb)cb.checked=true; // default to complete data every time the modal opens
@@ -8122,6 +8900,8 @@ function showExportChoice(ctx){
   if(scopeRow)scopeRow.style.display=(S.exportCtx==='commissioner')?'none':'grid';
   setExportScope(true); // reset the two scope buttons to "Complete" every time the modal opens
   var title=id('mExportTitle');if(title)title.textContent=(S.exportCtx==='commissioner')?'Export Commissioner Report':'Export Task Data';
+  _expAll=null; // fresh data each time the window opens
+  expFillDepts();expFillOfficers();expRenderCols();expRowsBadge();
   updateExportSummary();
   openModal('mExport');
 }
@@ -8142,72 +8922,44 @@ function setExportScope(allMode){
 // from the tracker by default) were silently missing from the export.
 function updateExportSummary(){
   var allMode=id('mExportAllTasks')?id('mExportAllTasks').checked:true;
-  var desc=id('mExportDesc');
-  var sumEl=id('mExportFilterSummary');
-  if(S.exportCtx==='commissioner'){
-    if(desc)desc.textContent='Structured review-ready official report.';
-    var tasks=S.tasks;
+  var desc=id('mExportDesc'),sumEl=id('mExportFilterSummary');
+  if(desc)desc.textContent=S.exportCtx==='commissioner'?'Structured review-ready official report.':(allMode?'Every task, all time, all statuses — then your filters below.':'Only the tasks shown on screen — then your filters below.');
+  if(sumEl)sumEl.innerHTML='<span style="color:var(--tx3)">Counting…</span>';
+  expBaseTasks(function(all,err){
+    if(!sumEl)return;
+    if(!all){sumEl.textContent=err;return;}
+    var tasks=expApplyRows(expScopeTasks(all));
     var done=0,over=0;for(var i=0;i<tasks.length;i++){if(tasks[i].status==='Done'||tasks[i].status==='Verified')done++;if(tasks[i].isOverdue)over++;}
-    if(sumEl)sumEl.innerHTML='<strong>'+tasks.length+'</strong> tasks \u00b7 <span style="color:var(--c-green)">'+done+' completed</span> \u00b7 <span style="color:var(--c-red)">'+over+' overdue</span>';
-    return;
-  }
-  if(allMode){
-    if(desc)desc.textContent='Every task, all time, all statuses \u2014 including Completed and Closed.';
-    if(sumEl)sumEl.innerHTML='<span style="color:var(--tx3)">Fetching the complete count\u2026</span>';
-    gasCall('serverGetTasks',S.token,{days:0,includeCompleted:true,includeClosed:true}).then(function(r){
-      if(!id('mExportAllTasks')||!id('mExportAllTasks').checked)return; // toggled off or modal closed before this resolved
-      var tasks=(r&&r.success)?normalizeTaskList(r.data||[]):[];
-      var done=0,over=0;for(var i=0;i<tasks.length;i++){if(tasks[i].status==='Done'||tasks[i].status==='Verified')done++;if(tasks[i].isOverdue)over++;}
-      if(sumEl)sumEl.innerHTML='<strong>'+tasks.length+'</strong> tasks (complete) \u00b7 <span style="color:var(--c-green)">'+done+' completed</span> \u00b7 <span style="color:var(--c-red)">'+over+' overdue</span>';
-    });
-  } else {
-    if(desc)desc.textContent='Only the tasks currently shown on screen (your active filters apply).';
-    var tasksShown=(S.filtered.length?S.filtered:S.tasks);
-    var done2=0,over2=0;for(var j=0;j<tasksShown.length;j++){if(tasksShown[j].status==='Done'||tasksShown[j].status==='Verified')done2++;if(tasksShown[j].isOverdue)over2++;}
-    if(sumEl)sumEl.innerHTML='<strong>'+tasksShown.length+'</strong> tasks shown \u00b7 <span style="color:var(--c-green)">'+done2+' completed</span> \u00b7 <span style="color:var(--c-red)">'+over2+' overdue</span>';
-  }
-}
-function doExport(fmt){
-  var allMode=id('mExportAllTasks')?id('mExportAllTasks').checked:true;
-  if(S.exportCtx==='commissioner'){
-    closeModal('mExport');
-    var tasks=S.tasks;
-    if(!tasks.length){toast('No tasks to export.','info');return;}
-    if(fmt==='excel')exportExcel(tasks);else exportPDF(tasks,S.exportCtx);
-    return;
-  }
-  if(!allMode){
-    closeModal('mExport');
-    var tasksShown=(S.filtered.length?S.filtered:S.tasks);
-    if(!tasksShown.length){toast('No tasks to export.','info');return;}
-    if(fmt==='excel')exportExcel(tasksShown);else exportPDF(tasksShown,S.exportCtx);
-    return;
-  }
-  // Complete export — fetch fresh, full data regardless of whatever's
-  // currently filtered/visible. This is the fix for exports silently
-  // missing Completed/Closed tasks: previously export always used
-  // S.filtered, which never contains them unless the tracker's own
-  // "show completed" toggle happened to already be on.
-  showLoader('Preparing complete export\u2026');
-  gasCall('serverGetTasks',S.token,{days:0,includeCompleted:true,includeClosed:true}).then(function(r){
-    hideLoader();
-    closeModal('mExport');
-    if(!r||!r.success){toast((r&&r.message)||'Could not fetch complete task list for export.','error');return;}
-    var tasks=normalizeTaskList(r.data||[]);
-    if(!tasks.length){toast('No tasks to export.','info');return;}
-    if(fmt==='excel')exportExcel(tasks);else exportPDF(tasks,S.exportCtx);
+    sumEl.innerHTML='<strong>'+tasks.length+'</strong> task'+(tasks.length!==1?'s':'')+' will be exported · <span style="color:var(--c-green)">'+done+' done</span> · <span style="color:var(--c-red)">'+over+' overdue</span>';
   });
 }
-function exportExcel(tasks){
+function doExport(fmt){
+  var cols=expSelectedCols();
+  if(!cols.length){toast('Please choose at least one column.','error');var cs=id('expColsSec');if(cs)cs.open=true;return;}
+  showLoader('Preparing export…');
+  expBaseTasks(function(all,err){
+    hideLoader();
+    if(!all){toast(err,'error');return;}
+    var tasks=expApplyRows(expScopeTasks(all));
+    if(!tasks.length){toast('No tasks match these filters.','info');return;}
+    closeModal('mExport');
+    if(fmt==='excel')exportExcel(tasks,cols);else exportPDF(tasks,S.exportCtx,cols);
+  });
+}
+function exportExcel(tasks,cols){
+  cols=cols||expSelectedCols();if(!cols.length)cols=EXP_COLS.filter(function(c){return c.std;});
   var now=new Date().toLocaleDateString('en-IN'),done=0,over=0,pend=0;
   for(var i=0;i<tasks.length;i++){if(tasks[i].status==='Done'||tasks[i].status==='Verified')done++;if(tasks[i].isOverdue)over++;if(tasks[i].status==='Pending')pend++;}
-  var h=['#','Task ID','Type','Description','Zone','Department','Officer','Priority','Due Date','Status','Completed?','Created On'];
-  var rows=[['Salem City Municipal Corporation - Task Report ('+now+')'],['Total:'+tasks.length,'Completed:'+done,'Pending:'+pend,'Overdue:'+over],[],h];
-  for(var i=0;i<tasks.length;i++){var t=tasks[i];rows.push([i+1,t.taskID,t.taskType,'"'+(t.description||'').replace(/"/g,'""')+'"',t.zone,t.department,t.officerName,t.priority,t.dueDate||'Not set',t.status,(t.status==='Done'||t.status==='Verified')?'Yes':'No',t.createdAt?t.createdAt.slice(0,10):'']);}
-  dlFile(rows.map(function(r){return r.join(',');}).join('\n'),'SalemTMS_'+new Date().toISOString().slice(0,10)+'.csv','text/csv');
+  function q(v){v=String(v===undefined||v===null?'':v);return /[",\n\r]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;}
+  var lines=[q('Salem City Municipal Corporation - Task Report ('+now+')'),[q('Total: '+tasks.length),q('Done: '+done),q('Pending: '+pend),q('Overdue: '+over)].join(','),'',cols.map(function(c){return q(c.l);}).join(',')];
+  for(var j=0;j<tasks.length;j++)lines.push(cols.map(function(c){return q(expColVal(c,tasks[j],j));}).join(','));
+  // ﻿ = tells Excel the file is UTF-8, so Tamil text shows correctly
+  dlFile('﻿'+lines.join('\r\n'),'SalemTMS_'+new Date().toISOString().slice(0,10)+'.csv','text/csv;charset=utf-8');
 }
-function exportPDF(tasks,context){
+function exportPDF(tasks,context,cols){
   if(!tasks.length){toast('No tasks to export.','info');return;}
+  cols=cols||expSelectedCols();if(!cols.length)cols=EXP_COLS.filter(function(c){return c.std;});
+  var withSummary=!id('expPdfSummary')||id('expPdfSummary').checked;
   // Sort tasks by dateAssigned ascending (oldest first)
   var sorted=tasks.slice().sort(function(a,b){
     var da=a.dateAssigned||a.createdAt||'';
@@ -8223,6 +8975,7 @@ function exportPDF(tasks,context){
   var rate=total>0?Math.round(completed/total*100):0;
   var filterParts=[],fz=V('fZone'),fd=V('fDept'),fs=V('fStatus'),fp=V('fPri');
   if(fz)filterParts.push('Zone: '+fz);if(fd)filterParts.push('Dept: '+fd);if(fs)filterParts.push('Status: '+fs);if(fp)filterParts.push('Priority: '+fp);
+  try{var ef=expRowFilter();if(ef.from||ef.to)filterParts.push('Assigned: '+(ef.from||'start')+' to '+(ef.to||'today'));if(ef.status.length<4)filterParts.push('Status: '+ef.status.join(', '));if(ef.overdue)filterParts.push('Overdue only');if(ef.urgent)filterParts.push('Urgent only');if(ef.dept)filterParts.push('Dept: '+ef.dept);if(ef.officer)filterParts.push('Officer: '+ef.officer);}catch(e){}
   var filterNote=filterParts.length?filterParts.join(' | '):'All tasks (no filter applied)';
   var zoneMap={},deptMap={};
   for(var i=0;i<tasks.length;i++){
@@ -8277,37 +9030,20 @@ function exportPDF(tasks,context){
   }
   var overdueRows='',overdueTasks=[];for(var i=0;i<tasks.length;i++)if(tasks[i].isOverdue)overdueTasks.push(tasks[i]);
   for(var i=0;i<overdueTasks.length;i++){var t=overdueTasks[i],days=t.dueDate?Math.floor((new Date()-new Date(t.dueDate))/86400000):0;overdueRows+='<tr style="background:#fff1f2"><td style="padding:6px 9px;font-family:monospace;font-size:9px;color:#be123c;font-weight:700;vertical-align:top;white-space:nowrap">'+t.taskID+'</td><td style="padding:6px 9px;font-size:10px;word-break:break-word;white-space:normal;vertical-align:top">'+String(t.description||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')+'</td><td style="padding:6px 9px;vertical-align:top;white-space:nowrap">'+t.zone+'</td><td style="padding:6px 9px;vertical-align:top;white-space:nowrap">'+t.department+'</td><td style="padding:6px 9px;font-weight:700;vertical-align:top;white-space:nowrap">'+t.officerName+'</td><td style="padding:6px 9px;color:#be123c;font-weight:700;vertical-align:top;white-space:nowrap">'+(t.dueDate||'\u2014')+'</td><td style="padding:6px 9px;text-align:center;color:#be123c;font-weight:800;vertical-align:top;white-space:nowrap">'+days+' day'+(days!==1?'s':'')+'</td></tr>';}
+  // v139: complete list uses the columns the user chose
   var taskRows='';
   for(var i=0;i<tasks.length;i++){
-    var t=tasks[i],isC=(t.status==='Done'||t.status==='Verified');
-    // A row that's taller than a full printable page CANNOT honor
-    // page-break-inside:avoid — there's physically no page it could fit
-    // on without splitting, so the browser is forced to break it anyway
-    // regardless of the CSS. Long, unabbreviated descriptions wrapping
-    // across many lines were exactly what made some rows that tall.
-    // Truncating here (this table only — the full text is still in the
-    // app itself, and in the per-officer breakdown further up) keeps
-    // every row comfortably within a single page's height.
-    var descText=String(t.description||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-    if(descText.length>140)descText=descText.slice(0,140)+'\u2026';
-    var remarksText=t.officerRemarks?String(t.officerRemarks).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'):'\u2014';
-    if(remarksText.length>100)remarksText=remarksText.slice(0,100)+'\u2026';
-    // Date of Inspection column added, sorted by dateAssigned
-    taskRows+='<tr style="'+(t.isOverdue?'background:#fff1f2':'')+'">'
-      +'<td style="padding:6px 9px;color:#94a3b8;font-size:9px;vertical-align:top">'+(i+1)+'</td>'
-      +'<td style="padding:6px 9px;font-family:monospace;font-size:9px;color:#1d4ed8;font-weight:700;vertical-align:top;white-space:nowrap">'+t.taskID+'</td>'
-      +'<td style="padding:6px 9px;font-size:9px;color:#475569;white-space:nowrap;vertical-align:top">'+(t.dateAssigned||'\u2014')+'</td>'
-      +'<td style="padding:6px 9px;font-size:10px;word-break:break-word;white-space:normal;vertical-align:top">'+descText+'</td>'
-      +'<td style="padding:6px 9px;font-size:9.5px;vertical-align:top;white-space:nowrap">'+t.zone+'</td>'
-      +'<td style="padding:6px 9px;font-size:9.5px;vertical-align:top;white-space:nowrap">'+t.department+'</td>'
-      +'<td style="padding:6px 9px;font-size:9.5px;font-weight:600;vertical-align:top;white-space:nowrap">'+t.officerName+'</td>'
-      +'<td style="padding:6px 9px;font-weight:700;color:'+priColor(t.priority)+';font-size:9.5px;vertical-align:top;white-space:nowrap">'+prLabel(t.priority)+'</td>'
-      +'<td style="padding:6px 9px;font-size:9px;vertical-align:top;white-space:nowrap;'+(t.isOverdue?'color:#be123c;font-weight:700':'')+'">'+( t.dueDate||'Not set')+(t.isOverdue?' \u26a0':'')+'</td>'
-      +'<td style="padding:6px 9px;vertical-align:top;white-space:nowrap"><span style="'+sStyle(t.status)+'">'+t.status+'</span></td>'
-      +'<td style="padding:6px 9px;text-align:center;font-weight:700;color:'+(isC?'#15803d':'#b45309')+';font-size:14px;vertical-align:top">'+(isC?'\u2713':'\u2013')+'</td>'
-      +(isComm?'<td style="padding:6px 9px;font-size:9px;color:#475569;word-break:break-word;white-space:normal;vertical-align:top">'+remarksText+'</td>':'')
-      +'</tr>';
+    var t=tasks[i];
+    taskRows+='<tr style="'+(t.isOverdue?'background:#fff1f2':'')+'">'+cols.map(function(c){
+      var v=String(expColVal(c,t,i)).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+      if((c.k==='description'||c.k==='officerRemarks')&&v.length>220)v=v.slice(0,220)+'…';
+      if(c.k==='status')return '<td style="padding:6px 9px;vertical-align:top;white-space:nowrap"><span style="'+sStyle(t.status)+'">'+v+'</span></td>';
+      if(c.k==='taskID')return '<td style="padding:6px 9px;font-family:monospace;font-size:9px;color:#1d4ed8;font-weight:700;vertical-align:top;white-space:nowrap">'+v+'</td>';
+      var wrap=(c.k==='description'||c.k==='officerRemarks');
+      return '<td style="padding:6px 9px;font-size:'+(wrap?'10':'9.5')+'px;vertical-align:top;'+(wrap?'word-break:break-word;white-space:normal':'white-space:nowrap')+(c.k==='dueDate'&&t.isOverdue?';color:#be123c;font-weight:700':'')+'">'+v+'</td>';
+    }).join('')+'</tr>';
   }
+  var taskHead='<tr>'+cols.map(function(c){return '<th>'+htmlEsc(c.l)+'</th>';}).join('')+'</tr>';
   var sigHTML=isComm?'<div style="margin-top:36px;padding:16px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px"><div style="font-size:9.5px;color:#475569;margin-bottom:18px;font-style:italic;text-align:center">This report has been generated from the Salem City Municipal Corporation Task Management System for the Commissioner\'s review and appropriate action.</div><div style="display:flex;gap:40px"><div style="flex:1;text-align:center"><div style="height:36px"></div><div style="border-top:1.5px solid #0b1f45;padding-top:6px"><div style="font-size:11px;font-weight:700;color:#0b1f45">Personal Clerk to Commissioner</div><div style="font-size:9px;color:#64748b;margin-top:2px">Submitted By</div><div style="font-size:9px;color:#94a3b8;margin-top:1px">Date: '+dateStr+'</div></div></div><div style="flex:1;text-align:center"><div style="height:36px"></div><div style="border-top:1.5px solid #0b1f45;padding-top:6px"><div style="font-size:11px;font-weight:700;color:#0b1f45">Commissioner</div><div style="font-size:9px;color:#64748b;margin-top:2px">Salem City Municipal Corporation</div><div style="font-size:9px;color:#94a3b8;margin-top:1px">Date: _______________</div></div></div></div></div>':'';
   var css='@page{size:A4;margin:15mm}*{box-sizing:border-box;margin:0;padding:0}body{font-family:"Segoe UI",Arial,sans-serif;font-size:11px;color:#1e293b;background:#fff;line-height:1.5}.watermark{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%) rotate(-35deg);font-size:80px;font-weight:900;color:rgba(11,31,69,.03);white-space:nowrap;pointer-events:none;letter-spacing:10px}.hband{background:linear-gradient(135deg,#0b1f45,#1a3a6b);color:#fff;display:flex;align-items:stretch}.gbar{width:8px;background:linear-gradient(180deg,#f59e0b,#d97706);flex-shrink:0}.hmain{flex:1;padding:16px 18px;display:flex;justify-content:space-between;align-items:center}.emblem{width:52px;height:52px;background:linear-gradient(135deg,#f59e0b,#d97706);border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-size:20px;font-weight:900;flex-shrink:0}.gdiv{height:3px;background:linear-gradient(90deg,#f59e0b,#d97706,#f59e0b)}.metarow{background:#f8fafc;border-bottom:1px solid #e2e8f0;padding:7px 16px;display:flex;gap:20px;flex-wrap:wrap;font-size:9.5px;color:#475569}.sechd{display:flex;align-items:center;gap:8px;margin:16px 0 10px;padding-bottom:5px;border-bottom:2px solid #0b1f45}.secnum{width:20px;height:20px;background:#0b1f45;color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9.5px;font-weight:800;flex-shrink:0}.sechd h2{font-size:11px;font-weight:800;color:#0b1f45;text-transform:uppercase;letter-spacing:.07em}.kpirow{display:flex;gap:10px;margin-bottom:16px}.kbox{flex:1;border-radius:7px;padding:11px 10px;text-align:center;border:1px solid}.kbox .knum{font-size:22px;font-weight:900;line-height:1}.kbox .klbl{font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;margin-top:3px}.knavy{background:#eff6ff;border-color:#bfdbfe}.knavy .knum,.knavy .klbl{color:#1d4ed8}.kgreen{background:#f0fdf4;border-color:#bbf7d0}.kgreen .knum,.kgreen .klbl{color:#15803d}.kgold{background:#fffbeb;border-color:#fde68a}.kgold .knum,.kgold .klbl{color:#b45309}.kred{background:#fff1f2;border-color:#fecdd3}.kred .knum,.kred .klbl{color:#be123c}.kteal{background:#f0f9ff;border-color:#bae6fd}.kteal .knum,.kteal .klbl{color:#0369a1}.bgrid{display:flex;gap:12px}.bcol{flex:1}.twrap{border:1px solid #e2e8f0;border-radius:6px;overflow:hidden;margin-bottom:14px}table{width:100%;border-collapse:collapse}thead{display:table-header-group}thead tr{background:#0b1f45;color:#fff}thead th{padding:7px 9px;text-align:left;font-weight:700;font-size:9px;text-transform:uppercase;letter-spacing:.05em;white-space:nowrap}tbody tr:nth-child(even){background:#f8fafc}tr{page-break-inside:avoid;break-inside:avoid}.pbreak{page-break-before:always}.fband{margin-top:16px;border-top:2px solid #e2e8f0;padding-top:7px;display:flex;justify-content:space-between;align-items:center;font-size:8.5px;color:#94a3b8}@media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact}.twrap{overflow:visible}}';
   // Read saved logo for PDF header
@@ -8322,6 +9058,7 @@ function exportPDF(tasks,context){
     +'<div class="hband"><div class="gbar"></div><div class="hmain"><div style="display:flex;align-items:center;gap:14px">'+emblemHtml+'<div><div style="font-size:14px;font-weight:800;letter-spacing:.02em">Salem City Municipal Corporation</div><div style="font-size:9px;color:rgba(255,255,255,.6);margin-top:2px;text-transform:uppercase;letter-spacing:.05em">Tamil Nadu Government \u00b7 Urban Local Body</div></div></div><div style="text-align:right"><div style="background:rgba(245,158,11,.2);border:1px solid rgba(245,158,11,.4);color:#fbbf24;padding:3px 10px;border-radius:4px;font-size:8.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin-bottom:4px;display:inline-block">'+(isComm?'Commissioner Review Report':'Task Export Report')+'</div><div style="font-size:15px;font-weight:800">'+(isComm?'Task Performance Review':'Task Report')+'</div><div style="font-size:8.5px;color:rgba(255,255,255,.6);margin-top:3px;line-height:1.8">Report No: <strong>'+reportNo+'</strong><br>Date: <strong>'+dateStr+'</strong></div></div></div></div>'
     +'<div class="gdiv"></div>'
     +'<div class="metarow"><div>\ud83d\udccb Prepared by: <strong>'+preparedBy+'</strong></div><div>\ud83d\udd0d Filters: <strong>'+filterNote+'</strong></div><div>\ud83d\udcca Records: <strong>'+total+' tasks</strong></div></div>'
+    +(withSummary?(''
     +'<div class="sechd" style="margin-top:14px"><div class="secnum">1</div><h2>Executive Summary</h2></div>'
     +'<div class="kpirow"><div class="kbox knavy"><div class="knum">'+total+'</div><div class="klbl">Total Tasks</div></div><div class="kbox kgreen"><div class="knum">'+completed+'</div><div class="klbl">Completed</div></div><div class="kbox kgold"><div class="knum">'+inProg+'</div><div class="klbl">In Progress</div></div><div class="kbox kgold"><div class="knum">'+pending+'</div><div class="klbl">Pending</div></div><div class="kbox kred"><div class="knum">'+overdue+'</div><div class="klbl">Overdue</div></div><div class="kbox kteal"><div class="knum">'+notCompleted+'</div><div class="klbl">Not Completed</div></div><div class="kbox knavy"><div class="knum">'+rate+'%</div><div class="klbl">Completion Rate</div></div></div>'
     +'<div style="margin-bottom:14px;padding:10px 14px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:7px"><div style="display:flex;justify-content:space-between;margin-bottom:5px"><span style="font-size:10px;font-weight:700;color:#0b1f45">Overall Completion Rate</span><span style="font-size:11px;font-weight:800;color:'+(rate>=70?'#15803d':rate>=40?'#b45309':'#be123c')+'">'+rate+'%</span></div><div style="background:#e2e8f0;border-radius:999px;height:8px;overflow:hidden"><div style="height:100%;border-radius:999px;background:'+(rate>=70?'#22c55e':rate>=40?'#f59e0b':'#ef4444')+';width:'+rate+'%"></div></div></div>'
@@ -8332,8 +9069,9 @@ function exportPDF(tasks,context){
     +'<div class="bgrid"><div class="bcol"><div style="font-size:9.5px;font-weight:700;color:#0b1f45;margin-bottom:5px;text-transform:uppercase">Zone-wise Summary</div><div class="twrap"><table><thead><tr><th>Zone</th><th style="text-align:center">Total</th><th style="text-align:center">Completed</th><th style="text-align:center">Pending</th><th style="text-align:center">Overdue</th><th>Completion</th></tr></thead><tbody>'+zoneRows+'</tbody></table></div></div>'
     +'<div class="bcol"><div style="font-size:9.5px;font-weight:700;color:#0b1f45;margin-bottom:5px;text-transform:uppercase">Department-wise Summary</div><div class="twrap"><table><thead><tr><th>Department</th><th style="text-align:center">Total</th><th style="text-align:center">Completed</th><th style="text-align:center">Pending</th><th style="text-align:center">Overdue</th><th>Completion</th></tr></thead><tbody>'+deptRows+'</tbody></table></div></div></div>'
     +(overdueTasks.length>0?'<div class="sechd pbreak"><div class="secnum">3</div><h2>\u26a0 Overdue Tasks \u2014 Immediate Action Required</h2></div><div class="twrap" style="border-color:#fecdd3"><table><thead style="background:#be123c"><tr><th>Task ID</th><th>Description</th><th>Zone</th><th>Department</th><th>Officer</th><th>Due Date</th><th>Days Overdue</th></tr></thead><tbody>'+overdueRows+'</tbody></table></div>':'')
-    +'<div class="sechd'+(overdueTasks.length>0?' pbreak':'')+'"><div class="secnum">'+(overdueTasks.length>0?4:3)+'</div><h2>Complete Task List</h2></div>'
-    +'<div class="twrap"><table><thead><tr><th style="width:20px">#</th><th style="width:75px">Task ID</th><th style="width:72px">Insp. Date</th><th>Description</th><th>Zone</th><th>Dept</th><th>Officer</th><th>Priority</th><th>Due Date</th><th>Status</th><th style="text-align:center">Done?</th>'+(isComm?'<th>Remarks</th>':'')+'</tr></thead><tbody>'+taskRows+'</tbody></table></div>'
+    ):'')
+    +'<div class="sechd'+(withSummary&&overdueTasks.length>0?' pbreak':'')+'"><div class="secnum">'+(withSummary?(overdueTasks.length>0?4:3):1)+'</div><h2>Complete Task List</h2></div>'
+    +'<div class="twrap"><table><thead>'+taskHead+'</thead><tbody>'+taskRows+'</tbody></table></div>'
     +sigHTML
     +'<div class="fband"><div><strong>Salem City Municipal Corporation</strong> \u00b7 Task Management System<br>Report No: '+reportNo+' \u00b7 '+dateStr+' '+timeStr+'</div><div style="text-align:right">Official Government Document<br>For Internal Use Only</div></div>'
     +'<script>window.onload=function(){setTimeout(function(){window.print();},500);};<\/script></body></html>';
@@ -11357,7 +12095,46 @@ function loadSettings(){
 // ABOUT PAGE — interactive elements
 // ════════════════════════════════════════════════════════════
 var ABOUT_INITED=false;
-var APP_VERSION='v138',APP_VERSION_DATE='28 Nov 2026';
+
+// v142: login background — office photo first; the two heritage photos load
+// only after the page is ready, then fade every 6 s. Stops once signed in.
+var LG={i:0,t:null,busy:false,caps:['Corporation Main Office, Salem','Salem City Municipal Corporation &middot; Aerial view','Historic cannon &middot; Corporation campus','Heritage steam road roller &middot; Corporation campus']};
+// v142: photos SLIDE in from the side every 5 s. Swipe on the photo or tap a dot to move yourself.
+function lgSlides(){return document.querySelectorAll('#lgSlides .lg-slide');}
+function lgGo(n,back){
+  var sl=lgSlides();if(!sl.length||LG.busy)return;
+  n=(n+sl.length)%sl.length;if(n===LG.i||sl[n].getAttribute('data-src'))return; // same, or not loaded yet
+  if(back===undefined)back=n<LG.i&&!(LG.i===sl.length-1&&n===0);
+  var cur=sl[LG.i],nx=sl[n];LG.busy=true;
+  nx.classList.add('noanim');nx.classList.remove('out-l','out-r','from-l');if(back)nx.classList.add('from-l');
+  void nx.offsetWidth; // place it at the start position before animating
+  nx.classList.remove('noanim','from-l');nx.classList.add('on');
+  cur.classList.remove('on');cur.classList.add(back?'out-r':'out-l');
+  setTimeout(function(){cur.classList.add('noanim');cur.classList.remove('out-l','out-r');void cur.offsetWidth;cur.classList.remove('noanim');LG.busy=false;},950);
+  LG.i=n;
+  var c=document.getElementById('lgCapTxt');if(c)c.innerHTML=LG.caps[n]||'';
+  document.querySelectorAll('#lgDots i').forEach(function(d,k){d.classList.toggle('on',k===n);});
+  lgTimer();
+}
+function lgTimer(){
+  if(LG.t)clearInterval(LG.t);
+  LG.t=setInterval(function(){
+    var lp=document.getElementById('loginPage');if(!lp||lp.style.display==='none'||document.hidden)return; // signed in: do nothing
+    lgGo(LG.i+1,false);
+  },5000);
+}
+function lgStart(){
+  var sl=lgSlides();if(!sl.length||LG.t)return;
+  sl.forEach(function(el){var u=el.getAttribute('data-src');if(u){var im=new Image();im.onload=function(){el.style.backgroundImage="url('"+u+"')";el.removeAttribute('data-src');};im.src=u;}});
+  var box=document.getElementById('lgSlides'),x0=null;
+  if(box){
+    box.addEventListener('touchstart',function(e){x0=e.touches[0].clientX;},{passive:true});
+    box.addEventListener('touchend',function(e){if(x0===null)return;var dx=e.changedTouches[0].clientX-x0;x0=null;if(Math.abs(dx)>40)lgGo(LG.i+(dx<0?1:-1),dx>0);},{passive:true});
+  }
+  lgTimer();
+}
+window.addEventListener('load',function(){setTimeout(lgStart,1500);});
+var APP_VERSION='v142',APP_VERSION_DATE='28 Nov 2026';
 function loadAboutPage(){
   // v137: real numbers from what the app already has — no extra server call
   var role=S.user?S.user.role:'',me=S.user?S.user.userID:'';
