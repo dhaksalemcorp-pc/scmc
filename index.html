@@ -1435,6 +1435,23 @@ tbody tr:hover { background: var(--surface2); }
 
 
 /* ════ v140 MORNING INSPECTIONS ═════════════════════════════ */
+.in-reg-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;border:1px solid var(--border);border-radius:10px}
+.in-reg{border-collapse:separate;border-spacing:0;font-size:12px;min-width:100%}
+.in-reg th,.in-reg td{border-bottom:1px solid var(--border);border-right:1px solid var(--border);padding:4px 5px;text-align:center;white-space:nowrap}
+.in-reg thead th{background:var(--surface2);font-size:11px;position:sticky;top:0;z-index:1}
+.in-reg th.dy{min-width:26px;font-weight:700}.in-reg th.dy small{display:block;font-size:9px;color:var(--tx3);font-weight:600}
+.in-reg th.sun{color:#b91c1c}.in-reg th.td{background:#fef3c7}
+.in-reg .nm{text-align:left;position:sticky;left:0;background:var(--surface);z-index:2;min-width:150px}
+.in-reg thead .nm{z-index:3;background:var(--surface2)}
+.in-reg .nm small{display:none;font-size:10px;color:var(--tx3)}
+.in-reg .sl{color:var(--tx3);font-size:11px}.in-reg .dg{text-align:left;font-size:11px;color:var(--tx2)}
+.in-reg td.c{font-size:10px;font-weight:700;padding:3px 0;min-width:26px}
+.in-reg td.y{background:#dcfce7;color:#166534}.in-reg td.n{background:#9f1239;color:#fff}.in-reg td.fu{background:repeating-linear-gradient(45deg,transparent 0 4px,rgba(0,0,0,.04) 4px 8px)}
+.in-reg .tt{font-weight:800;min-width:38px}.in-reg .tt.ok{color:#15803d}.in-reg .tt.no{color:#b91c1c}
+.in-reg tfoot td{background:var(--surface2);font-weight:800;border-top:2px solid var(--border)}.in-reg tfoot .pr{text-align:right;position:sticky;left:0}
+.in-reg-lg{font-size:12px;color:var(--tx3);margin-top:8px}.in-reg-lg span{display:inline-block;width:18px;text-align:center;font-weight:700;border-radius:3px;font-size:10px}
+.in-reg-lg .y{background:#dcfce7;color:#166534}.in-reg-lg .n{background:#9f1239;color:#fff}
+@media (max-width:700px){.in-reg .dg,.in-reg .sl{display:none}.in-reg .nm{min-width:118px;max-width:130px;white-space:normal}.in-reg .nm b{font-size:11.5px}.in-reg .nm small{display:block}.in-reg tfoot .pr{font-size:10.5px}}
 .in-bar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:8px 12px}
 .in-dates{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .in-dates .f-ctrl{width:auto;min-width:150px}
@@ -2781,9 +2798,11 @@ tbody tr:hover { background: var(--surface2); }
         <div class="tpl-tabs" style="margin:0;border:none">
           <button class="tpl-tab active" id="inMode-day" onclick="inSetMode('day')"><span class="material-icons-round">today</span> Daily</button>
           <button class="tpl-tab" id="inMode-range" onclick="inSetMode('range')"><span class="material-icons-round">date_range</span> Date range</button>
+          <button class="tpl-tab" id="inMode-month" onclick="inSetMode('month')"><span class="material-icons-round">calendar_month</span> Monthly register</button>
         </div>
         <div class="in-dates" id="inDay"><input type="date" class="f-ctrl" id="inDate" onchange="inLoad()"><button class="btn btn-ghost btn-sm" onclick="inQuick('today')">Today</button><button class="btn btn-ghost btn-sm" onclick="inQuick('yday')">Yesterday</button></div>
         <div class="in-dates" id="inRange" style="display:none"><input type="date" class="f-ctrl" id="inFrom"><span style="color:var(--tx3)">to</span><input type="date" class="f-ctrl" id="inTo"><button class="btn btn-ghost btn-sm" onclick="inQuick('week')">This week</button><button class="btn btn-ghost btn-sm" onclick="inQuick('month')">This month</button><label class="remember-label" style="font-size:12.5px"><input type="checkbox" id="inSkipSun" checked onchange="inRender()"> Skip Sundays</label><button class="btn btn-primary btn-sm" onclick="inLoad()">Show</button></div>
+        <div class="in-dates" id="inMonthBar" style="display:none"><input type="month" class="f-ctrl" id="inMon" onchange="inLoad()"><button class="btn btn-ghost btn-sm" onclick="inQuick('thism')">This month</button><button class="btn btn-ghost btn-sm" onclick="inQuick('lastm')">Last month</button><button class="btn btn-primary btn-sm" onclick="inPrintRegister()"><span class="material-icons-round mi">picture_as_pdf</span> Print / PDF</button><button class="btn btn-ghost btn-sm" onclick="inRegisterExcel()"><span class="material-icons-round mi">table_view</span> Excel</button></div>
       </div>
       <div class="in-kpis">
         <div class="in-kpi blue"><b id="inK-total">&#8212;</b><small>Total entries</small></div>
@@ -5477,17 +5496,20 @@ function loadInspectionPage(){
   if(INS.data){inRender();}
   inLoad();
 }
-function inSetMode(m){INS.mode=m;['day','range'].forEach(function(k){var b=id('inMode-'+k);if(b)b.classList.toggle('active',k===m);});id('inDay').style.display=m==='day'?'':'none';id('inRange').style.display=m==='range'?'':'none';inLoad();}
+function inSetMode(m){INS.mode=m;['day','range','month'].forEach(function(k){var b=id('inMode-'+k);if(b)b.classList.toggle('active',k===m);});id('inDay').style.display=m==='day'?'':'none';id('inRange').style.display=m==='range'?'':'none';id('inMonthBar').style.display=m==='month'?'':'none';if(m==='month'&&!V('inMon'))inQuick('thism',true);inLoad();}
 function inQuick(k,noLoad){
   var d=new Date();
   if(k==='today'){id('inDate').value=inYmd(d);}
   else if(k==='yday'){id('inDate').value=inYmd(new Date(d.getTime()-86400000));}
   else if(k==='week'){var mon=new Date(d);mon.setDate(d.getDate()-((d.getDay()+6)%7));id('inFrom').value=inYmd(mon);id('inTo').value=inYmd(d);}
   else if(k==='month'){id('inFrom').value=inYmd(new Date(d.getFullYear(),d.getMonth(),1));id('inTo').value=inYmd(d);}
+  else if(k==='thism'){id('inMon').value=inYmd(d).slice(0,7);}
+  else if(k==='lastm'){id('inMon').value=inYmd(new Date(d.getFullYear(),d.getMonth()-1,1)).slice(0,7);}
   if(!noLoad)inLoad();
 }
 function inRangeDates(){
   if(INS.mode==='day'){var y=V('inDate')||inYmd(new Date());return {from:y,to:y};}
+  if(INS.mode==='month'){var mo=V('inMon')||inYmd(new Date()).slice(0,7),f=mo+'-01',p=mo.split('-'),last=inYmd(new Date(+p[0],+p[1],0)),t=inYmd(new Date());return {from:f,to:last<t?last:(t<f?f:t)};}
   return {from:V('inFrom')||inYmd(new Date()),to:V('inTo')||inYmd(new Date())};
 }
 function inLoad(){
@@ -5520,7 +5542,7 @@ function inCompute(){
   rows.forEach(function(r){
     byDay[r.d]=(byDay[r.d]||0)+1;
     var z=r.z||'UNKNOWN';(byZone[z]=byZone[z]||{n:0,off:{}}).n++;byZone[z].off[r.m||r.n]=1;
-    if(r.m){var o=(byOff[r.m]=byOff[r.m]||{rows:[],days:{}});o.rows.push(r);o.days[r.d]=1;}
+    if(r.m){var o=(byOff[r.m]=byOff[r.m]||{rows:[],days:{},pdays:{}});o.rows.push(r);o.days[r.d]=1;if(r.p&&r.p.length)o.pdays[r.d]=1;}
     else (unknown[r.n]=unknown[r.n]||{rows:[],desig:r.g}).rows.push(r);
   });
   var notSub=act.filter(function(o){return !byOff[o.name];});
@@ -5538,6 +5560,7 @@ function inRender(){
   id('inK-not').textContent=c.notSub.length;
   id('inK-cov').textContent=c.coverage+'%';
   id('inK-subL').textContent=isRange?'Officers submitted (any day)':'Officers submitted';
+  if(INS.mode==='month'){inRenderRegister(c,box);return;}
   var h='';
   // 1. not submitted — first, because it needs action
   h+='<div class="in-sec"><div class="in-sec-hd"><span class="material-icons-round" style="color:#c0392b">person_off</span> Not submitted <span class="in-cnt">'+c.notSub.length+'</span></div><div class="in-sec-bd">';
@@ -5582,6 +5605,77 @@ function inRender(){
   }
   box.innerHTML=h;
 }
+
+// ─── v142 MONTHLY FIELD MONITORING REGISTER (the Commissioner's monthly report) ───
+// Officer × day grid: Yes = inspection submitted with photo that day, No = not.
+// Same layout as the old "Officers Daily Morning Field Monitoring Report".
+function inRegData(){
+  var c=INS.c,d=INS.data;if(!c||!d)return null;
+  var mo=d.from.slice(0,7),p=mo.split('-'),n=new Date(+p[0],+p[1],0).getDate(),all=[];
+  for(var i=1;i<=n;i++)all.push(mo+'-'+String(i).padStart(2,'0'));
+  var counted=all.filter(function(y){return y<=d.to;});
+  var rows=c.act.map(function(o){var b=c.byOff[o.name],pd=b?b.pdays:{},yes=counted.filter(function(y){return pd[y];}).length;return {o:o,pd:pd,yes:yes,no:counted.length-yes};});
+  var present=all.map(function(y){return y<=d.to?rows.filter(function(r){return r.pd[y];}).length:null;});
+  var title=new Date(+p[0],+p[1]-1,1).toLocaleDateString('en-IN',{month:'long',year:'numeric'});
+  return {all:all,counted:counted,rows:rows,present:present,title:title,mo:mo};
+}
+function inDdmmyy(y){var p=y.split('-');return p[2]+'.'+p[1]+'.'+p[0].slice(2);}
+function inRenderRegister(c,box){
+  var R=inRegData();if(!R)return;
+  var cells=R.rows.length*R.counted.length,yes=R.rows.reduce(function(a,r){return a+r.yes;},0);
+  id('inK-not').textContent=R.rows.filter(function(r){return !r.yes;}).length;
+  id('inK-cov').textContent=(cells?Math.round(yes*100/cells):0)+'%';
+  var today=inYmd(new Date());
+  var h='<div class="in-sec"><div class="in-sec-hd"><span class="material-icons-round">calendar_month</span> Field monitoring register &mdash; '+htmlEsc(R.title)+' <span class="in-cnt">'+R.counted.length+' days &middot; '+R.rows.length+' officers</span></div><div class="in-sec-bd">'
+    +'<div class="in-reg-wrap"><table class="in-reg"><thead><tr><th class="sl">#</th><th class="nm">Name</th><th class="dg">Designation</th>'
+    +R.all.map(function(y){var dt=new Date(y+'T00:00:00');return '<th class="dy'+(dt.getDay()===0?' sun':'')+(y===today?' td':'')+'" title="'+inFmtDay(y)+'">'+dt.getDate()+'<small>'+['S','M','T','W','T','F','S'][dt.getDay()]+'</small></th>';}).join('')
+    +'<th class="tt">Days</th><th class="tt ok">Yes</th><th class="tt no">No</th></tr></thead><tbody>';
+  R.rows.forEach(function(r,i){
+    h+='<tr><td class="sl">'+(i+1)+'</td><td class="nm"><b>'+htmlEsc(r.o.name)+'</b><small>'+htmlEsc(r.o.desig)+'</small></td><td class="dg">'+htmlEsc(r.o.desig)+'</td>'
+      +R.all.map(function(y){if(y>INS.data.to)return '<td class="c fu"></td>';return r.pd[y]?'<td class="c y" title="'+inFmtDay(y)+': Yes">Y</td>':'<td class="c n" title="'+inFmtDay(y)+': No">N</td>';}).join('')
+      +'<td class="tt">'+R.counted.length+'</td><td class="tt ok">'+r.yes+'</td><td class="tt no">'+r.no+'</td></tr>';
+  });
+  h+='</tbody><tfoot><tr><td class="sl"></td><td class="nm pr">Officers present (of '+R.rows.length+')</td><td class="dg"></td>'+R.present.map(function(v){return '<td class="c pv">'+(v===null?'':v)+'</td>';}).join('')+'<td colspan="3"></td></tr></tfoot></table></div>'
+    +'<div class="in-reg-lg"><span class="y">Y</span> inspection submitted with photo &nbsp; <span class="n">N</span> not submitted &nbsp;&middot;&nbsp; Swipe the table sideways to see all days</div>';
+  if(c.skipped.length)h+='<div class="in-skipped"><span class="material-icons-round">event_busy</span><div><b>Not counted in this register ('+c.skipped.length+'):</b> '+c.skipped.map(function(o){return '<span class="in-sk">'+htmlEsc(o.name)+' <a href="#" data-n="'+htmlEsc(o.name)+'" onclick="event.preventDefault();inSkip(this.dataset.n,false)">undo</a></span>';}).join(' ')+'</div></div>';
+  h+='<div style="font-size:12px;color:var(--tx3);margin-top:8px">Officers come from the <a href="#" onclick="event.preventDefault();inRosterOpen()">Officer list</a> (in that order). Untick anyone who should not appear (e.g. Deputy Commissioner, on long leave).</div></div></div>';
+  box.innerHTML=h;
+}
+function inPrintRegister(){
+  if(INS.mode!=='month'){toast('Open the Monthly register tab first.','info');return;}
+  var R=inRegData();if(!R){toast('Please wait — the register is still loading.','info');return;}
+  var esc=htmlEsc,nDays=R.counted.length;
+  var css='@page{size:A4 landscape;margin:8mm}*{box-sizing:border-box}body{font-family:"Times New Roman",Times,serif;margin:0;color:#000}'
+    +'table{width:100%;border-collapse:collapse;table-layout:fixed}th,td{border:1px solid #000;font-size:8.5px;padding:2px 3px;text-align:center}'
+    +'thead{display:table-header-group}tfoot{display:table-row-group}tr{page-break-inside:avoid}'
+    +'.ttl th{font-size:14px;font-weight:bold;padding:7px;background:#fff}'
+    +'.hd th{background:#f2f2f2;font-weight:bold;font-size:9px}.vd{height:58px;padding:0}.vd div{writing-mode:vertical-rl;transform:rotate(180deg);margin:auto;font-size:8px;font-weight:bold;white-space:nowrap}'
+    +'td.l{text-align:left;font-size:8.5px}td.y{background:#e2efda;color:#1e4620;font-weight:bold;font-size:7.5px}td.n{background:#a50021;color:#fff;font-weight:bold;font-size:7.5px}td.b{font-weight:bold;font-size:10px}'
+    +'.ft{display:flex;justify-content:space-between;font-family:Arial,sans-serif;font-size:8px;color:#555;margin-top:6px}';
+  var cols='<colgroup><col style="width:3.2%"><col style="width:10.5%"><col style="width:13%">'+R.all.map(function(){return '<col>';}).join('')+'<col style="width:3.4%"><col style="width:4.4%"><col style="width:4.4%"></colgroup>';
+  var h='<table>'+cols+'<thead><tr class="ttl"><th colspan="'+(R.all.length+6)+'">Salem City Municipal Corporation - Officers Daily Morning Field Monitoring Report - '+esc(R.title)+' ('+nDays+' Days)</th></tr>'
+    +'<tr class="hd"><th>Sl.No</th><th>Name</th><th>Designation</th>'+R.all.map(function(y){return '<th class="vd"><div>'+inDdmmyy(y)+'</div></th>';}).join('')+'<th>Total No of Days</th><th>No of Days Photos uploaded</th><th>No of Days Photos Not uploaded</th></tr></thead><tbody>';
+  R.rows.forEach(function(r,i){
+    h+='<tr><td>'+(i+1)+'</td><td class="l">'+esc(r.o.name)+'</td><td class="l">'+esc(r.o.desig)+'</td>'
+      +R.all.map(function(y){return y>INS.data.to?'<td></td>':(r.pd[y]?'<td class="y">Yes</td>':'<td class="n">No</td>');}).join('')
+      +'<td class="b">'+nDays+'</td><td class="b">'+r.yes+'</td><td class="b">'+r.no+'</td></tr>';
+  });
+  h+='<tr><td colspan="3" class="b" style="text-align:right">Officers present (of '+R.rows.length+')</td>'+R.present.map(function(v){return '<td class="b" style="font-size:8.5px">'+(v===null?'':v)+'</td>';}).join('')+'<td colspan="3"></td></tr></tbody></table>'
+    +'<div class="ft"><span>Yes = inspection submitted with photo &middot; No = not submitted / no photo</span><span>Printed '+esc(new Date().toLocaleString('en-IN'))+'</span></div>';
+  var w=window.open('','_blank');if(!w){toast('Please allow pop-ups to print.','error');return;}
+  w.document.write('<!DOCTYPE html><html><head><meta charset="utf-8"><title>Field_Monitoring_Register_'+esc(R.title.replace(/ /g,'_'))+'</title><style>'+css+'</style></head><body>'+h+'<script>setTimeout(function(){window.print()},400)<\/script></body></html>');w.document.close();
+}
+function inRegisterExcel(){
+  if(INS.mode!=='month')return;var R=inRegData();if(!R){toast('Please wait — the register is still loading.','info');return;}
+  var q=function(v){v=String(v==null?'':v);return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;};
+  var lines=[q('Salem City Municipal Corporation - Officers Daily Morning Field Monitoring Report - '+R.title+' ('+R.counted.length+' Days)'),
+    ['Sl.No','Name','Designation'].concat(R.all.map(inDdmmyy)).concat(['Total No of Days','No of Days Photos uploaded','No of Days Photos Not uploaded']).map(q).join(',')];
+  R.rows.forEach(function(r,i){lines.push([i+1,r.o.name,r.o.desig].concat(R.all.map(function(y){return y>INS.data.to?'':(r.pd[y]?'Yes':'No');})).concat([R.counted.length,r.yes,r.no]).map(q).join(','));});
+  lines.push(['','Officers present (of '+R.rows.length+')',''].concat(R.present.map(function(v){return v===null?'':v;})).map(q).join(','));
+  var blob=new Blob(['﻿'+lines.join('\r\n')],{type:'text/csv;charset=utf-8'});
+  var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='Field_Monitoring_Register_'+R.title.replace(/ /g,'_')+'.csv';document.body.appendChild(a);a.click();setTimeout(function(){URL.revokeObjectURL(a.href);a.remove();},500);
+  toast('Excel file downloaded.','ok');
+}
 // officer phone number from TMS users (names are matched loosely)
 function inCompact(n){return String(n||'').toUpperCase().replace(/[^A-Z]/g,'');}
 function inEdit1(a,b){if(a===b)return true;if(Math.abs(a.length-b.length)>1)return false;var i=0,j=0,d=0;while(i<a.length&&j<b.length){if(a[i]===b[j]){i++;j++;continue;}if(++d>1)return false;if(a.length>b.length)i++;else if(b.length>a.length)j++;else{i++;j++;}}return d+(a.length-i)+(b.length-j)<=1;}
@@ -5614,6 +5708,7 @@ function inCopyTSV(){
 }
 function inCopyFallback(t){var ta=document.createElement('textarea');ta.value=t;ta.style.position='fixed';ta.style.opacity='0';document.body.appendChild(ta);ta.select();try{document.execCommand('copy');}catch(e){}document.body.removeChild(ta);}
 function inPrint(){
+  if(INS.mode==='month'){inPrintRegister();return;}
   var c=INS.c,d=INS.data;if(!c){toast('Load a day first.','info');return;}
   var isRange=d.from!==d.to,esc=htmlEsc,when=isRange?inFmt(d.from)+' to '+inFmt(d.to):new Date(d.from+'T00:00:00').toLocaleDateString('en-IN',{weekday:'long',day:'2-digit',month:'long',year:'numeric'});
   var logo='';try{logo=localStorage.getItem('sc-logo')||'';}catch(e){}
